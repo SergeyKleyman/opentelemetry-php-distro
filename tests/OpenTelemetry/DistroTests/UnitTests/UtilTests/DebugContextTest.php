@@ -28,7 +28,7 @@ use RuntimeException;
 use function dummyFuncForTestsWithoutNamespace;
 use function OpenTelemetry\DistroTests\dummyFuncForTestsWithNamespace;
 
-use const OpenTelemetry\DistroTest\DUMMY_FUNC_FOR_TESTS_WITH_NAMESPACE_CONTINUATION_CALL_LINE;
+use const OpenTelemetry\DistroTests\DUMMY_FUNC_FOR_TESTS_WITH_NAMESPACE_CONTINUATION_CALL_LINE;
 use const OpenTelemetry\DistroTests\DUMMY_FUNC_FOR_TESTS_WITH_NAMESPACE_FILE;
 use const OpenTelemetry\DistroTests\DUMMY_FUNC_FOR_TESTS_WITH_NAMESPACE_FUNCTION;
 

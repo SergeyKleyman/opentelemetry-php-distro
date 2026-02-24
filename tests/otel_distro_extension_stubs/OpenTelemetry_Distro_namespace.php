@@ -6,6 +6,9 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
 
+use Closure;
+use Throwable;
+
 /**
  * This function is implemented by the extension
  *

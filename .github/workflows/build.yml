@@ -23,6 +23,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  test-php-static-and-unit:
+    uses: ./.github/workflows/test-php-static-and-unit.yml
+
   build-compiler:
     uses: ./.github/workflows/native-dev-tools-build.yml
     secrets: inherit
@@ -69,6 +72,7 @@ jobs:
   ci:
     needs:
       - tests-phpt
+      - test-php-static-and-unit
       - build-packages
       - test-otel-unit
       - test-packages-component-tests

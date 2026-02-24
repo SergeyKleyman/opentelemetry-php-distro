@@ -88,4 +88,4 @@ function main () {
     generate_rows_to_test_increased_log_level
 }
 
-main
+main "$@"
