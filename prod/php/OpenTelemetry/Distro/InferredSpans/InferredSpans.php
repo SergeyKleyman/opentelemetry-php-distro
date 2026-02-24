@@ -184,7 +184,10 @@ class InferredSpans
             $frame = $stackTrace[$index];
             if (
                 array_key_exists('class', $frame) &&
-                (str_starts_with($frame['class'], 'OpenTelemetry\\')) //TODO allow other namespaces via config?
+                (
+                    str_starts_with($frame['class'], 'OpenTelemetry\\')
+                    && !str_starts_with($frame['class'], 'OpenTelemetry\\DistroTests\\')
+                ) // TODO allow namespaces to be configured
             ) {
                 $cutIndex = $index;
                 break;
