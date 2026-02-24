@@ -67,7 +67,7 @@ function _export_var_to_env () {
     local key="$2"
     local value="$3"
     local verbose=$4
-    local var_name="OTEL_PHP_PHP_TESTS_${key}"
+    local var_name="OTEL_PHP_TESTS_${key}"
     local var_name="${prefix}_$(echo $key | tr '[:lower:]' '[:upper:]')"
     if [ "${verbose}" == "true" ] ; then
         echo "Exporting env var: ${var_name}=${value}"
@@ -87,7 +87,7 @@ function unpack_matrix_row {
     fi
 
     if [ -z "${variable_prefix}" ] ; then
-        variable_prefix="OTEL_PHP_PHP_TESTS"
+        variable_prefix="OTEL_PHP_TESTS"
     fi
 
     if [ -z "${verbose}" ] ; then

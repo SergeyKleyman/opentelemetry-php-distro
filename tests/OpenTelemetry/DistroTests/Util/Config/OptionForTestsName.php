@@ -39,7 +39,7 @@ enum OptionForTestsName
     case mysql_password;
     case mysql_db;
 
-    public const ENV_VAR_NAME_PREFIX = 'OTEL_PHP_PHP_TESTS_';
+    public const ENV_VAR_NAME_PREFIX = 'OTEL_PHP_TESTS_';
 
     public function toEnvVarName(): string
     {

@@ -17,7 +17,7 @@ final class ComposerUtil
     use BuildToolsAssertTrait;
     use BuildToolsLoggingClassTrait;
 
-    public const ALLOW_DIRECT_COMPOSER_COMMAND_ENV_VAR_NAME = 'OTEL_PHP_PHP_TOOLS_ALLOW_DIRECT_COMPOSER_COMMAND';
+    public const ALLOW_DIRECT_COMPOSER_COMMAND_ENV_VAR_NAME = 'OTEL_PHP_TOOLS_ALLOW_DIRECT_COMPOSER_COMMAND';
 
     public const COMPOSER_JSON_FILE_NAME = 'composer.json';
     public const COMPOSER_LOCK_FILE_NAME = 'composer.lock';

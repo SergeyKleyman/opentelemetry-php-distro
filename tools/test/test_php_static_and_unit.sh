@@ -82,7 +82,7 @@ main() {
 
     # SC2034: <env var> appears unused. Verify use (or export if used externally).
     # shellcheck disable=SC2034
-    OTEL_PHP_PHP_TESTS_LOGS_DIRECTORY="/otel_php_distro_tests/logs"
+    OTEL_PHP_TESTS_LOGS_DIRECTORY="/otel_php_distro_tests/logs"
     local docker_run_env_vars_cmd_line_args=()
     build_docker_env_vars_command_line_part docker_run_env_vars_cmd_line_args
 

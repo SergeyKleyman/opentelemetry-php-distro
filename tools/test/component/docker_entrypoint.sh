@@ -57,7 +57,7 @@ function install_open_telemetry_php_distro_package () {
     local architecture="x86_64"
 
     local package_file_full_path
-    package_file_full_path=$(select_otel_package_file /otel_php_distro_tests/packages "${OTEL_PHP_PHP_TESTS_PACKAGE_TYPE:?}" "${architecture}")
+    package_file_full_path=$(select_otel_package_file /otel_php_distro_tests/packages "${OTEL_PHP_TESTS_PACKAGE_TYPE:?}" "${architecture}")
 
     install_package_file "${package_file_full_path}"
 
@@ -88,7 +88,7 @@ function start_syslog_and_set_related_config () {
     if [[ "${start_syslog_started}" != "true" ]]; then
         # By default tests log level escalation mechanism uses log_level_syslog production option
         # If there is not syslog running then let's use log_level_stderr
-        export OTEL_PHP_PHP_TESTS_ESCALATED_RERUNS_PROD_CODE_LOG_LEVEL_OPTION_NAME=log_level_stderr
+        export OTEL_PHP_TESTS_ESCALATED_RERUNS_PROD_CODE_LOG_LEVEL_OPTION_NAME=log_level_stderr
     fi
 }
 
@@ -166,7 +166,7 @@ function gather_logs () {
     extract_log_ending
 
     # Setting ownership/permissions to allow docker host to read files copied to /otel_php_distro_tests/logs/
-    chown -R "${OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_ID:?}:${OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID:?}" /otel_php_distro_tests/logs
+    chown -R "${OTEL_PHP_TESTS_DOCKER_RUNNING_USER_ID:?}:${OTEL_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID:?}" /otel_php_distro_tests/logs
     chmod -R 777 /otel_php_distro_tests/logs
 
     current_github_workflow_log_group_name="Content of /otel_php_distro_tests/logs after setting ownership/permissions"
@@ -243,16 +243,16 @@ function main() {
 
     end_github_workflow_log_group "${current_github_workflow_log_group_name}"
 
-    current_github_workflow_log_group_name="Running component tests for app_host_kind: ${OTEL_PHP_PHP_TESTS_APP_CODE_HOST_KIND}"
-    if [[ -n "${OTEL_PHP_PHP_TESTS_GROUP+x}" ]]; then # -n is true if string is not empty
-        current_github_workflow_log_group_name="${current_github_workflow_log_group_name}, test_group: ${OTEL_PHP_PHP_TESTS_GROUP}"
+    current_github_workflow_log_group_name="Running component tests for app_host_kind: ${OTEL_PHP_TESTS_APP_CODE_HOST_KIND}"
+    if [[ -n "${OTEL_PHP_TESTS_GROUP+x}" ]]; then # -n is true if string is not empty
+        current_github_workflow_log_group_name="${current_github_workflow_log_group_name}, test_group: ${OTEL_PHP_TESTS_GROUP}"
     fi
-    if [[ -n "${OTEL_PHP_PHP_TESTS_FILTER+x}" ]]; then # -n is true if string is not empty
-        current_github_workflow_log_group_name="${current_github_workflow_log_group_name}, filter: ${OTEL_PHP_PHP_TESTS_FILTER}"
+    if [[ -n "${OTEL_PHP_TESTS_FILTER+x}" ]]; then # -n is true if string is not empty
+        current_github_workflow_log_group_name="${current_github_workflow_log_group_name}, filter: ${OTEL_PHP_TESTS_FILTER}"
     fi
     start_github_workflow_log_group "${current_github_workflow_log_group_name}"
 
-    export OTEL_PHP_PHP_TESTS_LOGS_DIRECTORY="/otel_php_distro_tests/logs"
+    export OTEL_PHP_TESTS_LOGS_DIRECTORY="/otel_php_distro_tests/logs"
     ./tools/test/component/test_installed_package_one_matrix_row.sh
 }
 

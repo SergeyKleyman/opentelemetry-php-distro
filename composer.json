@@ -74,7 +74,7 @@
             "php tools/build/direct_composer_install_update_not_allowed.php update"
         ],
         "generate_lock_use_current_json": [
-            "@putenv OTEL_PHP_PHP_TOOLS_ALLOW_DIRECT_COMPOSER_COMMAND=true",
+            "@putenv OTEL_PHP_TOOLS_ALLOW_DIRECT_COMPOSER_COMMAND=true",
             "composer --ignore-platform-req=ext-mysqli --ignore-platform-req=ext-pgsql --ignore-platform-req=ext-opentelemetry --no-interaction --no-plugins --no-scripts --no-install update"
         ],
         "parallel-lint": [

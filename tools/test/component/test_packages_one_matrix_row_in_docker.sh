@@ -77,12 +77,12 @@ function select_Dockerfile_based_on_package_type () {
 }
 
 function does_tests_group_need_external_services () {
-    if [ -z "${OTEL_PHP_PHP_TESTS_GROUP}" ] ; then
+    if [ -z "${OTEL_PHP_TESTS_GROUP}" ] ; then
         echo "true"
         return
     fi
 
-    case "${OTEL_PHP_PHP_TESTS_GROUP}" in
+    case "${OTEL_PHP_TESTS_GROUP}" in
         'does_not_require_external_services')
                 echo "false"
                 return 0
@@ -98,7 +98,7 @@ function does_tests_group_need_external_services () {
         *)
                 # SC2028: echo may not expand escape sequences. Use printf.
                 # shellcheck disable=SC2028
-                echo "Unknown tests group name: \`${OTEL_PHP_PHP_TESTS_GROUP}\'"
+                echo "Unknown tests group name: \`${OTEL_PHP_TESTS_GROUP}\'"
                 return 1
                 ;;
     esac
@@ -147,23 +147,23 @@ function main() {
     ensure_dir_exists_and_empty "${logs_dir}"
     touch "${logs_dir}/z_dummy_file_to_make_directory_non-empty"
 
-    # All environment variables matching OTEL_PHP_PHP_TESTS_* are passed to the docker container
+    # All environment variables matching OTEL_PHP_TESTS_* are passed to the docker container
     # SC2034: <env var> appears unused. Verify use (or export if used externally).
     # shellcheck disable=SC2034
-    export OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_ID
-    OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_ID="$(id -u)"
+    export OTEL_PHP_TESTS_DOCKER_RUNNING_USER_ID
+    OTEL_PHP_TESTS_DOCKER_RUNNING_USER_ID="$(id -u)"
     # shellcheck disable=SC2034
-    export OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID
-    OTEL_PHP_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID="$(id -g)"
+    export OTEL_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID
+    OTEL_PHP_TESTS_DOCKER_RUNNING_USER_GROUP_ID="$(id -g)"
 
     source tools/test/component/unpack_matrix_row.sh
-    unpack_matrix_row "${matrix_row}" "OTEL_PHP_PHP_TESTS" "true"
+    unpack_matrix_row "${matrix_row}" "OTEL_PHP_TESTS" "true"
 
-    export OTEL_PHP_PHP_TESTS_MATRIX_ROW="${matrix_row}"
+    export OTEL_PHP_TESTS_MATRIX_ROW="${matrix_row}"
 
-    # unpack_matrix_row "${matrix_row:?}" "OTEL_PHP_PHP_TESTS" "true"
+    # unpack_matrix_row "${matrix_row:?}" "OTEL_PHP_TESTS" "true"
     echo "Environment variables after unpacking the matrix row:"
-    env | grep OTEL_PHP_PHP_TESTS_ | sort
+    env | grep OTEL_PHP_TESTS_ | sort
 
     should_start_external_services=$(does_tests_group_need_external_services)
 
@@ -177,17 +177,17 @@ function main() {
     fi
 
     local dockerfile
-    dockerfile=$(select_Dockerfile_based_on_package_type "${OTEL_PHP_PHP_TESTS_PACKAGE_TYPE:?}")
+    dockerfile=$(select_Dockerfile_based_on_package_type "${OTEL_PHP_TESTS_PACKAGE_TYPE:?}")
     echo "Selected Dockerfile: ${dockerfile}"
 
-    local docker_image_tag="elastic-otel-php-tests-component-${OTEL_PHP_PHP_TESTS_PACKAGE_TYPE:?}-${OTEL_PHP_PHP_TESTS_PHP_VERSION:?}"
+    local docker_image_tag="elastic-otel-php-tests-component-${OTEL_PHP_TESTS_PACKAGE_TYPE:?}-${OTEL_PHP_TESTS_PHP_VERSION:?}"
 
     end_github_workflow_log_group "${current_github_workflow_log_group_name}"
 
-    local current_github_workflow_log_group_name="Building docker image with tag ${docker_image_tag} using ${this_script_dir}/${dockerfile} with PHP_VERSION=${OTEL_PHP_PHP_TESTS_PHP_VERSION:?}"
+    local current_github_workflow_log_group_name="Building docker image with tag ${docker_image_tag} using ${this_script_dir}/${dockerfile} with PHP_VERSION=${OTEL_PHP_TESTS_PHP_VERSION:?}"
     start_github_workflow_log_group "${current_github_workflow_log_group_name}"
 
-    docker build --file "${this_script_dir}/${dockerfile}" --build-arg "PHP_VERSION=${OTEL_PHP_PHP_TESTS_PHP_VERSION:?}" --tag "${docker_image_tag}" .
+    docker build --file "${this_script_dir}/${dockerfile}" --build-arg "PHP_VERSION=${OTEL_PHP_TESTS_PHP_VERSION:?}" --tag "${docker_image_tag}" .
 
     end_github_workflow_log_group "${current_github_workflow_log_group_name}"
 
@@ -203,7 +203,7 @@ function main() {
     docker_run_cmd_line_args+=(-v "${this_script_dir}/custom_php_config.ini:/otel_php_distro_tests/php_ini_scan_dir/custom_php_config.ini:ro")
 
     if [ "${should_start_external_services}" == "true" ] ; then
-        docker_run_cmd_line_args+=("--network=${OTEL_PHP_PHP_TESTS_DOCKER_NETWORK:?}")
+        docker_run_cmd_line_args+=("--network=${OTEL_PHP_TESTS_DOCKER_NETWORK:?}")
     fi
 
     echo "docker_run_cmd_line_args: ${docker_run_cmd_line_args[*]}"

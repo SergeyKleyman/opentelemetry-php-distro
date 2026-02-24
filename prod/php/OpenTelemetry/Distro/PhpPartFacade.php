@@ -46,7 +46,7 @@ final class PhpPartFacade
     private ?InferredSpans $inferredSpans = null;
 
     public const IS_ENABLED_ENV_VAR_NAME = 'OTEL_PHP_ENABLED';
-    public const MODE_IS_DEV_ENV_VAR_NAME = 'OTEL_PHP_PHP_DEV_INTERNAL_MODE_IS_DEV';
+    public const MODE_IS_DEV_ENV_VAR_NAME = 'OTEL_PHP_DEV_INTERNAL_MODE_IS_DEV';
 
     /**
      * Called by the extension

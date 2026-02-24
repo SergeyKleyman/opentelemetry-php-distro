@@ -30,7 +30,7 @@ abstract class SpawnedProcessBase implements LoggableInterface
     use LoggableTrait;
 
     public const FAILURE_PROCESS_EXIT_CODE = 213;
-    public const DBG_PROCESS_NAME_ENV_VAR_NAME = 'OTEL_PHP_PHP_TESTS_DBG_PROCESS_NAME';
+    public const DBG_PROCESS_NAME_ENV_VAR_NAME = 'OTEL_PHP_TESTS_DBG_PROCESS_NAME';
 
     private readonly Logger $logger;
 

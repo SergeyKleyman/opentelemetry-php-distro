@@ -15,7 +15,7 @@ use Override;
  */
 final class RequestHeadersRawSnapshotSource implements RawSnapshotSourceInterface
 {
-    public const HEADER_NAMES_PREFIX = 'OTEL_PHP_PHP_TESTS_';
+    public const HEADER_NAMES_PREFIX = 'OTEL_PHP_TESTS_';
 
     /** @var GetHeader */
     private Closure $getHeaderValue;

@@ -5,11 +5,11 @@ services:
         image: mysql:8.0
         restart: always
         environment:
-            - MYSQL_DATABASE=${OTEL_PHP_PHP_TESTS_MYSQL_DB}
-            - MYSQL_ROOT_PASSWORD=${OTEL_PHP_PHP_TESTS_MYSQL_PASSWORD}
+            - MYSQL_DATABASE=${OTEL_PHP_TESTS_MYSQL_DB}
+            - MYSQL_ROOT_PASSWORD=${OTEL_PHP_TESTS_MYSQL_PASSWORD}
         command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --default-authentication-plugin=mysql_native_password
         healthcheck:
-            test: [ "CMD", "mysqladmin", "--host=localhost", "--user=${OTEL_PHP_PHP_TESTS_MYSQL_USER}", "--password=${OTEL_PHP_PHP_TESTS_MYSQL_PASSWORD}", "ping" ]
+            test: [ "CMD", "mysqladmin", "--host=localhost", "--user=${OTEL_PHP_TESTS_MYSQL_USER}", "--password=${OTEL_PHP_TESTS_MYSQL_PASSWORD}", "ping" ]
             timeout: 5s
             retries: 60
         networks:
@@ -23,6 +23,6 @@ services:
 
 networks:
     elastic-otel-php-tests-component-network:
-        name: ${OTEL_PHP_PHP_TESTS_DOCKER_NETWORK}
+        name: ${OTEL_PHP_TESTS_DOCKER_NETWORK}
         attachable: true
         external: false
