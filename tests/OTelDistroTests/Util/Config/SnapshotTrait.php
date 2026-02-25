@@ -1,0 +1,80 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OTelDistroTests\Util\Config;
+
+use OpenTelemetry\Distro\Util\ArrayUtil;
+use OpenTelemetry\Distro\Util\TextUtil;
+use OTelDistroTests\Util\ArrayUtilForTests;
+use OTelDistroTests\Util\Log\LoggableTrait;
+use PHPUnit\Framework\Assert;
+
+/**
+ * Code in this file is part of implementation internals, and thus it is not covered by the backward compatibility.
+ *
+ * @internal
+ */
+trait SnapshotTrait
+{
+    use LoggableTrait;
+
+    /** @var ?array<string, mixed> */
+    private ?array $optNameToParsedValue = null;
+
+    /**
+     * @param array<string, mixed> $optNameToParsedValue
+     */
+    protected function setPropertiesToValuesFrom(array $optNameToParsedValue): void
+    {
+        Assert::assertNull($this->optNameToParsedValue);
+
+        $actualClass = get_called_class();
+        foreach ($optNameToParsedValue as $optName => $parsedValue) {
+            $propertyName = TextUtil::snakeToCamelCase($optName);
+            if (!property_exists($actualClass, $propertyName)) {
+                throw new ConfigException("Property `$propertyName' doesn't exist in class " . $actualClass);
+            }
+            $this->$propertyName = $parsedValue;
+        }
+
+        $this->optNameToParsedValue = $optNameToParsedValue;
+    }
+
+    /**
+     * @return string[]
+     */
+    protected static function snapshotTraitPropNamesNotForOptions(): array
+    {
+        return ['optNameToParsedValue'];
+    }
+
+    /**
+     * @return string[]
+     */
+    protected static function additionalPropNamesNotForOptions(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function propertyNamesForOptions(): array
+    {
+        /** @var ?array<string> $result */
+        static $result = null;
+        if ($result === null) {
+            $result = array_keys(get_class_vars(get_called_class()));
+            $propNamesNotForOptions = array_merge(self::snapshotTraitPropNamesNotForOptions(), self::additionalPropNamesNotForOptions());
+            Assert::assertSame(count($propNamesNotForOptions), ArrayUtilForTests::removeAllValues(/* in,out */ $result, $propNamesNotForOptions));
+        }
+        return $result;
+    }
+
+    public function getOptionValueByName(OptionForTestsName $optName): mixed
+    {
+        Assert::assertNotNull($this->optNameToParsedValue);
+        return ArrayUtil::getValueIfKeyExistsElse($optName->name, $this->optNameToParsedValue, null);
+    }
+}

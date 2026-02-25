@@ -28,4 +28,19 @@ function get_array_max_value() {
 }
 
 
+function is_value_in_array () {
+    # The first argument is the element that should be in array
+    local value_to_check="${1:?}"
+    # The rest of the arguments is the array
+    local -a array=("${@:2}")
+
+    for current_value in "${array[@]}"; do
+        if [ "${value_to_check}" == "${current_value}" ] ; then
+            echo "true"
+            return
+        fi
+    done
+    echo "false"
+}
+
 

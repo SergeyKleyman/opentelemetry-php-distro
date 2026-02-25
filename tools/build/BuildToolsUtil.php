@@ -21,7 +21,7 @@ final class BuildToolsUtil
     use BuildToolsAssertTrait;
     use BuildToolsLoggingClassTrait;
 
-    private const KEEP_TEMP_FILES_ENV_VAR_NAME = 'OTEL_PHP_PHP_TOOLS_KEEP_TEMP_FILES';
+    private const KEEP_TEMP_FILES_ENV_VAR_NAME = 'OTEL_PHP_TOOLS_KEEP_TEMP_FILES';
 
     public const FAILURE_EXIT_CODE = 1;
 

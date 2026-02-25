@@ -43,8 +43,8 @@ contents:
 - src: /source/prod/php
   dst: /opt/opentelemetry/php/distro/php
   packager: apk
-- src: /source/packaging/configs/elastic-otel-custom-template.ini
-  dst: /opt/opentelemetry/php/distro/etc/elastic-otel-custom.ini
+- src: /source/packaging/configs/opentelemetry_distro_custom_template.ini
+  dst: /opt/opentelemetry/php/distro/etc/opentelemetry_distro_custom_template.ini
   type: config
 - src: /source/README.md
   dst: /opt/opentelemetry/php/distro/docs/README.md

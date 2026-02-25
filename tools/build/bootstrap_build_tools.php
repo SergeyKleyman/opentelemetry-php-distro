@@ -9,7 +9,7 @@ use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\Log\LogLevel;
 use RuntimeException;
 
-const OTEL_PHP_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME = 'OTEL_PHP_PHP_TOOLS_LOG_LEVEL';
+const OTEL_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME = 'OTEL_PHP_TOOLS_LOG_LEVEL';
 
 require __DIR__ . DIRECTORY_SEPARATOR . 'BuildToolsAssertTrait.php';
 require __DIR__ . DIRECTORY_SEPARATOR . 'BuildToolsLog.php';
@@ -27,7 +27,7 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageStdErrWriter.p
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
 
 $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
-    $envVarVal = getenv(OTEL_PHP_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME);
+    $envVarVal = getenv(OTEL_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME);
     if (!is_string($envVarVal)) {
         return null;
     }

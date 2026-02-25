@@ -23,6 +23,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  test-php-static-and-unit:
+    uses: ./.github/workflows/test-php-static-and-unit.yml
+
   build-compiler:
     uses: ./.github/workflows/native-dev-tools-build.yml
     secrets: inherit
@@ -58,13 +61,21 @@ jobs:
       - build-packages
     uses: ./.github/workflows/test-otel-unit.yml
 
+  test-packages-component-tests:
+    needs:
+      - build-packages
+    uses: ./.github/workflows/test-packages-component-tests.yml
+
+
   # The very last job to report whether the Workflow passed.
   # This will act as the Branch Protection gatekeeper
   ci:
     needs:
       - tests-phpt
+      - test-php-static-and-unit
       - build-packages
       - test-otel-unit
+      - test-packages-component-tests
     runs-on: ubuntu-latest
     steps:
       - name: report

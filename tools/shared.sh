@@ -216,7 +216,7 @@ function delete_dir_contents() {
 function delete_temp_dir() {
     local dir_to_delete="${1:?}"
 
-    if [ -n "${OTEL_PHP_PHP_TOOLS_KEEP_TEMP_FILES+x}" ] && [ "${OTEL_PHP_PHP_TOOLS_KEEP_TEMP_FILES}" == "true" ]; then
+    if [ -n "${OTEL_PHP_TOOLS_KEEP_TEMP_FILES+x}" ] && [ "${OTEL_PHP_TOOLS_KEEP_TEMP_FILES}" == "true" ]; then
         echo "Keeping temporary directory ${dir_to_delete}/"
         return
     fi

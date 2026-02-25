@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OTelDistroTests\Util;
+
+use OpenTelemetry\Distro\Util\StaticClassTrait;
+use JsonException;
+
+final class JsonUtil
+{
+    use StaticClassTrait;
+
+    public static function encode(mixed $data, bool $prettyPrint = false): string
+    {
+        $options = JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES;
+        $options |= $prettyPrint ? JSON_PRETTY_PRINT : 0;
+        $encodedData = json_encode($data, $options);
+        if ($encodedData === false) {
+            throw new JsonException(
+                'json_encode() failed'
+                . '. json_last_error_msg(): ' . json_last_error_msg()
+                . '. data type: ' . get_debug_type($data)
+            );
+        }
+        return $encodedData;
+    }
+
+    public static function decode(string $encodedData, bool $asAssocArray): mixed
+    {
+        $decodedData = json_decode($encodedData, /* assoc: */ $asAssocArray);
+        if ($decodedData === null && ($encodedData !== 'null')) {
+            throw new JsonException(
+                'json_decode() failed.'
+                . ' json_last_error_msg(): ' . json_last_error_msg() . '.'
+                . ' encodedData: `' . $encodedData . '\''
+            );
+        }
+        return $decodedData;
+    }
+
+    public static function adaptStringToSearchInJson(string $input): string
+    {
+        return str_replace(search: '\\', replace: '\\\\', subject: $input);
+    }
+}

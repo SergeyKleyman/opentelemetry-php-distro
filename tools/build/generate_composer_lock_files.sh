@@ -14,12 +14,12 @@ function show_help() {
 
 # Function to parse arguments
 function parse_args() {
-    export OTEL_PHP_PHP_TOOLS_KEEP_TEMP_FILES="false"
+    export OTEL_PHP_TOOLS_KEEP_TEMP_FILES="false"
 
     while [[ "$#" -gt 0 ]]; do
         case $1 in
         --keep_temp_files)
-            export OTEL_PHP_PHP_TOOLS_KEEP_TEMP_FILES="true"
+            export OTEL_PHP_TOOLS_KEEP_TEMP_FILES="true"
             ;;
         --help)
             show_help

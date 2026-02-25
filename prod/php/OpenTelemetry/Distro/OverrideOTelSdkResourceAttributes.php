@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use OpenTelemetry\SDK\Common\Attribute\Attributes;
-use OpenTelemetry\SDK\Registry;
+use OpenTelemetry\SDK\Registry as OTelSdkRegistry;
 use OpenTelemetry\SDK\Resource\ResourceDetectorInterface;
 use OpenTelemetry\SDK\Resource\ResourceInfo;
 use OpenTelemetry\SemConv\ResourceAttributes;
@@ -22,7 +22,7 @@ final class OverrideOTelSdkResourceAttributes implements ResourceDetectorInterfa
     public static function register(string $nativePartVersion): void
     {
         self::$distroVersion = self::buildDistroVersion($nativePartVersion);
-        Registry::registerResourceDetector(self::class, new self());
+        OTelSdkRegistry::registerResourceDetector(self::class, new self());
         BootstrapStageLogger::logDebug('Registered; distroVersion: ' . self::$distroVersion, __FILE__, __LINE__, __CLASS__, __FUNCTION__);
     }
 
