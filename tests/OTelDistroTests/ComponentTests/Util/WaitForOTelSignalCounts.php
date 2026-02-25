@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\Util;
 
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
-use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\IterableUtil;
-use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\LoggableInterface;
 use OTelDistroTests\Util\Log\LoggableTrait;
-use OTelDistroTests\Util\Log\Logger;
 use Override;
 use PHPUnit\Framework\Assert;
 
@@ -21,11 +18,8 @@ final class WaitForOTelSignalCounts implements IsEnoughAgentBackendCommsInterfac
     private int $minSpanCount = 0;
     private int $maxSpanCount = 0;
 
-    private readonly Logger $logger;
-
     private function __construct()
     {
-        $this->logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('this'));
     }
 
     /**
@@ -55,25 +49,27 @@ final class WaitForOTelSignalCounts implements IsEnoughAgentBackendCommsInterfac
     }
 
     #[Override]
-    public function isEnough(AgentBackendComms $comms): bool
+    public function reasonNotEnough(AgentBackendComms $comms): ?string
     {
         $spansCount = IterableUtil::count($comms->spans());
         Assert::assertLessThanOrEqual($this->maxSpanCount, $spansCount);
 
-        // If minSpanCount !== 0 then check that there is at least one root span
-        $result = ($spansCount >= $this->minSpanCount) && (($this->minSpanCount === 0) || self::isThereAtLeastOneRootSpan($comms->spans()));
+        if ($spansCount < $this->minSpanCount) {
+            return "Actual spansCount ($spansCount) < expected minSpanCount ($this->minSpanCount)";
+        }
 
-        ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__))
-        && $loggerProxy->log('Checked if exported data events counts reached the waited for values', compact('result', 'spansCount', 'this'));
+        if (($this->minSpanCount !== 0) && !self::isThereAtLeastOneTraceRootSpan($comms->spans())) {
+            return "There is no trace root span among $spansCount accumulated spans";
+        }
 
-        return $result;
+        return null;
     }
 
     /**
      * @param iterable<Span> $spans
      */
-    private static function isThereAtLeastOneRootSpan(iterable $spans): bool
+    private static function isThereAtLeastOneTraceRootSpan(iterable $spans): bool
     {
-        return !IterableUtil::isEmpty(IterableUtil::findByPredicateOnValue($spans, fn($span) => $span->parentId === null));
+        return !IterableUtil::isEmpty(IterableUtil::findByPredicateOnValue($spans, fn($span) => !$span->hasParent()));
     }
 }

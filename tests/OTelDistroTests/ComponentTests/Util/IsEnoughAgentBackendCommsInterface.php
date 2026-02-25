@@ -6,5 +6,5 @@ namespace OTelDistroTests\ComponentTests\Util;
 
 interface IsEnoughAgentBackendCommsInterface
 {
-    public function isEnough(AgentBackendComms $comms): bool;
+    public function reasonNotEnough(AgentBackendComms $comms): ?string;
 }

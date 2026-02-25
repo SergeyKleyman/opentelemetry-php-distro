@@ -150,7 +150,7 @@ final class AgentBackendComms
     public function findRootSpans(): iterable
     {
         foreach ($this->spans() as $span) {
-            if ($span->parentId === null) {
+            if (!$span->hasParent()) {
                 yield $span;
             }
         }

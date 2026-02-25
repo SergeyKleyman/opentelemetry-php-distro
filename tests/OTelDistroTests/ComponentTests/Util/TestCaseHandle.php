@@ -11,7 +11,6 @@ use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\LoggableInterface;
-use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\Log\LoggableTrait;
 use OTelDistroTests\Util\Log\Logger;
 use OTelDistroTests\Util\TimeUtil;
@@ -95,19 +94,25 @@ final class TestCaseHandle implements LoggableInterface
     {
         Assert::assertNotEmpty($this->appCodeInvocations);
         $accumulator = new AgentBackendCommsAccumulator();
+        $accumulatedData = null;
+        $reasonNotEnough = null;
+        $logDebug = $this->logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
         $hasPassed = (new PollingCheck(__FUNCTION__ . ' passes', intval(TimeUtil::secondsToMicroseconds(self::MAX_WAIT_TIME_DATA_FROM_AGENT_SECONDS))))->run(
-            function () use ($expectedIsEnough, $accumulator) {
+            function () use ($expectedIsEnough, $accumulator, &$accumulatedData, &$reasonNotEnough, $logDebug) {
                 $accumulator->addEvents($this->mockOTelCollector->fetchNewAgentBackendCommEvents(shouldWait: true));
-                return $accumulator->isEnough($expectedIsEnough);
+                $accumulatedData = $accumulator->getResultSoFar();
+                $reasonNotEnough = $expectedIsEnough->reasonNotEnough($accumulatedData);
+                $logDebug?->log(__LINE__, 'Checked if exported data events counts reached the waited for values', compact('reasonNotEnough', 'this'));
+                return $reasonNotEnough === null;
             }
         );
+        Assert::assertNotNull($accumulatedData);
 
-        $accumulatedData = $accumulator->getResult();
         if (!$hasPassed) {
             DebugContext::getCurrentScope(/* out */ $dbgCtx);
             $accumulatedDataSummary = $accumulatedData->dbgGetSummary();
-            $dbgCtx->add(compact('expectedIsEnough', 'accumulatedDataSummary', 'accumulatedData', 'accumulator'));
-            Assert::fail('The expected exported data has not arrived; ' . LoggableToString::convert(compact('expectedIsEnough', 'accumulatedDataSummary')));
+            $dbgCtx->add(compact('reasonNotEnough', 'expectedIsEnough', 'accumulatedDataSummary', 'accumulatedData', 'accumulator'));
+            Assert::fail('The expected exported data has not arrived: ' . $reasonNotEnough);
         }
 
         return $accumulatedData;

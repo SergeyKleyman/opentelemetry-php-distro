@@ -67,12 +67,7 @@ final class AgentBackendCommsAccumulator implements LoggableInterface
         };
     }
 
-    public function isEnough(IsEnoughAgentBackendCommsInterface $isEnoughAgentBackendComms): bool
-    {
-        return $isEnoughAgentBackendComms->isEnough($this->getResult());
-    }
-
-    public function getResult(): AgentBackendComms
+    public function getResultSoFar(): AgentBackendComms
     {
         if ($this->cachedResult === null) {
             $connections = $this->closedConnections;

@@ -110,6 +110,11 @@ final class Span implements LoggableInterface
         return floatval($protoVal);
     }
 
+    public function hasParent(): bool
+    {
+        return $this->parentId !== null;
+    }
+
     public function hasRemoteParent(): ?bool
     {
         if (($this->flags & OTelProtoSpanFlags::SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK) === 0) {

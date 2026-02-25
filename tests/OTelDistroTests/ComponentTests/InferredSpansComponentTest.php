@@ -234,11 +234,6 @@ final class InferredSpansComponentTest extends ComponentTestCaseBase
      */
     public function testInferredSpans(MixedMap $testArgs): void
     {
-        // TODO: Re-enable InferredSpansComponentTest::testInferredSpans - Temporarily disabled this test and we will fix in a separate PR
-        if (self::dummyAssert()) {
-            return;
-        }
-
         self::runAndEscalateLogLevelOnFailure(
             self::buildDbgDescForTestWithArgs(__CLASS__, __FUNCTION__, $testArgs),
             function () use ($testArgs): void {
