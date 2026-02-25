@@ -99,6 +99,18 @@ match_packages() {
     done
 }
 
+get_package_version() {
+    local pkg_name=$1
+    local version=$(jq -r --arg pkg "$pkg_name" '.require[$pkg]' "$OPT_COMPOSER_FILE")
+
+    if [[ -z "$version" || "$version" == "null" ]]; then
+        echo "::error::Package $pkg_name not found in composer.json" >&2
+        return 1
+    fi
+
+    echo "$pkg_name:$version"
+}
+
 setup_composer_project() {
     echo "::group::Installing composer project"
     composer ${OPT_QUIET} init -n --name "opentelemetry-php-distro/otel-tests"
@@ -175,6 +187,9 @@ echo "::endgroup::"
 
 FAILURE=false
 
+semconv_package=$(get_package_version "open-telemetry/sem-conv")
+sdk_package=$(get_package_version "open-telemetry/sdk")
+
 for package in "${MATCHED_PACKAGES[@]}"; do
     vendor_dir="${OPT_WORKINGDIR}/vendor/$package"
 
@@ -182,13 +197,24 @@ for package in "${MATCHED_PACKAGES[@]}"; do
 
     cd $vendor_dir
     echo "::group::Installing $package dependencies"
+    rm composer.lock
+
     composer ${OPT_QUIET} config --no-plugins allow-plugins.php-http/discovery false
     composer ${OPT_QUIET} config allow-plugins.tbachert/spi true
-    composer ${OPT_QUIET} install --dev --ignore-platform-req php
+
+    echo "Removing static analysis tools to avoid conflicts with tests"
+
+    composer ${OPT_QUIET} require php:^8.1 --no-update
+    composer ${OPT_QUIET} remove --dev -n --no-update phan/phan phpstan/phpstan phpstan/phpstan-phpunit psalm/plugin-phpunit vimeo/psalm friendsofphp/php-cs-fixer
+    composer ${OPT_QUIET} require -n --no-update "$semconv_package" "$sdk_package"
+
+    echo "Installing $package with version constraints from composer.json"
+    composer ${OPT_QUIET} install
+
     echo "::endgroup::"
 
     echo "::group::🚀 Running $package tests 🚀"
-    ./vendor/bin/phpunit --debug --log-junit ${OPT_REPORTS_DESTINATION_PATH}/$package.xml
+    ./vendor/bin/phpunit --verbose --debug --log-junit ${OPT_REPORTS_DESTINATION_PATH}/$package.xml
 
     if [[ $? -ne 0 ]]; then
         echo "::error::PHPUnit tests failed for package $package"
