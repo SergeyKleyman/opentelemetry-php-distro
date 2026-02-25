@@ -24,14 +24,14 @@ final class AgentBackendCommsAccumulator implements LoggableInterface
     /** @var list<IntakeDataRequestDeserialized> */
     private array $openConnectionRequests = [];
 
-    private ?AgentBackendComms $cachedResult = null;
+    private ?AgentBackendComms $cachedResultSoFar = null;
 
     /**
      * @param iterable<AgentBackendCommEvent> $events
      */
     public function addEvents(iterable $events): void
     {
-        $this->cachedResult = null;
+        $this->cachedResultSoFar = null;
 
         foreach ($events as $event) {
             match (true) {
@@ -69,14 +69,14 @@ final class AgentBackendCommsAccumulator implements LoggableInterface
 
     public function getResultSoFar(): AgentBackendComms
     {
-        if ($this->cachedResult === null) {
+        if ($this->cachedResultSoFar === null) {
             $connections = $this->closedConnections;
             if ($this->openConnectionStart !== null) {
                 $connections[] = new AgentBackendConnection($this->openConnectionStart, $this->openConnectionRequests);
             }
-            $this->cachedResult = new AgentBackendComms($this->events, $connections);
+            $this->cachedResultSoFar = new AgentBackendComms($this->events, $connections);
         }
 
-        return $this->cachedResult;
+        return $this->cachedResultSoFar;
     }
 }
