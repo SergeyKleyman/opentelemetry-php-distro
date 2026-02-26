@@ -9,12 +9,11 @@ use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\HttpMethods;
-use OTelDistroTests\Util\HttpStatusCodes;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\Logger;
 use PHPUnit\Framework\Assert;
 
-final class MockOTelCollectorHandle extends HttpServerHandle
+final class MockOTelCollectorHandle extends TestInfraHttpServerHandleBase
 {
     private readonly Logger $logger;
     private int $nextIntakeDataRequestIndexToFetch = 0;
@@ -23,9 +22,7 @@ final class MockOTelCollectorHandle extends HttpServerHandle
     {
         parent::__construct(
             ClassNameUtil::fqToShort(MockOTelCollector::class) /* <- dbgServerDesc */,
-            $httpSpawnedProcessHandle->spawnedProcessOsId,
-            $httpSpawnedProcessHandle->spawnedProcessInternalId,
-            $httpSpawnedProcessHandle->ports
+            $httpSpawnedProcessHandle,
         );
 
         $this->logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('this'));
@@ -69,7 +66,6 @@ final class MockOTelCollectorHandle extends HttpServerHandle
     {
         $this->nextIntakeDataRequestIndexToFetch = 0;
 
-        $response = $this->sendRequest(HttpMethods::POST, TestInfraHttpServerProcessBase::CLEAN_TEST_SCOPED_URI_PATH);
-        Assert::assertSame(HttpStatusCodes::OK, $response->getStatusCode());
+        parent::cleanTestScoped();
     }
 }

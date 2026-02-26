@@ -17,6 +17,7 @@ final class JsonUtil
         $options |= $prettyPrint ? JSON_PRETTY_PRINT : 0;
         $encodedData = json_encode($data, $options);
         if ($encodedData === false) {
+            /** @noinspection PhpUnhandledExceptionInspection */
             throw new JsonException(
                 'json_encode() failed'
                 . '. json_last_error_msg(): ' . json_last_error_msg()
@@ -30,6 +31,7 @@ final class JsonUtil
     {
         $decodedData = json_decode($encodedData, /* assoc: */ $asAssocArray);
         if ($decodedData === null && ($encodedData !== 'null')) {
+            /** @noinspection PhpUnhandledExceptionInspection */
             throw new JsonException(
                 'json_decode() failed.'
                 . ' json_last_error_msg(): ' . json_last_error_msg() . '.'

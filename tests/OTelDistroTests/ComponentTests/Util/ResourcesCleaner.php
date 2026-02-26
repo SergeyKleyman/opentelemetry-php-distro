@@ -56,6 +56,7 @@ final class ResourcesCleaner extends TestInfraHttpServerProcessBase
 
         $this->logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('this'));
 
+        /** @noinspection PhpUnhandledExceptionInspection */
         parent::__construct();
 
         ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__)) && $loggerProxy->log('Done');
@@ -188,6 +189,7 @@ final class ResourcesCleaner extends TestInfraHttpServerProcessBase
     {
         $dbgProcessName = self::getRequiredRequestHeader($request, self::DBG_PROCESS_NAME_HEADER_NAME);
         $pid = AssertEx::stringIsInt(self::getRequiredRequestHeader($request, self::PID_HEADER_NAME));
+        /** @noinspection PhpUnhandledExceptionInspection */
         $isTestScoped = AssertEx::isBool(JsonUtil::decode(self::getRequiredRequestHeader($request, self::IS_TEST_SCOPED_HEADER_NAME), asAssocArray: true));
         $processesToTerminateIds = $isTestScoped ? $this->testScopedProcessesToTerminate : $this->globalProcessesToTerminate;
         $processesToTerminateIds->add([$dbgProcessName, $pid]);
@@ -200,6 +202,7 @@ final class ResourcesCleaner extends TestInfraHttpServerProcessBase
     {
         $path = self::getRequiredRequestHeader($request, self::PATH_HEADER_NAME);
         $isTestScopedAsString = self::getRequiredRequestHeader($request, self::IS_TEST_SCOPED_HEADER_NAME);
+        /** @noinspection PhpUnhandledExceptionInspection */
         $isTestScoped = JsonUtil::decode($isTestScopedAsString, asAssocArray: true);
         $filesToDeletePaths = $isTestScoped ? $this->testScopedFilesToDeletePaths : $this->globalFilesToDeletePaths;
         $filesToDeletePaths->add($path);

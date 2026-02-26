@@ -42,6 +42,7 @@ final class ComponentTestsPHPUnitExtension extends PHPUnitExtensionBase
         } catch (Throwable $throwable) {
             ($loggerProxy = $this->logger->ifCriticalLevelEnabled(__LINE__, __FUNCTION__))
             && $loggerProxy->logThrowable($throwable, 'Throwable escaped from GlobalTestInfra constructor');
+            /** @noinspection PhpUnhandledExceptionInspection */
             throw $throwable;
         }
     }

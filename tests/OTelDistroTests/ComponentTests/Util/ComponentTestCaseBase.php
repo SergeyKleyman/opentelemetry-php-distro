@@ -258,7 +258,7 @@ class ComponentTestCaseBase extends TestCaseBase
         try {
             $this->runAndEscalateLogLevelOnFailureImpl($dbgTestDesc, $testCall);
         } finally {
-            AmbientContextForTests::resetLogLevel($logLevelForTestCodeToRestore);
+            self::resetLogLevelForComponentTestsInfra($logLevelForTestCodeToRestore);
         }
     }
 
@@ -304,7 +304,7 @@ class ComponentTestCaseBase extends TestCaseBase
 
             $loggerProxyPerIt && $loggerProxyPerIt->log(__LINE__, 'Re-running failed test with escalated log levels...');
 
-            AmbientContextForTests::resetLogLevel($escalatedLogLevels[self::LOG_LEVEL_FOR_TEST_CODE_KEY]);
+            self::resetLogLevelForComponentTestsInfra($escalatedLogLevels[self::LOG_LEVEL_FOR_TEST_CODE_KEY]);
             $this->initTestCaseHandle($escalatedLogLevels[self::LOG_LEVEL_FOR_PROD_CODE_KEY]);
 
             try {
@@ -491,5 +491,11 @@ class ComponentTestCaseBase extends TestCaseBase
     {
         $appCodeParams->setProdOption(OptionForProdName::transaction_span_enabled, true);
         $appCodeParams->setProdOption(OptionForProdName::transaction_span_enabled_cli, true);
+    }
+
+    protected static function resetLogLevelForComponentTestsInfra(LogLevel $newVal): void
+    {
+        AmbientContextForTests::resetLogLevel($newVal);
+        ComponentTestsPHPUnitExtension::getGlobalTestInfra()->resetLogLevel($newVal);
     }
 }

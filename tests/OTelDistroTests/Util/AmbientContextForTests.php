@@ -39,6 +39,7 @@ final class AmbientContextForTests
 
     public static function init(string $dbgProcessName): void
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         ExceptionUtil::runCatchLogRethrow(
             function () use ($dbgProcessName): void {
                 if (self::$singletonInstance !== null) {
@@ -58,6 +59,7 @@ final class AmbientContextForTests
 
     public static function assertIsInited(): void
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         ExceptionUtil::runCatchLogRethrow(
             function (): void {
                 Assert::assertTrue(self::isInited(), 'Assertion that, ' . __CLASS__ . ' is initialized, failed');
@@ -67,6 +69,7 @@ final class AmbientContextForTests
 
     private static function getSingletonInstance(): self
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         return ExceptionUtil::runCatchLogRethrow(
             function (): self {
                 Assert::assertNotNull(self::$singletonInstance);
@@ -112,7 +115,10 @@ final class AmbientContextForTests
         return self::getSingletonInstance()->testConfig;
     }
 
-    /** @noinspection PhpUnused */
+    /**
+     * @noinspection PhpUnused
+     * @noinspection PhpUnhandledExceptionInspection
+     */
     public static function dbgProcessName(): string
     {
         return ExceptionUtil::runCatchLogRethrow(
@@ -125,6 +131,7 @@ final class AmbientContextForTests
 
     public static function loggerFactory(): LoggerFactory
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         return ExceptionUtil::runCatchLogRethrow(
             function (): LoggerFactory {
                 Assert::assertNotNull(self::$loggerFactory);

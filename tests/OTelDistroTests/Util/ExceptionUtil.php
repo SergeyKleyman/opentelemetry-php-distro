@@ -52,6 +52,7 @@ final class ExceptionUtil
             return $callableToRun();
         } catch (Throwable $throwable) {
             LogSinkForTests::writeLineToStdErr('Caught throwable: ' . $throwable);
+            /** @noinspection PhpUnhandledExceptionInspection */
             throw $throwable;
         }
     }

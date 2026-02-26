@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\ClassNameUtil;
 use PHPUnit\Framework\Assert;
 
@@ -29,6 +30,12 @@ final class GlobalTestInfra
     public function onTestEnd(): void
     {
         $this->cleanTestScoped();
+    }
+
+    public function resetLogLevel(LogLevel $newVal): void
+    {
+        $this->mockOTelCollector->resetLogLevel($newVal);
+        $this->resourcesCleaner->resetLogLevel($newVal);
     }
 
     private function cleanTestScoped(): void

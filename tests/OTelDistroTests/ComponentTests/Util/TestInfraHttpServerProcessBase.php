@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\Config\OptionForTestsName;
 use OTelDistroTests\Util\ExceptionUtil;
 use OTelDistroTests\Util\HttpStatusCodes;
@@ -32,7 +34,10 @@ abstract class TestInfraHttpServerProcessBase extends SpawnedProcessBase
 
     public const BASE_URI_PATH = '/OTel_PHP_Distro_tests_infra/';
     public const CLEAN_TEST_SCOPED_URI_PATH = self::BASE_URI_PATH . 'clean_test_scoped';
+    public const RESET_LOG_LEVEL_URI_PATH = self::BASE_URI_PATH . 'reset_log_level';
     public const EXIT_URI_PATH = self::BASE_URI_PATH . 'exit';
+
+    public const LOG_LEVEL_HEADER_NAME = RequestHeadersRawSnapshotSource::HEADER_NAMES_PREFIX . 'LOG_LEVEL';
 
     private readonly Logger $logger;
     protected ?LoopInterface $reactLoop = null;
@@ -106,6 +111,7 @@ abstract class TestInfraHttpServerProcessBase extends SpawnedProcessBase
 
     public static function run(): void
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         self::runSkeleton(
             function (SpawnedProcessBase $thisObj): void {
                 /** @var self $thisObj */
@@ -219,11 +225,14 @@ abstract class TestInfraHttpServerProcessBase extends SpawnedProcessBase
             }
         }
 
-        if ($request->getUri()->getPath() === HttpServerHandle::STATUS_CHECK_URI_PATH) {
-            return self::buildResponseWithPid();
-        } elseif ($request->getUri()->getPath() === self::EXIT_URI_PATH) {
-            $this->exit();
-            return self::buildDefaultResponse();
+        switch ($request->getUri()->getPath()) {
+            case HttpServerHandle::STATUS_CHECK_URI_PATH:
+                return self::buildResponseWithPid();
+            case self::RESET_LOG_LEVEL_URI_PATH:
+                return self::resetLogLevel($request);
+            case self::EXIT_URI_PATH:
+                $this->exit();
+                return self::buildDefaultResponse();
         }
 
         if (($response = $this->processRequest($request)) !== null) {
@@ -234,6 +243,13 @@ abstract class TestInfraHttpServerProcessBase extends SpawnedProcessBase
             HttpStatusCodes::BAD_REQUEST,
             'Unknown URI path: `' . $request->getRequestTarget() . '\''
         );
+    }
+
+    private function resetLogLevel(ServerRequestInterface $request): ResponseInterface
+    {
+        $newLogLevel = AssertEx::notNull(LogLevel::tryToFindByName(self::getRequiredRequestHeader($request, self::LOG_LEVEL_HEADER_NAME)));
+        AmbientContextForTests::resetLogLevel($newLogLevel);
+        return self::buildDefaultResponse();
     }
 
     protected function exit(): void

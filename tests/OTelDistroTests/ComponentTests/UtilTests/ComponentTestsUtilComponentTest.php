@@ -52,6 +52,7 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
     public static function appCodeForTestRunAndEscalateLogLevelOnFailure(MixedMap $appCodeArgs): void
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
         self::appCodeSetsHowFinishedAttributes(
             $appCodeArgs,
             function () use ($appCodeArgs): void {
@@ -133,7 +134,7 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
         $logLevelForTestCodeToRestore = AmbientContextForTests::testConfig()->logLevel;
         $initialLogLevelForTestCode = $testArgs->getLogLevel(self::LOG_LEVEL_FOR_TEST_CODE_KEY);
-        AmbientContextForTests::resetLogLevel($initialLogLevelForTestCode);
+        self::resetLogLevelForComponentTestsInfra($initialLogLevelForTestCode);
 
         $rerunsMaxCountToRestore = AmbientContextForTests::testConfig()->escalatedRerunsMaxCount;
         $rerunsMaxCount = $testArgs->getInt(OptionForTestsName::escalated_reruns_max_count->name);
@@ -173,7 +174,7 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
         AmbientContextForTests::resetEscalatedRerunsMaxCount($rerunsMaxCountToRestore);
 
         self::assertSame($initialLogLevelForTestCode, AmbientContextForTests::testConfig()->logLevel);
-        AmbientContextForTests::resetLogLevel($logLevelForTestCodeToRestore);
+        self::resetLogLevelForComponentTestsInfra($logLevelForTestCodeToRestore);
 
         self::assertSame($initialLogLevelForProdCode->name, EnvVarUtilForTests::get($prodCodeSyslogLevelEnvVarName));
         foreach ($logLevelRelatedEnvVarsToRestore as $envVarName => $envVarValue) {
