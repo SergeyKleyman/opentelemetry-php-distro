@@ -236,7 +236,7 @@ final class MockOTelCollector extends TestInfraHttpServerProcessBase
     /**
      * @param list<AgentBackendCommEvent> $events
      *
-     * @noinspection PhpDocMissingThrowsInspection
+     * @noinspection PhpDocMissingThrowsInspection, PhpUnhandledExceptionInspection
      */
     private static function encodeGetAgentBackendCommEvents(array $events): ResponseInterface
     {
@@ -250,7 +250,7 @@ final class MockOTelCollector extends TestInfraHttpServerProcessBase
     /**
      * @return list<AgentBackendCommEvent>
      *
-     * @noinspection PhpDocMissingThrowsInspection
+     * @noinspection PhpDocMissingThrowsInspection, PhpUnhandledExceptionInspection
      */
     public static function decodeGetAgentBackendCommEvents(ResponseInterface $response): array
     {

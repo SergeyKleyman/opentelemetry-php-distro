@@ -9,6 +9,7 @@ namespace OpenTelemetry\Distro;
 use OpenTelemetry\Distro\HttpTransport\NativeHttpTransportFactory;
 use OpenTelemetry\Distro\InferredSpans\InferredSpans;
 use OpenTelemetry\Distro\Log\NativeLogWriter;
+use OpenTelemetry\Distro\Traces\RootSpan;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
 use OpenTelemetry\API\Globals;
@@ -118,11 +119,13 @@ final class PhpPartFacade
                 return false;
             }
 
-            Traces\RootSpan::startRootSpan(function () {
+            BootstrapStageLogger::logDebug('Starting distro auto root span', __FILE__, __LINE__, __CLASS__, __FUNCTION__);
+            RootSpan::startRootSpan(function () {
                 PhpPartFacade::$rootSpanEnded = true;
                 if (PhpPartFacade::$singletonInstance && PhpPartFacade::$singletonInstance->inferredSpans) {
                     PhpPartFacade::$singletonInstance->inferredSpans->shutdown();
                 }
+                BootstrapStageLogger::logDebug('Ending distro auto root span', __FILE__, __LINE__, __CLASS__, __FUNCTION__);
             });
 
             self::$singletonInstance = new self();

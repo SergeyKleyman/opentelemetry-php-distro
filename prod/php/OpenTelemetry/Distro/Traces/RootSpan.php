@@ -18,6 +18,7 @@ use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SDK\Common\Configuration\Configuration;
 use OpenTelemetry\SDK\Common\Util\ShutdownHandler;
+use OpenTelemetry\SDK\Trace\ReadableSpanInterface;
 use OpenTelemetry\SemConv\TraceAttributes;
 use OpenTelemetry\SemConv\Version;
 use Psr\Http\Message\ServerRequestInterface;
@@ -75,12 +76,13 @@ class RootSpan
     private static function create(ServerRequestInterface $request): void
     {
         $tracer = Globals::tracerProvider()->getTracer(
-            'io.opentelemetry.php.distro.rootspan',
+            'io.opentelemetry.php.distro.root-span',
             null,
             Version::VERSION_1_25_0->url(),
         );
         $parent = Globals::propagator()->extract($request->getHeaders());
-        $spanBuilder = $tracer->spanBuilder(self::getSpanName($request))
+        $spanName = self::getSpanName($request);
+        $spanBuilder = $tracer->spanBuilder($spanName)
             ->setSpanKind(SpanKind::KIND_SERVER)
             ->setStartTimestamp((int) (self::getStartTime($request) * 1_000_000_000))
             ->setParent($parent);
@@ -98,6 +100,7 @@ class RootSpan
                 ]
             );
         }
+        self::logDebug('Starting distro auto root span', compact('spanName'));
         $span = $spanBuilder->startSpan();
         Context::storage()->attach($span->storeInContext($parent));
     }
@@ -160,6 +163,7 @@ class RootSpan
             }
         }
 
+        self::logDebug('Ending distro auto root span' . ($span instanceof ReadableSpanInterface ? ('; spanName: ' . $span->getName()) : ''));
         $span->end();
     }
 

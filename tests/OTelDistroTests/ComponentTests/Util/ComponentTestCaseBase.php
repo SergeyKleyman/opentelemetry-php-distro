@@ -81,7 +81,7 @@ class ComponentTestCaseBase extends TestCaseBase
     /**
      * @param callable(): void $appCodeImpl
      *
-     * @noinspection PhpDocMissingThrowsInspection
+     * @noinspection PhpDocSignatureInspection, PhpDocMissingThrowsInspection, PhpUnhandledExceptionInspection
      */
     public static function appCodeSetsHowFinishedAttributes(MixedMap $appCodeArgs, ?callable $appCodeImpl = null): void
     {
@@ -204,6 +204,8 @@ class ComponentTestCaseBase extends TestCaseBase
 
     /**
      * @return callable(iterable<mixed>): iterable<mixed>
+     *
+     * @noinspection PhpPluralMixedCanBeReplacedWithArrayInspection
      */
     public static function adaptToSmokeAsCallable(): callable
     {
@@ -248,7 +250,7 @@ class ComponentTestCaseBase extends TestCaseBase
     /**
      * @param callable(): void $testCall
      *
-     * @noinspection PhpDocMissingThrowsInspection
+     * @noinspection PhpDocMissingThrowsInspection, PhpUnhandledExceptionInspection
      */
     protected function runAndEscalateLogLevelOnFailure(string $dbgTestDesc, callable $testCall): void
     {
@@ -263,7 +265,7 @@ class ComponentTestCaseBase extends TestCaseBase
     /**
      * @param callable(): void $testCall
      *
-     * @noinspection PhpDocMissingThrowsInspection
+     * @noinspection PhpDocMissingThrowsInspection, PhpUnhandledExceptionInspection
      */
     private function runAndEscalateLogLevelOnFailureImpl(string $dbgTestDesc, callable $testCall): void
     {
