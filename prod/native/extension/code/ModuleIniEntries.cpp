@@ -69,6 +69,10 @@ bool registerIniEntries(opentelemetry::php::LoggerInterface *log, int module_num
 
         auto iniName = opentelemetry::utils::getIniName(option.first);
 
+        if (zend_hash_str_find_ptr(EG(ini_directives), iniName.data(), iniName.length()) == nullptr) {
+            continue;
+        }
+
         if (zend_ini_register_displayer(iniName.data(), iniName.length(), displaySecretIniValue) != ZEND_RESULT_CODE::SUCCESS) {
             ELOGF_WARNING(log, MODULE, "zend_ini_register_displayer() failed; iniName: " PRsv, PRsvArg(iniName));
         }
