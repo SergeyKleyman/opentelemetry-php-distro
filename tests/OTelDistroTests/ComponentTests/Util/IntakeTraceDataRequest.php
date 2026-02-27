@@ -29,6 +29,7 @@ final class IntakeTraceDataRequest extends IntakeDataRequestDeserialized
     {
         $serializer = ProtobufSerializer::getDefault();
         $otelProtoRequest = new OTelProtoExportTraceServiceRequest();
+        /** @noinspection PhpUnhandledExceptionInspection */
         $serializer->hydrate($otelProtoRequest, $raw->body);
 
         return new self($raw, ExportTraceServiceRequest::deserializeFromOTelProto($otelProtoRequest));

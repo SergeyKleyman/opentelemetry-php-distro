@@ -80,17 +80,18 @@ final class SpanExporter implements SpanExporterInterface
         if (Logging::level(LogLevel::DEBUG) >= Logging::logLevel()) {
             self::logDebug('Calling native convert_spans');
             $batchCopy = [];
-            $spanCount = 0;
             foreach ($batch as $span) {
                 $batchCopy[] = $span;
                 self::logDebug(
-                    'Span #' . ($spanCount + 1) . ' in the batch'
+                    'Span #' . count($batchCopy) . ' in the batch'
                     . '; name: ' . $span->getName()
                     . ', kind: ' . self::dbgApiTraceSpanKindToString($span->getKind()) . ' (as int: ' . $span->getKind() . ')'
                     . ', span ID: ' . $span->getSpanId()
                     . ', trace ID: ' . $span->getTraceId()
                     . ', parent span ID: ' . $span->getParentSpanId()
-                    . ', status: {code: ' . $span->getStatus()->getCode() . ', description: ' . $span->getStatus()->getDescription() . '}'
+                    . ', status: {code: ' . $span->getStatus()->getCode() . ', description: `' . $span->getStatus()->getDescription() . "'}"
+                    . ', attributes: ' . json_encode($span->getAttributes()->toArray())
+                    . ($span->getAttributes()->getDroppedAttributesCount() === 0 ? '' : (', dropped attributes count: ' . $span->getAttributes()->getDroppedAttributesCount()))
                 );
             }
         }

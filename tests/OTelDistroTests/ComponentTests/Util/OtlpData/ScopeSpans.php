@@ -44,7 +44,7 @@ class ScopeSpans
 
         $span = Span::deserializeFromOTelProto($source);
         if (($reason = Span::reasonToDiscard($span)) !== null) {
-            $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Span discarded', compact('reason', 'span'));
+            $loggerProxyDebug?->log(__LINE__, 'Span discarded', compact('reason', 'span'));
             return null;
         }
 
