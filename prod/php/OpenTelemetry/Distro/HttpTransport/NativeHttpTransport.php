@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro\HttpTransport;
 
+use OpenTelemetry\API\Behavior\LogsMessagesTrait;
 use OpenTelemetry\SDK\Common\Export\TransportInterface;
 use OpenTelemetry\SDK\Common\Future\CancellationInterface;
 use OpenTelemetry\SDK\Common\Future\CompletedFuture;
@@ -16,6 +17,8 @@ use OpenTelemetry\SDK\Common\Future\FutureInterface;
  */
 final class NativeHttpTransport implements TransportInterface
 {
+    use LogsMessagesTrait;
+
     private string $endpoint;
     private string $contentType;
 
@@ -56,6 +59,7 @@ final class NativeHttpTransport implements TransportInterface
      */
     public function send(string $payload, ?CancellationInterface $cancellation = null): FutureInterface
     {
+        self::logDebug('Calling native enqueue', ['$payload size' => strlen(bin2hex($payload)) / 2]);
         // \OpenTelemetry\Distro\HttpTransport\enqueue is provided by the extension
         enqueue($this->endpoint, $payload);
 
