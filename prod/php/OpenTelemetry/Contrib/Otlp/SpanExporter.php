@@ -97,7 +97,7 @@ final class SpanExporter implements SpanExporterInterface
         }
 
         $payload = convert_spans($batchCopy);
-        self::logDebug('Called native convert_spans', ['$payload size' => strlen(bin2hex($payload)) / 2]);
+        self::logDebug('Result returned by native convert_spans', ['$payload size' => strlen(bin2hex($payload)) / 2]);
         return $payload;
     }
 
