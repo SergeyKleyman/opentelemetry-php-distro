@@ -6,7 +6,7 @@ namespace OTelDistroTests\UnitTests\UtilTests\LogTests;
 
 use BackedEnum;
 use OpenTelemetry\Distro\Log\LogLevel;
-use OTelDistroTests\BootstrapTests;
+use OTelDistroTests\BootstrapTestsUtil;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\FloatLimits;
@@ -26,7 +26,7 @@ class LoggingVariousTypesTest extends TestCaseBase
 {
     public static function logValueAndDecodeToJson(mixed $valueToLog): mixed
     {
-        return JsonUtil::decode(LoggableToEncodedJson::convert($valueToLog), asAssocArray: true);
+        return JsonUtil::decode(LoggableToEncodedJson::convert($valueToLog));
     }
 
     public static function logValueAndVerify(mixed $valueToLog, mixed $expectedValue): void
@@ -287,7 +287,7 @@ class LoggingVariousTypesTest extends TestCaseBase
         $generateDataSets = function (): iterable {
             $maxDepthVariants = [0, 1, 2, 3, 10, 15, 20];
             $maxDepthVariants[] = LoggableToJsonEncodable::MAX_DEPTH_IN_PROD_MODE;
-            $maxDepthVariants[] = BootstrapTests::LOG_COMPOSITE_DATA_MAX_DEPTH_IN_TEST_MODE;
+            $maxDepthVariants[] = BootstrapTestsUtil::LOG_COMPOSITE_DATA_MAX_DEPTH_IN_TEST_MODE;
             $maxDepthVariants = array_unique($maxDepthVariants, SORT_NUMERIC);
             asort(/* ref */ $maxDepthVariants, SORT_NUMERIC);
             foreach ($maxDepthVariants as $maxDepth) {

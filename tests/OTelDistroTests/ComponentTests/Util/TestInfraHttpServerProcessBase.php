@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use ErrorException;
+use OpenTelemetry\Distro\Util\ArrayUtil;
 use OTelDistroTests\Util\AmbientContextForTests;
-use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\Config\OptionForTestsName;
 use OTelDistroTests\Util\ExceptionUtil;
 use OTelDistroTests\Util\HttpStatusCodes;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\Log\Logger;
-use ErrorException;
 use Override;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
@@ -249,7 +249,7 @@ abstract class TestInfraHttpServerProcessBase extends SpawnedProcessBase
     protected static function getRequestHeader(ServerRequestInterface $request, string $headerName): ?string
     {
         $headerValues = $request->getHeader($headerName);
-        if (ArrayUtilForTests::isEmpty($headerValues)) {
+        if (ArrayUtil::isEmpty($headerValues)) {
             return null;
         }
         if (count($headerValues) !== 1) {

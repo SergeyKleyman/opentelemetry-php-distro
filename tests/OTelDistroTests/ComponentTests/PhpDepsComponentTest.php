@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests;
 
+use Closure;
 use Composer\Semver\Semver;
 use OpenTelemetry\Distro\PhpPartFacade;
+use OpenTelemetry\Distro\Util\BoolUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
@@ -18,59 +20,31 @@ use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
 use OTelDistroTests\Util\TimeUtil;
+use OTelDistroTests\Util\VendorDir;
+use OTelDistroTools\Build\InstallPhpDeps;
+use OTelDistroTools\Build\PhpDepsGroup;
+use Override;
 use PhpParser\Error as PhpParserError;
-use PhpParser\ErrorHandler\Throwing as ThrowingPhpParserErrorHandler;
+use PhpParser\Node as PhpParserNode;
+use PhpParser\Node\Stmt as PhpParserNodeStmt;
+use PhpParser\Node\Stmt\Namespace_ as PhpParserNodeNamespace;
+use PhpParser\ErrorHandler\Throwing as PhpParserThrowingErrorHandler;
+use PhpParser\NodeTraverser as PhpParserNodeTraverser;
+use PhpParser\NodeVisitorAbstract as PhpParserNodeVisitorAbstract;
 use PhpParser\ParserFactory;
 use SplFileInfo;
-use Throwable;
 
 /**
  * @group does_not_require_external_services
  */
-final class PackagesPhpRequirementTest extends ComponentTestCaseBase
+final class PhpDepsComponentTest extends ComponentTestCaseBase
 {
+    /**
+     * Make sure this value is in sync with the rest of locations where it's defined (see scope_namespace in <repo root>/tools/build/scope_PHP_deps.sh)
+     */
+    public const SCOPE_NAMESPACE = 'ScopedByElasticOTel';
+
     private const PROD_VENDOR_DIR_KEY = 'prod_vendor_dir';
-
-    public function testSemverConstraint(): void
-    {
-        $assertSatisfies = function (string $version, string $constraint): void {
-            self::assertTrue(Semver::satisfies($version, $constraint));
-        };
-
-        $assertNotSatisfies = function (string $version, string $constraint): void {
-            self::assertNotTrue(Semver::satisfies($version, $constraint));
-        };
-
-        $assertThrows = function (string $version, string $constraint): void {
-            $thrown = null;
-            try {
-                Semver::satisfies($version, $constraint);
-            } catch (Throwable $throwable) {
-                $thrown = $throwable;
-            }
-            self::assertNotNull($thrown);
-        };
-
-        $assertSatisfies('8.1', '^8.0');
-        $assertSatisfies('8.1', '^8.1');
-        $assertNotSatisfies('8.1', '^8.2');
-        $assertNotSatisfies('8.1', '^8.3');
-        $assertNotSatisfies('8.1', '^9.1');
-
-        $assertSatisfies('8.1', '>=7.0');
-        $assertSatisfies('8.1', '>=8.0');
-        $assertSatisfies('8.1', '>=8.1');
-        $assertNotSatisfies('8.1', '>=8.2');
-        $assertNotSatisfies('8.1', '>=9.1');
-
-        $assertSatisfies('8.1', '^5.3 || ^7.0 || ^8.0');
-        $assertNotSatisfies('4.1', '^5.3 || ^7.0 || ^8.0');
-
-        $assertSatisfies('8.1.2.3', '^8.1');
-        $assertNotSatisfies('8.1.2.3', '^8.2');
-
-        $assertThrows('8.1.2.3-extra', '^8.1');
-    }
 
     private static function getCurrentPhpVersion(): string
     {
@@ -92,7 +66,7 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
             return null;
         }
         $jsonEncoded = FileUtil::getFileContents($packageComposerJsonFilePath);
-        $jsonDecoded = AssertEx::isArray(JsonUtil::decode($jsonEncoded, asAssocArray: true));
+        $jsonDecoded = AssertEx::isArray(JsonUtil::decode($jsonEncoded));
         $requireMap = AssertEx::isArray(AssertEx::arrayHasKey('require', $jsonDecoded));
         return AssertEx::isString(AssertEx::arrayHasKey('php', $requireMap));
     }
@@ -173,15 +147,61 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         return false;
     }
 
-    private static function validatePhpFilesUseParser(string $prodVendorDir): void
+    /**
+     * @param PhpParserNodeStmt[] $statements
+     */
+    private static function verifyPhpSourceFileNamespace(string $filePath, array $statements): void
+    {
+        $visitNode = function (PhpParserNode $node) use ($filePath): void {
+            $logger = PhpDepsComponentTest::getLoggerStatic(__NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('filePath'));
+            $loggerProxy = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
+
+            if ($node instanceof PhpParserNodeNamespace) {
+                $nameNode = $node->name;
+                if ($nameNode === null) {
+                    $loggerProxy?->log(__LINE__, '$nameNode === null');
+                    return;
+                }
+                $loggerProxy?->log(__LINE__, '$nameNode->name: ' . $nameNode->name);
+                $loggerProxy?->log(__LINE__, '$nameNode->isRelative(): ' . BoolUtil::toString($nameNode->isRelative()));
+                // TODO: Sergey Kleyman: UNCOMMENT
+                //                Assert::assertStringStartsWith("\\" . PhpDepsTest::SCOPE_NAMESPACE . "\\", $nameNode->name);
+            }
+        };
+        $traverser = new PhpParserNodeTraverser();
+        $traverser->addVisitor(
+            new class ($visitNode) extends PhpParserNodeVisitorAbstract {
+                /**
+                 * @param Closure(PhpParserNode): void $visitNodeCode
+                 */
+                public function __construct(
+                    private readonly Closure $visitNodeCode,
+                ) {
+                }
+
+                /**
+                 * @return null
+                 */
+                #[Override]
+                public function enterNode(PhpParserNode $node)
+                {
+                    ($this->visitNodeCode)($node);
+                    return null;
+                }
+            },
+        );
+
+        $traverser->traverse($statements);
+    }
+
+    private static function verifyPhpSourceFilesUsingParser(string $prodVendorDir): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
         $loggerProxy = self::getLoggerStatic(__NAMESPACE__, __CLASS__, __FILE__)->ifDebugLevelEnabledNoLine(__FUNCTION__);
         $loggerProxy?->log(__LINE__, 'Entered', compact('prodVendorDir'));
 
-        $parser = (new ParserFactory())->createForHostVersion();
-        $throwingErrorHandler = new ThrowingPhpParserErrorHandler();
+        $throwingErrorHandler = new PhpParserThrowingErrorHandler();
         $dbgCtx->pushSubScope();
         foreach (FileUtil::iterateOverFilesInDirectoryRecursively($prodVendorDir) as $fileInfo) {
             $filePath = $fileInfo->getRealPath();
@@ -192,9 +212,11 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
             $dbgCtx->resetTopSubScope(compact('filePath'));
             $loggerProxy?->log(__LINE__, '', compact('filePath'));
 
+            $parser = (new ParserFactory())->createForHostVersion();
             try {
-                $tokens = $parser->parse(FileUtil::getFileContents($filePath), $throwingErrorHandler);
-                self::assertNotNull($tokens);
+                $statements = $parser->parse(FileUtil::getFileContents($filePath), $throwingErrorHandler);
+                self::assertNotNull($statements);
+                self::verifyPhpSourceFileNamespace($filePath, $statements);
             } catch (PhpParserError $parserError) {
                 $dbgCtx->add(compact('parserError'));
                 self::fail("PHP parser failed on $filePath: {$parserError->getMessage()}");
@@ -203,7 +225,7 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         $dbgCtx->popSubScope();
     }
 
-    private static function validatePhpFilesUseOpCache(string $prodVendorDir): void
+    private static function verifyPhpSourceFilesUsingOpCache(string $prodVendorDir): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
@@ -222,12 +244,18 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         self::assertSame(0, $procInfo['exitCode']);
     }
 
+    private static function verifyVendorDevAndProdOnlyPackages(string $prodVendorDir): void
+    {
+        InstallPhpDeps::verifyDevProdOnlyPackages(PhpDepsGroup::dev, VendorDir::getFullPath());
+        InstallPhpDeps::verifyDevProdOnlyPackages(PhpDepsGroup::prod, $prodVendorDir);
+    }
+
     public static function appCodeForTestPackagesHaveCorrectPhpVersion(): void
     {
         OTelUtil::addActiveSpanAttributes([self::PROD_VENDOR_DIR_KEY => PhpPartFacade::getVendorDirPath()]);
     }
 
-    public function testPackagesHaveCorrectPhpVersion(): void
+    public function testPackagesInVendorForProd(): void
     {
         self::assertOpcacheEnabled();
 
@@ -247,7 +275,9 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         $prodVendorDir = FileUtil::normalizePath($agentBackendComms->singleSpan()->attributes->getString(self::PROD_VENDOR_DIR_KEY));
 
         self::verifyPackagesPhpVersion($prodVendorDir);
-        self::validatePhpFilesUseParser($prodVendorDir);
-        self::validatePhpFilesUseOpCache($prodVendorDir);
+        self::verifyPhpSourceFilesUsingParser($prodVendorDir);
+        self::verifyPhpSourceFilesUsingOpCache($prodVendorDir);
+
+        self::verifyVendorDevAndProdOnlyPackages($prodVendorDir);
     }
 }

@@ -1,36 +1,55 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
+/*
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch B.V. licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 declare(strict_types=1);
 
-namespace OTelDistroTools\Build;
+namespace OTelDistroTools;
 
 use DirectoryIterator;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\PhpPartFacade;
 use JsonException;
 use RuntimeException;
+use SplFileInfo;
 use Throwable;
 
 /**
  * @phpstan-type EnvVars array<string, string>
+ * @phpstan-import-type Context from ToolsLog
  */
-final class BuildToolsUtil
+final class ToolsUtil
 {
-    use BuildToolsAssertTrait;
-    use BuildToolsLoggingClassTrait;
+    use ToolsAssertTrait;
+    use ToolsLoggingClassTrait;
 
-    private const KEEP_TEMP_FILES_ENV_VAR_NAME = 'OTEL_PHP_TOOLS_KEEP_TEMP_FILES';
+    private const KEEP_TEMP_FILES_ENV_VAR_NAME = 'ELASTIC_OTEL_PHP_TOOLS_KEEP_TEMP_FILES';
 
     public const FAILURE_EXIT_CODE = 1;
 
     /**
      * @param callable(): void $code
      */
-    public static function runCmdLineImpl(string $calledFromFqMethod, callable $code): void
+    public static function runCmdLineImpl(string $dbgCalledFrom, callable $code): void
     {
-        self::logInfo(__LINE__, __METHOD__, 'Running code for command line: ' . BuildToolsLog::shortenFqMethod($calledFromFqMethod), ['log level' => BuildToolsLog::getMaxEnabledLevel()->name]);
+        self::logInfo(__LINE__, __METHOD__, 'Running code for command line: ' . $dbgCalledFrom, ['log level' => ToolsLog::getMaxEnabledLevel()->name]);
 
         $exitCode = 0;
 
@@ -41,7 +60,7 @@ final class BuildToolsUtil
             self::logThrowable(LogLevel::critical, __LINE__, __METHOD__, $throwable);
         }
 
-        self::logInfo(__LINE__, __METHOD__, 'Finished running code for command line: ' . BuildToolsLog::shortenFqMethod($calledFromFqMethod), compact('exitCode'));
+        self::logInfo(__LINE__, __METHOD__, 'Finished running code for command line: ' . $dbgCalledFrom, compact('exitCode'));
         exit($exitCode);
     }
 
@@ -90,28 +109,41 @@ final class BuildToolsUtil
         return $cachedResult;
     }
 
-    public static function execShellCommand(string $shellCmd): void
+    /**
+     * @param Context $dbgCtx
+     */
+    public static function execShellCommand(string $shellCmd, array $dbgCtx = [], bool $assertSuccessExitCode = true): int
     {
-        self::logInfo(__LINE__, __METHOD__, "Executing shell command: $shellCmd");
+        self::logInfo(__LINE__, __METHOD__, "Executing shell command: $shellCmd", $dbgCtx);
         $retVal = system($shellCmd, /* out */ $exitCode);
         self::assertNotFalse($retVal, compact('retVal'));
-        self::assert($exitCode === 0, '$exitCode === 0' . ' ; shellCmd: ' . $shellCmd . ' ; exitCode: ' . $exitCode . ' ; retVal: ' . $retVal);
+        if ($assertSuccessExitCode) {
+            self::assert($exitCode === 0, '$exitCode === 0' . ' ; shellCmd: ' . $shellCmd . ' ; exitCode: ' . $exitCode . ' ; retVal: ' . $retVal);
+        }
+        return $exitCode;
     }
 
     /**
-     * @param array<string> $parts
+     * @phpstan-param array<string> $parts
+     * @phpstan-param EnvVars $envVars
      */
-    public static function buildShellCommand(array $parts): string
+    public static function buildShellCommand(array $parts, array $envVars = []): string
     {
-        $cmd = '';
-        foreach ($parts as $part) {
-            if ($part === '') {
-                continue;
-            }
-            $cmd .= ($cmd === '' ? '' : ' ') . $part;
-        }
+        return implode(' ', array_merge(self::convertEnvVarsToCmdLinePart($envVars), $parts));
+    }
 
-        return $cmd;
+    /**
+     * @phpstan-param EnvVars $envVars
+     *
+     * @return list<string>
+     */
+    private static function convertEnvVarsToCmdLinePart(array $envVars): array
+    {
+        $cmdParts = [];
+        foreach ($envVars as $envVarName => $envVarVal) {
+            $cmdParts[] = ToolsUtil::isCurrentOsWindows() ? "set \"$envVarName=$envVarVal\" &&" : "$envVarName=\"$envVarVal\"";
+        }
+        return $cmdParts;
     }
 
     /**
@@ -127,18 +159,32 @@ final class BuildToolsUtil
     {
         $tempDir = self::createTempDirectoryGenerateUniqueName($tempDirNamePrefix);
         return self::runCodeAndCleanUp(
-            function () use ($tempDir, $code): mixed {
-                return $code($tempDir);
+            code: function () use ($code, $tempDir): mixed {
+                return self::changeCurrentDirectoryRunCodeAndRestore(
+                    $tempDir,
+                    function () use ($code, $tempDir): mixed {
+                        return $code($tempDir);
+                    },
+                );
             },
-            cleanUp: fn() => self::deleteTempDirectory($tempDir)
+            cleanUp: fn() => self::deleteTempDirectory($tempDir),
         );
     }
 
-    public static function changeCurrentDirectoryRunCodeAndRestore(string $newCurrentDir, callable $code): void
+    /**
+     * @template TCodeRetVal
+     * *
+     * @param callable(string $currentDir): TCodeRetVal $code
+     *
+     * @phpstan-return TCodeRetVal
+     *
+     * @noinspection PhpDocMissingThrowsInspection
+     */
+    public static function changeCurrentDirectoryRunCodeAndRestore(string $newCurrentDir, callable $code): mixed
     {
         $originalCurrentDir = self::getCurrentDirectory();
         self::changeCurrentDirectory($newCurrentDir);
-        self::runCodeAndCleanUp($code, cleanUp: fn() => self::changeCurrentDirectory($originalCurrentDir));
+        return self::runCodeAndCleanUp(code: fn() => $code($newCurrentDir), cleanUp: fn() => self::changeCurrentDirectory($originalCurrentDir));
     }
 
     public static function encodeJson(mixed $data, bool $prettyPrint = false): string
@@ -156,9 +202,9 @@ final class BuildToolsUtil
         return $encodedData;
     }
 
-    public static function decodeJson(string $encodedData, bool $asAssocArray = true): mixed
+    public static function decodeJson(string $encodedData): mixed
     {
-        $decodedData = json_decode($encodedData, /* assoc: */ $asAssocArray);
+        $decodedData = json_decode($encodedData, /* associative: */ true);
         if ($decodedData === null && ($encodedData !== 'null')) {
             throw new JsonException(
                 'json_decode() failed.'
@@ -248,8 +294,20 @@ final class BuildToolsUtil
         $allowOverwriteOpt = ($allowOverwrite ? (self::isCurrentOsWindows() ? '/y' : '-f') : '');
         self::execShellCommand(
             self::isCurrentOsWindows()
-                ? "copy $allowOverwriteOpt \"$fromFilePath\" \"$toFilePath\""
+                ? "copy $allowOverwriteOpt \"$fromFilePath\" \"$toFilePath\" > NUL"
                 : "cp $allowOverwriteOpt \"$fromFilePath\" \"$toFilePath\""
+        );
+    }
+
+    /** @noinspection PhpUnused */
+    public static function moveFile(string $fromFilePath, string $toFilePath, bool $allowOverwrite = false): void
+    {
+        self::logInfo(__LINE__, __METHOD__, "Moving file $fromFilePath to $toFilePath");
+        $allowOverwriteOpt = ($allowOverwrite ? (self::isCurrentOsWindows() ? '/y' : '-f') : '');
+        self::execShellCommand(
+            self::isCurrentOsWindows()
+                ? "move $allowOverwriteOpt \"$fromFilePath\" \"$toFilePath\""
+                : "mv $allowOverwriteOpt \"$fromFilePath\" \"$toFilePath\""
         );
     }
 
@@ -320,8 +378,8 @@ final class BuildToolsUtil
         self::logInfo(__LINE__, __METHOD__, "Copying directory contents from $fromDirPath to $toDirPath");
         self::execShellCommand(
             self::isCurrentOsWindows()
-                ? "xcopy /y /s /e \"$fromDirPath\\*\" \"$toDirPath\\\""
-                : "cp -r \"$fromDirPath/\"* \"$toDirPath/\"",
+                ? "xcopy /y /s /e /q \"$fromDirPath\\*\" \"$toDirPath\\\""
+                : "cp -r \"$fromDirPath/.\" \"$toDirPath/\"",
         );
     }
 
@@ -351,9 +409,30 @@ final class BuildToolsUtil
         self::logInfo(__LINE__, __METHOD__, "Deleting directory $dirPath");
         self::execShellCommand(
             self::isCurrentOsWindows()
-                ? "DEL /F /Q /S \"$dirPath\" && RD /S /Q \"$dirPath\""
+                ? "rmdir /s /q \"$dirPath\""
                 : "rm -rf \"$dirPath\""
         );
+    }
+
+    public static function deleteDirectoryContents(string $dirPath): void
+    {
+        self::logInfo(__LINE__, __METHOD__, "Deleting directory $dirPath");
+        if (self::isCurrentOsWindows()) {
+            self::deleteDirectory($dirPath);
+            self::createDirectory($dirPath);
+        } else {
+            self::execShellCommand("rm -rf \"$dirPath\"/*");
+        }
+    }
+
+    public static function ensureEmptyDirectory(string $dirPath): void
+    {
+        self::logInfo(__LINE__, __METHOD__, "Ensuring directory is empty: $dirPath");
+        if (is_dir($dirPath)) {
+            ToolsUtil::deleteDirectoryContents($dirPath);
+        } else {
+            ToolsUtil::createDirectory($dirPath);
+        }
     }
 
     public static function deleteTempDirectory(string $dirPath): void
@@ -378,6 +457,20 @@ final class BuildToolsUtil
         self::assertNotFalse($chdirRetVal, compact('chdirRetVal'));
     }
 
+    /**
+     * @return iterable<SplFileInfo>
+     */
+    public static function iterateDirectory(string $dirPath): iterable
+    {
+        foreach (new DirectoryIterator($dirPath) as $fileInfo) {
+            if ($fileInfo->getFilename() === '.' || $fileInfo->getFilename() === '..') {
+                continue;
+            }
+
+            yield $fileInfo;
+        }
+    }
+
     public static function listDirectoryContents(string $dirPath, int $recursiveDepth = 0): void
     {
         self::logInfo(__LINE__, __METHOD__, "Contents  of directory $dirPath:");
@@ -391,11 +484,7 @@ final class BuildToolsUtil
             return;
         }
 
-        foreach (new DirectoryIterator($dirPath) as $fileInfo) {
-            if ($fileInfo->getFilename() === '.' || $fileInfo->getFilename() === '..') {
-                continue;
-            }
-
+        foreach (self::iterateDirectory($dirPath) as $fileInfo) {
             self::listDirectoryContents($fileInfo->getRealPath(), $recursiveDepth - 1);
         }
     }
@@ -456,7 +545,7 @@ final class BuildToolsUtil
     }
 
     /**
-     * Must be defined in class using BuildToolsLoggingClassTrait
+     * Must be defined in class using ToolsLoggingClassTrait
      */
     private static function getCurrentSourceCodeFile(): string
     {

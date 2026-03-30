@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Util\ArrayUtil;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OTelDistroTests\Util\AmbientContextForTests;
-use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\HttpMethods;
 use OTelDistroTests\Util\HttpStatusCodes;
@@ -56,7 +56,7 @@ final class MockOTelCollectorHandle extends HttpServerHandle
 
         $newEvents = MockOTelCollector::decodeGetAgentBackendCommEvents($response);
 
-        if (ArrayUtilForTests::isEmpty($newEvents)) {
+        if (ArrayUtil::isEmpty($newEvents)) {
             $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Fetched NO new data from agent receiver events');
         } else {
             $this->nextIntakeDataRequestIndexToFetch += count($newEvents);

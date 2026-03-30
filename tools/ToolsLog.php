@@ -1,10 +1,27 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
+/*
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch B.V. licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 declare(strict_types=1);
 
-namespace OTelDistroTools\Build;
+namespace OTelDistroTools;
 
 use OpenTelemetry\Distro\BootstrapStageStdErrWriter;
 use OpenTelemetry\Distro\Log\LogFeature;
@@ -14,9 +31,9 @@ use ReflectionClass;
 /**
  * @phpstan-type Context array<string, mixed>
  */
-final class BuildToolsLog
+final class ToolsLog
 {
-    use BuildToolsAssertTrait;
+    use ToolsAssertTrait;
 
     public const DEFAULT_LEVEL = LogLevel::info;
 
@@ -132,7 +149,7 @@ final class BuildToolsLog
     public static function writeAsProdSink(int $levelIntVal, int $feature, string $file, int $line, string $func, string $text): void
     {
         $foundLevel = LogLevel::tryFrom($levelIntVal);
-        $levelToUse = $foundLevel === null ? BuildToolsLog::DEFAULT_LEVEL : $foundLevel;
+        $levelToUse = $foundLevel === null ? ToolsLog::DEFAULT_LEVEL : $foundLevel;
         $levelNameToUse = $foundLevel === null ? "LEVEL $levelIntVal" : $foundLevel->name;
         self::withLevelAndFeature($levelToUse, $levelNameToUse, $feature, $file, $line, $func, $text);
     }

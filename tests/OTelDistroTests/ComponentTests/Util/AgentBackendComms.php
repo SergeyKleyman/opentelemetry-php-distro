@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Util\ArrayUtil;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Attributes;
 use OTelDistroTests\ComponentTests\Util\OtlpData\OTelResource;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
@@ -114,7 +115,7 @@ final class AgentBackendComms
     public function findSpanById(string $id): ?Span
     {
         $spans = $this->findSpansById($id);
-        if (ArrayUtilForTests::isEmpty($spans)) {
+        if (ArrayUtil::isEmpty($spans)) {
             return null;
         }
         return ArrayUtilForTests::getSingleValue($spans);

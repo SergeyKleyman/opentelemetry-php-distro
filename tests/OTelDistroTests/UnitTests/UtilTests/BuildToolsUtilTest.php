@@ -7,7 +7,7 @@ namespace OTelDistroTests\UnitTests\UtilTests;
 use OpenTelemetry\Distro\Log\LogFeature;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\TestCaseBase;
-use OpenTelemetry\DistroTools\Build\BuildToolsLog;
+use OTelDistroTools\Build\BuildToolsLog;
 use ReflectionClass;
 
 final class BuildToolsUtilTest extends TestCaseBase

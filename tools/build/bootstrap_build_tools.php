@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OpenTelemetry\DistroTools\Build;
+namespace OTelDistroTools\Build;
 
 use OpenTelemetry\Distro\AutoloaderDistroOTelClasses;
 use OpenTelemetry\Distro\BootstrapStageLogger;

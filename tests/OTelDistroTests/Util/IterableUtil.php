@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace OTelDistroTests\Util;
 
 use Countable;
-use OpenTelemetry\Distro\Util\StaticClassTrait;
-use OpenTelemetry\Distro\Util\TextUtil;
 use Generator;
 use Iterator;
+use OpenTelemetry\Distro\Util\ArrayUtil;
+use OpenTelemetry\Distro\Util\StaticClassTrait;
+use OpenTelemetry\Distro\Util\TextUtil;
 use PHPUnit\Framework\Assert;
 
 /**
@@ -209,7 +210,7 @@ final class IterableUtil
         $expectedEndTupleCount = $withIndex ? 1 : 0;
         $expectedTupleCount = count($iterables) + $expectedEndTupleCount;
         $index = 0;
-        if (ArrayUtilForTests::isEmpty($iterables)) {
+        if (ArrayUtil::isEmpty($iterables)) {
             return;
         }
 

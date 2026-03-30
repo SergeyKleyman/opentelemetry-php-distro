@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-namespace OpenTelemetry\DistroTools\Build;
+namespace OTelDistroTools\Build;
 
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\PhpPartFacade;
@@ -65,7 +65,7 @@ final class ComposerUtil
         return BuildToolsUtil::realPath($repoRootPath . DIRECTORY_SEPARATOR . self::GENERATED_FILES_DIR_NAME . DIRECTORY_SEPARATOR . $fileName);
     }
 
-    public static function buildGeneratedComposerJsonFileName(PhpDepsEnvKind $envKind): string
+    public static function buildGeneratedComposerJsonFileName(PhpDepsGroup $envKind): string
     {
         /**
          * @see build_generated_composer_json_file_name() finction in tool/shared.sh
@@ -74,7 +74,7 @@ final class ComposerUtil
         return $envKind->name . '.json';
     }
 
-    public static function buildGeneratedComposerLockFileNameForCurrentPhpVersion(PhpDepsEnvKind $envKind): string
+    public static function buildGeneratedComposerLockFileNameForCurrentPhpVersion(PhpDepsGroup $envKind): string
     {
         /**
          * @see build_generated_composer_lock_file_name() finction in tool/shared.sh
@@ -87,11 +87,11 @@ final class ComposerUtil
         BuildToolsUtil::execShellCommand('composer --check-lock --no-check-all validate');
     }
 
-    public static function convertEnvKindToWithDev(PhpDepsEnvKind $envKind): bool
+    public static function convertEnvKindToWithDev(PhpDepsGroup $envKind): bool
     {
         return match ($envKind) {
-            PhpDepsEnvKind::dev, PhpDepsEnvKind::prod_static_check, PhpDepsEnvKind::test => true,
-            PhpDepsEnvKind::prod => false,
+            PhpDepsGroup::dev, PhpDepsGroup::prod_static_check, PhpDepsGroup::test => true,
+            PhpDepsGroup::prod => false,
         };
     }
 

@@ -68,4 +68,24 @@ final class ArrayUtil
         unset($array[$key]);
         return true;
     }
+
+    /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param array<TKey, TValue> $from
+     * @param array<TKey, TValue> $to
+     */
+    public static function prepend(array $from, /* in,out */ array &$to): void
+    {
+        $to = $from + $to;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     */
+    public static function isEmpty(array $array): bool
+    {
+        return count($array) === 0;
+    }
 }

@@ -4,16 +4,15 @@
 
 declare(strict_types=1);
 
-namespace OpenTelemetry\DistroTools\Build;
+namespace OTelDistroTools\Build;
 
 use OpenTelemetry\Distro\Util\EnumUtilTrait;
 
-enum PhpDepsEnvKind
+enum PhpDepsGroup
 {
     use EnumUtilTrait;
 
     case dev;
     case prod;
-    case prod_static_check;
-    case test;
+    case dev_for_prod_static_check;
 }

@@ -1,6 +1,6 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
+/** @noinspection PhpIllegalPsrClassPathInspection, PhpUnusedAliasInspection */
 
 declare(strict_types=1);
 
@@ -46,7 +46,7 @@ final class BootstrapStageLogger
     /**
      * @phpstan-param ?WriteToSink $writeToSink
      */
-    public static function configure(int $maxEnabledLevel, string $phpSrcCodeRootDir, string $rootNamespace, ?Closure $writeToSink = null): void
+    public static function configure(int $maxEnabledLevel, string $phpSrcCodeRootDir, ?Closure $writeToSink = null): void
     {
         require __DIR__ . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogFeature.php';
 
@@ -57,7 +57,7 @@ final class BootstrapStageLogger
         }
 
         self::$phpSrcCodePathPrefixToRemove = $phpSrcCodeRootDir . DIRECTORY_SEPARATOR;
-        self::$classNamePrefixToRemove = $rootNamespace . '\\';
+        self::$classNamePrefixToRemove = __NAMESPACE__ . '\\';
 
         self::logDebug(
             'Exiting...'

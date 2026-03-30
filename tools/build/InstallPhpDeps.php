@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-namespace OpenTelemetry\DistroTools\Build;
+namespace OTelDistroTools\Build;
 
 use OpenTelemetry\Distro\Util\BoolUtil;
 
@@ -23,7 +23,7 @@ final class InstallPhpDeps
             function (): void {
                 $repoRootDir = BuildToolsUtil::getCurrentDirectory();
                 $repoRootJsonPath = $repoRootDir . DIRECTORY_SEPARATOR . ComposerUtil::COMPOSER_JSON_FILE_NAME;
-                $generatedDevJsonPath = ComposerUtil::buildToGeneratedFileFullPath($repoRootDir, ComposerUtil::buildGeneratedComposerJsonFileName(PhpDepsEnvKind::dev));
+                $generatedDevJsonPath = ComposerUtil::buildToGeneratedFileFullPath($repoRootDir, ComposerUtil::buildGeneratedComposerJsonFileName(PhpDepsGroup::dev));
                 self::assertFilesHaveSameContent($repoRootJsonPath, $generatedDevJsonPath);
             }
         );
@@ -34,7 +34,7 @@ final class InstallPhpDeps
         BuildToolsUtil::runCmdLineImpl(
             __METHOD__,
             function (): void {
-                self::selectLockAndInstall(BuildToolsUtil::getCurrentDirectory(), PhpDepsEnvKind::dev, allowOverwrite: true);
+                self::selectLockAndInstall(BuildToolsUtil::getCurrentDirectory(), PhpDepsGroup::dev, allowOverwrite: true);
             }
         );
     }
@@ -48,7 +48,7 @@ final class InstallPhpDeps
             __METHOD__,
             function () use ($cmdLineArgs): void {
                 self::assertCount(1, $cmdLineArgs);
-                $envKind = self::assertNotNull(PhpDepsEnvKind::tryToFindByName($cmdLineArgs[0]));
+                $envKind = self::assertNotNull(PhpDepsGroup::tryToFindByName($cmdLineArgs[0]));
                 $repoRootDir = BuildToolsUtil::getCurrentDirectory();
                 $generatedJsonFile = ComposerUtil::buildToGeneratedFileFullPath($repoRootDir, ComposerUtil::buildGeneratedComposerJsonFileName($envKind));
                 BuildToolsUtil::copyFile($generatedJsonFile, BuildToolsUtil::partsToPath($repoRootDir, ComposerUtil::COMPOSER_JSON_FILE_NAME));
@@ -57,14 +57,14 @@ final class InstallPhpDeps
         );
     }
 
-    private static function selectLockAndInstall(string $repoRootDir, PhpDepsEnvKind $envKind, bool $allowOverwrite): void
+    private static function selectLockAndInstall(string $repoRootDir, PhpDepsGroup $envKind, bool $allowOverwrite): void
     {
         $generatedLockFile = ComposerUtil::buildToGeneratedFileFullPath($repoRootDir, ComposerUtil::buildGeneratedComposerLockFileNameForCurrentPhpVersion($envKind));
         BuildToolsUtil::copyFile($generatedLockFile, BuildToolsUtil::partsToPath($repoRootDir, ComposerUtil::COMPOSER_LOCK_FILE_NAME), allowOverwrite: $allowOverwrite);
         ComposerUtil::verifyThatComposerJsonAndLockAreInSync();
 
         $withDev = ComposerUtil::convertEnvKindToWithDev($envKind);
-        if (AdaptPhpDepsTo81::isCurrentPhpVersion81() && ($envKind !== PhpDepsEnvKind::test)) {
+        if (AdaptPhpDepsTo81::isCurrentPhpVersion81() && ($envKind !== PhpDepsGroup::test)) {
             AdaptPhpDepsTo81::downloadAdaptPackagesGenConfigAndInstall($withDev);
         } else {
             ComposerUtil::execComposerInstallShellCommand($withDev, envVars: [ComposerUtil::ALLOW_DIRECT_COMPOSER_COMMAND_ENV_VAR_NAME => BoolUtil::toString(true)]);

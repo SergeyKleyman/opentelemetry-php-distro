@@ -1,15 +1,32 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
+/*
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch B.V. licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 declare(strict_types=1);
 
-namespace OTelDistroTools\Build;
+namespace OTelDistroTools;
 
 use Countable;
 use RuntimeException;
 
-trait BuildToolsAssertTrait
+trait ToolsAssertTrait
 {
     /**
      * @phpstan-assert true $condition
@@ -29,11 +46,19 @@ trait BuildToolsAssertTrait
     }
 
     /**
-     * @param ?array<string, mixed> $dbgCtx
+     * @param ?array<string, mixed> $dbgCtx1
+     * @param ?array<string, mixed> $dbgCtx2
      */
-    private static function convertAssertDbgCtxToStringToAppend(?array $dbgCtx = null): string
+    private static function convertAssertDbgCtxToStringToAppend(?array $dbgCtx1, ?array $dbgCtx2 = null): string
     {
-        return $dbgCtx === null ? '' : (' ; ' . json_encode($dbgCtx));
+        $dbgCtx = [];
+        if ($dbgCtx1 != null) {
+            $dbgCtx += $dbgCtx1;
+        }
+        if ($dbgCtx2 != null) {
+            $dbgCtx += $dbgCtx2;
+        }
+        return empty($dbgCtx) ? '' : (' ; ' . json_encode($dbgCtx));
     }
 
     /**
@@ -65,6 +90,26 @@ trait BuildToolsAssertTrait
         $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
         self::assert($actual !== null, "$dbgName !== null" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
         return $actual;
+    }
+
+    /**
+     * @param mixed $expected
+     * @param mixed $actual
+     * @param ?array<string, mixed> $dbgCtx
+     */
+    public static function assertSame(mixed $expected, mixed $actual, ?array $dbgCtx = null): void
+    {
+        self::assert($expected === $actual, '$expected === $actual' . self::convertAssertDbgCtxToStringToAppend(compact('expected', 'actual'), $dbgCtx));
+    }
+
+    /**
+     * @param mixed $expected
+     * @param mixed $actual
+     * @param ?array<string, mixed> $dbgCtx
+     */
+    public static function assertNotEqual(mixed $expected, mixed $actual, ?array $dbgCtx = null): void
+    {
+        self::assert($expected != $actual, '$expected != $actual' . self::convertAssertDbgCtxToStringToAppend(compact('expected', 'actual'), $dbgCtx));
     }
 
     /**
@@ -105,7 +150,7 @@ trait BuildToolsAssertTrait
     public static function assertCount(int $expectedCount, Countable|array $actual, ?array $dbgCtx = null): void
     {
         $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
-        self::assert(count($actual) === $expectedCount, "count($dbgName) === $expectedCount" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+        self::assert(count($actual) === $expectedCount, "count($dbgName) === $expectedCount" . self::convertAssertDbgCtxToStringToAppend(compact('expectedCount'), $dbgCtx));
     }
 
     /**
@@ -122,7 +167,8 @@ trait BuildToolsAssertTrait
      */
     public static function assertArrayHasKey(string|int $expectedKey, array $actualArray, ?array $dbgCtx = null): mixed
     {
-        self::assert(array_key_exists($expectedKey, $actualArray), 'array_key_exists($key, $array)' . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+        $actualKeys = array_keys($actualArray);
+        self::assert(array_key_exists($expectedKey, $actualArray), 'array_key_exists($key, $array)' . self::convertAssertDbgCtxToStringToAppend(compact('expectedKey', 'actualKeys'), $dbgCtx));
         return $actualArray[$expectedKey];
     }
 
@@ -155,6 +201,18 @@ trait BuildToolsAssertTrait
     }
 
     /**
+     * @template T of int|float
+     *
+     * @param T $expected
+     * @param T $actual
+     * @param ?array<string, mixed> $dbgCtx
+     */
+    public static function assertGreaterThan(mixed $expected, mixed $actual, ?array $dbgCtx = null): void
+    {
+        self::assert($expected < $actual, "\$expected ($expected) < \$actual ($actual) ; " . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+    }
+
+    /**
      * @param ?array<string, mixed> $dbgCtx
      *
      * @phpstan-assert string $actual
@@ -183,6 +241,41 @@ trait BuildToolsAssertTrait
     }
 
     /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param array<TKey, TValue> $actual
+     * @param ?array<string, mixed> $dbgCtx
+     *
+     * @noinspection PhpUnused
+     */
+    public static function assertArrayIsEmpty(array $actual, ?array $dbgCtx = null): void
+    {
+        $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
+        self::assert(count($actual) === 0, "count($dbgName) === 0" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+    }
+
+    /**
+     * @template TKey of array-key
+     * @template TValue
+     *
+     * @param array<TKey, TValue> $actual
+     * @param ?array<string, mixed> $dbgCtx
+     *
+     * @return non-empty-array<TKey, TValue>
+     *
+     * @phpstan-assert non-empty-array<TKey, TValue> $actual
+     *
+     * @noinspection PhpUnused
+     */
+    public static function assertArrayNotEmpty(array $actual, ?array $dbgCtx = null): array
+    {
+        $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
+        self::assert(count($actual) !== 0, "count($dbgName) !== 0" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+        return $actual;
+    }
+
+    /**
      * @template TValue
      * *
      * @param TValue|false $actual
@@ -201,7 +294,6 @@ trait BuildToolsAssertTrait
     }
 
     /**
-     * @param string $filePath
      * @param ?array<string, mixed> $dbgCtx
      */
     public static function assertFileExists(string $filePath, ?array $dbgCtx = null): void
@@ -211,7 +303,6 @@ trait BuildToolsAssertTrait
     }
 
     /**
-     * @param string $filePath
      * @param ?array<string, mixed> $dbgCtx
      *
      * @noinspection PhpUnused
@@ -223,19 +314,34 @@ trait BuildToolsAssertTrait
     }
 
     /**
-     * @param string $dirPath
      * @param ?array<string, mixed> $dbgCtx
      */
     public static function assertDirectoryExists(string $dirPath, ?array $dbgCtx = null): void
     {
         $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
-        self::assert(is_dir($dirPath), "file_exists($dbgName) && is_dir($dbgName)" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+        self::assert(is_dir($dirPath), "is_dir($dbgName)" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
     }
 
-    public static function assertFilesHaveSameContent(string $file1, string $file2): void
+    /**
+     * @param ?array<string, mixed> $dbgCtx
+     */
+    public static function assertDirectoryDoesNotExist(string $dirPath, ?array $dbgCtx = null): void
     {
-        $file1Contents = BuildToolsUtil::getFileContents($file1);
-        $file2Contents = BuildToolsUtil::getFileContents($file2);
-        self::assert($file1Contents === $file2Contents, '$file1Contents == $file1Content2 ; ' . json_encode(compact('file1', 'file2', 'file1Contents', 'file2Contents')));
+        $dbgName = $dbgCtx === null ? 'actual' : array_key_first($dbgCtx);
+        self::assert(!is_dir($dirPath), "!is_dir($dbgName)" . self::convertAssertDbgCtxToStringToAppend($dbgCtx));
+    }
+
+    /**
+     * @param ?array<string, mixed> $dbgCtx
+     */
+    public static function assertFilesHaveSameContent(string $file1, string $file2, ?array $dbgCtx = null): void
+    {
+        $file1Contents = ToolsUtil::getFileContents($file1);
+        $file2Contents = ToolsUtil::getFileContents($file2);
+        self::assert(
+            $file1Contents === $file2Contents,
+            '$file1Contents == $file1Content2'
+            . self::convertAssertDbgCtxToStringToAppend(compact('file1', 'file2', 'file1Contents', 'file2Contents'), $dbgCtx)
+        );
     }
 }

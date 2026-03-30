@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\UnitTests\UtilTests;
 
-use OTelDistroTests\Util\ArrayUtilForTests;
+use OpenTelemetry\Distro\Util\ArrayUtil;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\BoolUtilForTests;
 use OTelDistroTests\Util\CombinatorialUtil;
@@ -32,7 +32,7 @@ class DataProviderForTestBuilderTest extends TestCaseBase
         $dbgCtx->add(compact('actualDataSets'));
 
         $expectedDataSets = [];
-        if (!(ArrayUtilForTests::isEmpty($testDimensionValues) || ArrayUtilForTests::isEmpty(self::HELPER_DIMENSION_VALUES))) {
+        if (!(ArrayUtil::isEmpty($testDimensionValues) || ArrayUtil::isEmpty(self::HELPER_DIMENSION_VALUES))) {
             if ($onlyFirstValueCombinable) {
                 foreach ($testDimensionValues as $testDimensionValue) {
                     $expectedDataSets[] = [self::TEST_DIMENSION_KEY => $testDimensionValue, self::HELPER_DIMENSION_KEY => self::HELPER_DIMENSION_VALUES[0]];

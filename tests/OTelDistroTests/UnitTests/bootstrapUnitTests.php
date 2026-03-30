@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests;
 
-use OTelDistroTests\BootstrapTests;
+use OTelDistroTests\BootstrapTestsUtil;
 
 require __DIR__ . '/../../bootstrap.php';
 
-BootstrapTests::bootstrapUnitTests();
+BootstrapTestsUtil::bootstrapUnitTests();

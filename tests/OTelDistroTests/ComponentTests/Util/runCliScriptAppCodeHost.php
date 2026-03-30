@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
-require __DIR__ . '/../../../bootstrap.php';
+require __DIR__ . '/bootstrapAppCodeHost.php';
 
 CliScriptAppCodeHost::run();

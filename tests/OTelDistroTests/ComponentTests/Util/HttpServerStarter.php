@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Util\ArrayUtil;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\EnvVarUtil;
@@ -64,7 +65,7 @@ abstract class HttpServerStarter
     {
         Assert::assertGreaterThanOrEqual(1, $portsToAllocateCount);
         /** @var ?int $lastTriedPort */
-        $lastTriedPort = ArrayUtilForTests::isEmpty($portsInUse) ? null : ArrayUtilForTests::getLastValue($portsInUse);
+        $lastTriedPort = ArrayUtil::isEmpty($portsInUse) ? null : ArrayUtilForTests::getLastValue($portsInUse);
         for ($tryCount = 0; $tryCount < self::MAX_TRIES_TO_START_SERVER; ++$tryCount) {
             $dbgProcessName = DbgProcessNameGenerator::generate($this->dbgProcessNamePrefix);
             /** @var int[] $currentTryPorts */
@@ -198,7 +199,7 @@ abstract class HttpServerStarter
                 }
 
                 /** @var array<string, mixed> $decodedBody */
-                $decodedBody = JsonUtil::decode($response->getBody()->getContents(), asAssocArray: true);
+                $decodedBody = JsonUtil::decode($response->getBody()->getContents());
                 TestCase::assertArrayHasKey(HttpServerHandle::PID_KEY, $decodedBody);
                 $receivedPid = $decodedBody[HttpServerHandle::PID_KEY];
                 TestCase::assertIsInt($receivedPid, LoggableToString::convert(['$decodedBody' => $decodedBody]));

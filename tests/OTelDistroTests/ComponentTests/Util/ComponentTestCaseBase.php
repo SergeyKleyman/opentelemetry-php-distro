@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\API\Globals;
+use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Distro\Log\LogLevel;
+use OpenTelemetry\Distro\Util\ArrayUtil;
+use OpenTelemetry\SemConv\Version;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
@@ -22,9 +26,6 @@ use OTelDistroTests\Util\Log\LogLevelUtil;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\RangeUtil;
 use OTelDistroTests\Util\TestCaseBase;
-use OpenTelemetry\API\Globals;
-use OpenTelemetry\API\Trace\TracerInterface;
-use OpenTelemetry\SemConv\Version;
 use Override;
 use PHPUnit\Framework\Assert;
 use Throwable;
@@ -79,7 +80,7 @@ class ComponentTestCaseBase extends TestCaseBase
     }
 
     /**
-     * @param callable(): void $appCodeImpl
+     * @param ?callable(): void $appCodeImpl
      *
      * @noinspection PhpDocMissingThrowsInspection
      */
@@ -284,7 +285,7 @@ class ComponentTestCaseBase extends TestCaseBase
             throw $initiallyFailedTestException;
         }
         $initiallyFailedTestLogLevels = $this->getCurrentLogLevels($this->testCaseHandle);
-        if (ArrayUtilForTests::isEmpty($initiallyFailedTestLogLevels)) {
+        if (ArrayUtil::isEmpty($initiallyFailedTestLogLevels)) {
             $loggerProxyOutsideIt && $loggerProxyOutsideIt->log(__LINE__, 'Test failed but not even one app code host has started successfully - NOT re-running the test with escalated log levels');
             throw $initiallyFailedTestException;
         }
@@ -348,7 +349,7 @@ class ComponentTestCaseBase extends TestCaseBase
         /** @var array<string, LogLevel> $result */
         $result = [];
         $prodCodeLogLevels = $testCaseHandle->getProdCodeLogLevels();
-        if (ArrayUtilForTests::isEmpty($prodCodeLogLevels)) {
+        if (ArrayUtil::isEmpty($prodCodeLogLevels)) {
             return [];
         }
         /** @var non-empty-list<LogLevel> $prodCodeLogLevels */

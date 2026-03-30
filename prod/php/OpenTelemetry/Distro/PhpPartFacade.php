@@ -1,6 +1,6 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
+/** @noinspection PhpIllegalPsrClassPathInspection, PhpUnusedAliasInspection */
 
 declare(strict_types=1);
 
@@ -63,7 +63,7 @@ final class PhpPartFacade
 
         require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
 
-        BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__, __NAMESPACE__);
+        BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__);
         BootstrapStageLogger::logDebug(
             'Starting bootstrap sequence...'
             . "; nativePartVersion: $nativePartVersion" . "; maxEnabledLogLevel: $maxEnabledLogLevel" . "; requestInitStartTime: $requestInitStartTime",
@@ -202,7 +202,7 @@ final class PhpPartFacade
     {
         return ProdPhpDir::$fullPath . DIRECTORY_SEPARATOR . (
             self::isInDevMode()
-                ? ('..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'vendor')
+                ? ('..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'vendor_prod')
                 : ('vendor_' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION)
             );
     }
