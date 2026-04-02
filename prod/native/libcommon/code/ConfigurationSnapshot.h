@@ -21,6 +21,7 @@
 
 #define OTEL_PHP_DEBUG_INSTRUMENT_ALL debug_instrument_all
 #define OTEL_PHP_DEBUG_PHP_HOOKS_ENABLED debug_php_hooks_enabled
+#define OTEL_PHP_DEBUG_SCOPER_ENABLED debug_scoper_enabled
 
 #define OTEL_PHP_INFERRED_SPANS_ENABLED inferred_spans_enabled
 #define OTEL_PHP_INFERRED_SPANS_REDUCTION_ENABLED inferred_spans_reduction_enabled
@@ -97,6 +98,7 @@ struct ConfigurationSnapshot {
     std::chrono::milliseconds OTEL_PHP_ASYNC_TRANSPORT_SHUTDOWN_TIMEOUT = std::chrono::seconds(30);
     bool OTEL_PHP_DEBUG_INSTRUMENT_ALL = false;
     bool OTEL_PHP_DEBUG_PHP_HOOKS_ENABLED = false;
+    bool OTEL_PHP_DEBUG_SCOPER_ENABLED = true;
 
     bool OTEL_PHP_INFERRED_SPANS_ENABLED = false;
     bool OTEL_PHP_INFERRED_SPANS_REDUCTION_ENABLED = true;
@@ -104,7 +106,7 @@ struct ConfigurationSnapshot {
     std::chrono::milliseconds OTEL_PHP_INFERRED_SPANS_SAMPLING_INTERVAL = std::chrono::milliseconds(50);
     std::chrono::milliseconds OTEL_PHP_INFERRED_SPANS_MIN_DURATION = std::chrono::milliseconds(0);
 
-    bool OTEL_PHP_DEPENDENCY_AUTOLOADER_GUARD_ENABLED = true;
+    bool OTEL_PHP_DEPENDENCY_AUTOLOADER_GUARD_ENABLED = false;
     bool OTEL_PHP_NATIVE_OTLP_SERIALIZER_ENABLED = true;
 
     std::string OTEL_PHP_OPAMP_HEADERS;

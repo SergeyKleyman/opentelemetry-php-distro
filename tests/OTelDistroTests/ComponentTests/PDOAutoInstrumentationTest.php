@@ -14,14 +14,14 @@ use OTelDistroTests\ComponentTests\Util\PDOSpanExpectationsBuilder;
 use OTelDistroTests\ComponentTests\Util\SpanExpectations;
 use OTelDistroTests\ComponentTests\Util\SpanSequenceExpectations;
 use OTelDistroTests\ComponentTests\Util\WaitForOTelSignalCounts;
-use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LoggableToString;
+use OTelDistroTests\Util\OTelDistroProjectProperties;
 use OTelDistroTests\Util\MixedMap;
-use OpenTelemetry\Contrib\Instrumentation\PDO\PDOInstrumentation;
+use OTelDistroTests\Util\AssertEx;
 use OpenTelemetry\SemConv\TraceAttributes;
 use PDO;
 
@@ -137,8 +137,10 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            self::assertTrue(class_exists(PDOInstrumentation::class, autoload: false));
-            AssertEx::sameConstValues(PDOInstrumentation::NAME, self::AUTO_INSTRUMENTATION_NAME);
+            $scoperPrefix = OTelDistroProjectProperties::loadAsMap()['php_scoper_prefix'];
+            $scopedPDOInstrumentationClass = $scoperPrefix . '\\OpenTelemetry\\Contrib\\Instrumentation\\PDO\\PDOInstrumentation';
+            self::assertTrue(class_exists($scopedPDOInstrumentationClass, autoload: false));
+            AssertEx::sameConstValues(constant($scopedPDOInstrumentationClass . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
         $dbName = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::DB_NAME_KEY);

@@ -12,8 +12,6 @@ use OpenTelemetry\SDK\Common\Future\FutureInterface;
 use OpenTelemetry\SDK\Logs\LogRecordExporterInterface;
 use Throwable;
 
-use function OpenTelemetry\Distro\OtlpExporters\convert_logs;
-
 /**
  * @psalm-import-type SUPPORTED_CONTENT_TYPES from ProtobufSerializer
  */
@@ -36,8 +34,12 @@ class LogsExporter implements LogRecordExporterInterface
      */
     public function export(iterable $batch, ?CancellationInterface $cancellation = null): FutureInterface
     {
+        /**
+         * Use fully qualified names for functions implemented by the extension to make sure scoper correctly detects them
+         * @noinspection PhpFullyQualifiedNameUsageInspection
+         */
         return $this->transport
-            ->send(convert_logs($batch), $cancellation)
+            ->send(\OpenTelemetry\Distro\OtlpExporters\convert_logs($batch), $cancellation)
             ->map(
                 static function (mixed $payload): bool {
                     if ($payload === null) {
@@ -46,6 +48,7 @@ class LogsExporter implements LogRecordExporterInterface
 
                     $serviceResponse = new ExportLogsServiceResponse();
 
+                    /** @noinspection DuplicatedCode */
                     $partialSuccess = $serviceResponse->getPartialSuccess();
                     if ($partialSuccess !== null && $partialSuccess->getRejectedLogRecords()) {
                         self::logError('Export partial success', [

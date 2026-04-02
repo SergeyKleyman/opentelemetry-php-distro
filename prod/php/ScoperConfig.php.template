@@ -1,0 +1,16 @@
+<?php
+
+/* This file is generated, DO NOT EDIT IT MANUALLY */
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
+
+declare(strict_types=1);
+
+namespace OpenTelemetry\Distro;
+
+final class OTelDistroScoperConfig
+{
+    public const PREFIX = '@_PROJECT_PROPERTIES_PHP_SCOPER_PREFIX@';
+    public const PREFIX_LOWER = '@_PROJECT_PROPERTIES_PHP_SCOPER_PREFIX_LOWER@';
+    public const DISTRO_PATH = '@_PROJECT_PROPERTIES_PHP_SCOPER_PREFIX@';
+}

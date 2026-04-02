@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\UtilTests;
 
 use OpenTelemetry\Distro\Log\LogLevel;
+use OTelDistroTests\ComponentTests\Util\AppCodeContextDataUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
@@ -52,9 +53,12 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
     public static function appCodeForTestRunAndEscalateLogLevelOnFailure(MixedMap $appCodeArgs): void
     {
-        self::appCodeSetsHowFinishedAttributes(
+        self::appCodeSetsHowFinished(
             $appCodeArgs,
-            function () use ($appCodeArgs): void {
+            /**
+             * @retrun array<string, mixed>
+             */
+            function () use ($appCodeArgs): array {
                 DebugContext::getCurrentScope(/* out */ $dbgCtx);
                 $dbgCtx->add(compact('appCodeArgs'));
                 $dbgCtx->add(['testConfig' => AmbientContextForTests::testConfig()]);
@@ -70,28 +74,41 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
                 $actualLogLevelForTestCode = AmbientContextForTests::testConfig()->logLevel;
                 $dbgCtx->add(compact('actualLogLevelForTestCode'));
                 self::assertSame($expectedLogLevelForTestCode, $actualLogLevelForTestCode);
+                return [];
             }
         );
     }
 
     public function test0WithoutEscalation(): void
     {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
         $testCaseHandle = $this->getTestCaseHandle();
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost();
+
+        $appCodeArgs = [];
+        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeArgs);
+
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($testCaseHandle): void {
-                /** @var array<string, LogLevel> $appCodeArgs */
-                $appCodeArgs = [
-                    self::LOG_LEVEL_FOR_PROD_CODE_KEY => ArrayUtilForTests::getSingleValue($testCaseHandle->getProdCodeLogLevels()),
-                    self::LOG_LEVEL_FOR_TEST_CODE_KEY => AmbientContextForTests::testConfig()->logLevel,
-                ];
-                $appCodeRequestParams->setAppCodeArgs($appCodeArgs);
+            function (AppCodeRequestParams $appCodeRequestParams) use ($testCaseHandle, $appCodeArgs): void {
+                $appCodeRequestParams->setAppCodeArgs(
+                    $appCodeArgs
+                    + [
+                        self::LOG_LEVEL_FOR_PROD_CODE_KEY => ArrayUtilForTests::getSingleValue($testCaseHandle->getProdCodeLogLevels()),
+                        self::LOG_LEVEL_FOR_TEST_CODE_KEY => AmbientContextForTests::testConfig()->logLevel,
+                    ]
+                );
             }
         );
 
-        $span = $this->waitForOneSpan($testCaseHandle);
-        self::assertTrue($span->attributes->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+        $this->waitForOneSpan($testCaseHandle);
+
+        // Assert
+
+        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeArgs);
+        $dbgCtx->add(compact('appCodeContextData'));
+        self::assertTrue($appCodeContextData->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
     }
 
     /**
@@ -183,6 +200,8 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
     private function implTestRunAndEscalateLogLevelOnFailure(MixedMap $testArgs): void
     {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
         $currentRunCount = $testArgs->getInt('currentRunCount');
         self::assertGreaterThanOrEqual(1, $currentRunCount);
         $currentReRunCount = $currentRunCount === 1 ? 0 : ($currentRunCount - 1);
@@ -207,11 +226,13 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
         $testCaseHandle = $this->getTestCaseHandle();
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost();
+
+        $appCodeArgs = [];
+        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeArgs);
+
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($expectedLevels): void {
-                /** @var array<string, LogLevel> $appCodeArgs */
-                $appCodeArgs = [];
+            function (AppCodeRequestParams $appCodeRequestParams) use ($expectedLevels, $appCodeArgs): void {
                 foreach (self::LOG_LEVEL_FOR_CODE_KEYS as $levelTypeKey) {
                     $appCodeArgs[$levelTypeKey] = $expectedLevels[$levelTypeKey];
                 }
@@ -219,8 +240,13 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
             }
         );
 
-        $span = $this->waitForOneSpan($testCaseHandle);
-        self::assertTrue($span->attributes->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+        $this->waitForOneSpan($testCaseHandle);
+
+        // Assert
+
+        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeArgs);
+        $dbgCtx->add(compact('appCodeContextData'));
+        self::assertTrue($appCodeContextData->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
 
         if ($shouldCurrentRunFail) {
             self::fail(self::buildFailMessage($currentRunCount));

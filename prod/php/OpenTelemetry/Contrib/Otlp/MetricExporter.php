@@ -13,8 +13,6 @@ use OpenTelemetry\SDK\Metrics\MetricMetadataInterface;
 use OpenTelemetry\SDK\Metrics\PushMetricExporterInterface;
 use Throwable;
 
-use function OpenTelemetry\Distro\OtlpExporters\convert_metrics;
-
 /**
  * @see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk_exporters/stdout.md#opentelemetry-metrics-exporter---standard-output
  * @see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/file-exporter.md#json-file-serialization
@@ -42,8 +40,12 @@ final class MetricExporter implements PushMetricExporterInterface, AggregationTe
     /** @inheritDoc */
     public function export(iterable $batch): bool
     {
+        /**
+         * Use fully qualified names for functions implemented by the extension to make sure scoper correctly detects them
+         * @noinspection PhpFullyQualifiedNameUsageInspection
+         */
         return $this->transport
-            ->send(convert_metrics($batch))
+            ->send(\OpenTelemetry\Distro\OtlpExporters\convert_metrics($batch))
             ->map(
                 static function (mixed $payload): bool {
                     if ($payload === null) {
@@ -52,6 +54,7 @@ final class MetricExporter implements PushMetricExporterInterface, AggregationTe
 
                     $serviceResponse = new ExportMetricsServiceResponse();
 
+                    /** @noinspection DuplicatedCode */
                     $partialSuccess = $serviceResponse->getPartialSuccess();
                     if ($partialSuccess !== null && $partialSuccess->getRejectedDataPoints()) {
                         self::logError('Export partial success', [

@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests;
 
 use Composer\Semver\Semver;
-use OpenTelemetry\Distro\PhpPartFacade;
+use OpenTelemetry\Distro\VendorDir;
+use OTelDistroTests\ComponentTests\Util\AppCodeContextDataUtil;
+use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
+use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\EnvVarUtilForTests;
-use OTelDistroTests\ComponentTests\Util\OTelUtil;
 use OTelDistroTests\ComponentTests\Util\ProcessUtil;
 use OTelDistroTests\ComponentTests\Util\WaitForOTelSignalCounts;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
+use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\TimeUtil;
 use PhpParser\Error as PhpParserError;
 use PhpParser\ErrorHandler\Throwing as ThrowingPhpParserErrorHandler;
@@ -29,7 +32,7 @@ use Throwable;
  */
 final class PackagesPhpRequirementTest extends ComponentTestCaseBase
 {
-    private const PROD_VENDOR_DIR_KEY = 'prod_vendor_dir';
+    private const APP_CODE_CTX_VENDOR_DIR_KEY = 'prod_vendor_dir';
 
     public function testSemverConstraint(): void
     {
@@ -92,7 +95,7 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
             return null;
         }
         $jsonEncoded = FileUtil::getFileContents($packageComposerJsonFilePath);
-        $jsonDecoded = AssertEx::isArray(JsonUtil::decode($jsonEncoded, asAssocArray: true));
+        $jsonDecoded = AssertEx::isArray(JsonUtil::decode($jsonEncoded));
         $requireMap = AssertEx::isArray(AssertEx::arrayHasKey('require', $jsonDecoded));
         return AssertEx::isString(AssertEx::arrayHasKey('php', $requireMap));
     }
@@ -222,12 +225,12 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         self::assertSame(0, $procInfo['exitCode']);
     }
 
-    public static function appCodeForTestPackagesHaveCorrectPhpVersion(): void
+    public static function appCodeForTestPackagesHaveCorrectPhpVersion(MixedMap $appCodeArgs): void
     {
-        OTelUtil::addActiveSpanAttributes([self::PROD_VENDOR_DIR_KEY => PhpPartFacade::getVendorDirPath()]);
+        AppCodeContextDataUtil::writeDataToTempFile([self::APP_CODE_CTX_VENDOR_DIR_KEY => AppCodeContextUtil::adaptClassName(VendorDir::class)::$fullPath], $appCodeArgs);
     }
 
-    public function testPackagesHaveCorrectPhpVersion(): void
+    private function implTestPackagesHaveCorrectPhpVersion(): void
     {
         self::assertOpcacheEnabled();
 
@@ -235,19 +238,39 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
 
         $testCaseHandle = $this->getTestCaseHandle();
 
+        /** @var array<string, mixed> $appCodeArgs */
+        $appCodeArgs = [];
+        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeArgs);
+
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
             function (AppCodeHostParams $appCodeParams): void {
                 self::ensureTransactionSpanEnabled($appCodeParams);
             }
         );
-        $appCodeHost->execAppCode(AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestPackagesHaveCorrectPhpVersion']));
+        $appCodeHost->execAppCode(
+            AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestPackagesHaveCorrectPhpVersion']),
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeArgs): void {
+                $appCodeRequestParams->setAppCodeArgs($appCodeArgs);
+            }
+        );
 
         $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
         $dbgCtx->add(compact('agentBackendComms'));
-        $prodVendorDir = FileUtil::normalizePath($agentBackendComms->singleSpan()->attributes->getString(self::PROD_VENDOR_DIR_KEY));
+
+        $prodVendorDir = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeArgs)->getString(self::APP_CODE_CTX_VENDOR_DIR_KEY);
 
         self::verifyPackagesPhpVersion($prodVendorDir);
         self::validatePhpFilesUseParser($prodVendorDir);
         self::validatePhpFilesUseOpCache($prodVendorDir);
+    }
+
+    public function testPackagesHaveCorrectPhpVersion(): void
+    {
+        self::runAndEscalateLogLevelOnFailure(
+            self::buildDbgDescForTest(__CLASS__, __FUNCTION__),
+            function (): void {
+                $this->implTestPackagesHaveCorrectPhpVersion();
+            }
+        );
     }
 }
