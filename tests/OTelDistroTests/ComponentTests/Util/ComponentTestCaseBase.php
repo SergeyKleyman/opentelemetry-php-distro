@@ -8,6 +8,7 @@ use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\CompositeRawSnapshotSource;
 use OTelDistroTests\Util\Config\ConfigSnapshotForProd;
@@ -17,6 +18,7 @@ use OTelDistroTests\Util\Config\OptionsForProdMetadata;
 use OTelDistroTests\Util\Config\Parser as ConfigParser;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\DebugContextScopeRef;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\Log\LogLevelUtil;
@@ -36,6 +38,7 @@ class ComponentTestCaseBase extends TestCaseBase
     protected const SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY = 'should_app_code_create_dummy_span';
     protected const APP_CODE_DUMMY_SPAN_NAME = 'app_code_dummy_span_name';
 
+    protected const SUB_APP_CODE_TO_CALL_KEY = 'app_sub_code_to_call';
     protected const DID_APP_CODE_FINISH_SUCCESSFULLY_KEY = 'is_app_code_finished_successfully';
     protected const THROWABLE_FROM_APP_CODE_KEY = 'throwable_from_app_code';
 
@@ -76,48 +79,103 @@ class ComponentTestCaseBase extends TestCaseBase
     }
 
     /**
-     * @param ?callable(): array<string, mixed> $appCodeImpl
-     *
      * @noinspection PhpDocMissingThrowsInspection
      */
-    public static function appCodeSetsHowFinished(MixedMap $appCodeArgs, ?callable $appCodeImpl = null): void
+    public static function appCodeSetsHowFinished(MixedMap $appCodeRequestArgs): void
     {
         $logger = self::getLoggerStatic(__NAMESPACE__, __CLASS__, __FILE__);
         $loggerProxyDebug = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
-        $logger->addAllContext(compact('appCodeArgs'));
+        $logger->addAllContext(compact('appCodeRequestArgs'));
 
-        $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Calling $appCodeImpl() ...');
+        $subAppCode = $appCodeRequestArgs->tryGetArray(self::SUB_APP_CODE_TO_CALL_KEY);
+        $appCodeAuxOutput = [];
         try {
-            $appCodeContextData = [];
-            if ($appCodeImpl !== null) {
-                $appCodeContextData = $appCodeImpl();
+            if ($subAppCode !== null) {
+                self::assertIsCallable($subAppCode);
+                $loggerProxyDebug?->log(__LINE__, 'Calling $subAppCode() ...', compact('subAppCode', 'appCodeRequestArgs'));
+                $appSubCodeContextData = $subAppCode($appCodeRequestArgs);
+                if ($appSubCodeContextData !== null) {
+                    self::assertIsArray($appSubCodeContextData);
+                    /** @var array<string, mixed> $appSubCodeContextData */
+                    ArrayUtilForTests::append($appSubCodeContextData, /* in,out */ $appCodeAuxOutput);
+                }
             }
             $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Call to $appCodeImpl() finished successfully');
         } catch (Throwable $throwable) {
             $loggerProxyDebug && $loggerProxyDebug->logThrowable(__LINE__, $throwable, 'Call to $appCodeImpl() thrown');
-            ArrayUtilForTests::addAssertingKeyNew(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY, false, /* in,out */ $appCodeContextData);
-            ArrayUtilForTests::addAssertingKeyNew(self::THROWABLE_FROM_APP_CODE_KEY, LoggableToString::convert($throwable), /* in,out */ $appCodeContextData);
-            AppCodeContextDataUtil::writeDataToTempFile($appCodeContextData, $appCodeArgs);
+            ArrayUtilForTests::addAssertingKeyNew(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY, false, /* in,out */ $appCodeAuxOutput);
+            ArrayUtilForTests::addAssertingKeyNew(self::THROWABLE_FROM_APP_CODE_KEY, LoggableToString::convert($throwable), /* in,out */ $appCodeAuxOutput);
+            AppCodeAuxOutputUtil::writeDataToTempFile($appCodeAuxOutput, $appCodeRequestArgs);
             throw $throwable;
         }
-        ArrayUtilForTests::addAssertingKeyNew(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY, true, /* in,out */ $appCodeContextData);
-        AppCodeContextDataUtil::writeDataToTempFile($appCodeContextData, $appCodeArgs);
+        ArrayUtilForTests::addAssertingKeyNew(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY, true, /* in,out */ $appCodeAuxOutput);
+        AppCodeAuxOutputUtil::writeDataToTempFile($appCodeAuxOutput, $appCodeRequestArgs);
     }
 
-    public static function appCodeCreatesDummySpan(MixedMap $appCodeArgs): void
+    /**
+     * @phpstan-param ?callable(MixedMap): (void|array<string, mixed>) $subAppCode
+     * @phpstan-param ?callable(DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void $subImplTest
+     */
+    protected function implTestForAppCodeSetsHowFinished(MixedMap $testArgs, ?callable $subAppCode = null, ?callable $subImplTest = null): void
     {
-        if ($appCodeArgs->tryToGetBool(self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY) ?? true) {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $testCaseHandle = $this->getTestCaseHandle();
+
+        $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
+            function (AppCodeHostParams $appCodeHostParams) use ($testArgs): void {
+                self::ensureTransactionSpanEnabled($appCodeHostParams);
+                foreach ($testArgs as $testArgKey => $testArgValue) {
+                    if (array_key_exists($testArgKey, OptionsForProdMetadata::get())) {
+                        $appCodeHostParams->setProdOptionIfNotDefault(
+                            AssertEx::notNull(OptionForProdName::tryToFindByName($testArgKey)),
+                            AppCodeHostParams::assertValidProdOptionValueType($testArgValue, $testArgKey)
+                        );
+                    }
+                }
+            }
+        );
+
+        /** @var array<string, mixed> $appCodeRequestArgs */
+        $appCodeRequestArgs = $testArgs->cloneAsArray();
+        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+
+        ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, $subAppCode, /* in,out */ $appCodeRequestArgs);
+        $appCodeHost->execAppCode(
+            AppCodeTarget::asRouted([__CLASS__, 'appCodeSetsHowFinished']),
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
+            }
+        );
+
+        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
+        $dbgCtx->add(compact('agentBackendComms'));
+
+        // Assert
+
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+
+        if ($subImplTest !== null) {
+            $subImplTest($dbgCtx, $agentBackendComms, $appCodeAuxOutput);
+        }
+    }
+
+    public static function appCodeCreatesDummySpan(MixedMap $appCodeRequestArgs): void
+    {
+        if ($appCodeRequestArgs->tryToGetBool(self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY) ?? true) {
             OTelUtil::startEndSpan(self::APP_CODE_DUMMY_SPAN_NAME);
         }
     }
 
-    protected static function buildResourcesClientForAppCode(): ResourcesClient
+    protected static function buildResourcesClientForAppCode(): ResourcesCleanerClient
     {
         $resCleanerId = AmbientContextForTests::testConfig()->dataPerProcess()->resourcesCleanerSpawnedProcessInternalId;
         Assert::assertNotNull($resCleanerId);
         $resCleanerPort = AmbientContextForTests::testConfig()->dataPerProcess()->resourcesCleanerPort;
         Assert::assertNotNull($resCleanerPort);
-        return new ResourcesClient($resCleanerId, $resCleanerPort);
+        return new ResourcesCleanerClient($resCleanerId, $resCleanerPort);
     }
 
     public static function isSmoke(): bool
@@ -470,17 +528,17 @@ class ComponentTestCaseBase extends TestCaseBase
     {
         return self::isMainAppCodeHostHttp()
             ? HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_METHOD . ' ' . HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_URL_PATH
-            : CliScriptAppCodeHostHandle::getRunScriptNameFullPath();
+            : CliScriptAppCodeHostHandle::getScriptToRun();
     }
 
-    protected static function disableTimingDependentFeatures(AppCodeHostParams $appCodeParams): void
+    protected static function disableTimingDependentFeatures(AppCodeHostParams $appCodeHostParams): void
     {
-        $appCodeParams->setProdOption(OptionForProdName::inferred_spans_enabled, false);
+        $appCodeHostParams->setProdOption(OptionForProdName::inferred_spans_enabled, false);
     }
 
-    protected static function ensureTransactionSpanEnabled(AppCodeHostParams $appCodeParams): void
+    protected static function ensureTransactionSpanEnabled(AppCodeHostParams $appCodeHostParams): void
     {
-        $appCodeParams->setProdOption(OptionForProdName::transaction_span_enabled, true);
-        $appCodeParams->setProdOption(OptionForProdName::transaction_span_enabled_cli, true);
+        $appCodeHostParams->setProdOption(OptionForProdName::transaction_span_enabled, true);
+        $appCodeHostParams->setProdOption(OptionForProdName::transaction_span_enabled_cli, true);
     }
 }

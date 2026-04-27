@@ -6,17 +6,24 @@ namespace OTelDistroTests\ComponentTests\Util;
 
 use Closure;
 use OTelDistroTests\Util\AmbientContextForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\ConfigException;
 use OTelDistroTests\Util\Config\OptionForTestsName;
+use OTelDistroTests\Util\EnvVarUtil;
 use OTelDistroTests\Util\ExceptionUtil;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\Logger;
 use Override;
 
+/**
+ * @phpstan-import-type EnvVars from EnvVarUtil
+ */
 final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
 {
+    private static ?string $scriptToRunFullPath = null;
+
     private readonly Logger $logger;
 
     /**
@@ -38,9 +45,19 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         $this->logger->addAllContext(compact('this'));
     }
 
-    public static function getRunScriptNameFullPath(): string
+    private static function defaultScriptToRun(): string
     {
-        return FileUtil::partsToPath(__DIR__, CliScriptAppCodeHost::SCRIPT_TO_RUN_APP_CODE_HOST);
+        return FileUtil::partsToPath(__DIR__, 'runCliScriptAppCodeHost.php');
+    }
+
+    public static function setScriptToRun(?string $scriptToRunFullPath): void
+    {
+        self::$scriptToRunFullPath = $scriptToRunFullPath;
+    }
+
+    public static function getScriptToRun(): string
+    {
+        return self::$scriptToRunFullPath ?? self::defaultScriptToRun();
     }
 
     /** @inheritDoc */
@@ -55,7 +72,7 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         }
         $localLogger->addAllContext(compact('requestParams'));
 
-        $runScriptNameFullPath = self::getRunScriptNameFullPath();
+        $runScriptNameFullPath = self::getScriptToRun();
         if (!file_exists($runScriptNameFullPath)) {
             throw new ConfigException(ExceptionUtil::buildMessage('Run script does not exist', compact('runScriptNameFullPath')));
         }
@@ -80,9 +97,33 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Executing app code ...');
 
         $appCodeInvocation = $this->beforeAppCodeInvocation($requestParams);
-        SpawnedProcessBase::startProcessAndWaitForItToExit($dbgProcessName, $cmdLine, $envVars);
+        $this->startProcessAndWaitForItToExit($dbgProcessName, $cmdLine, $envVars);
         $this->afterAppCodeInvocation($appCodeInvocation);
 
         $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Executed app code');
+    }
+
+    /**
+     * @phpstan-param EnvVars $envVars
+     */
+    private function startProcessAndWaitForItToExit(string $dbgProcessName, string $command, array $envVars): void
+    {
+        $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__);
+        $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars'));
+
+        $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
+            dbgProcessName:            $dbgProcessName,
+            command:                   $command,
+            envVars:                   $envVars,
+            resourcesCleanerClient:    $this->resourcesCleaner->getClient(),
+            isTestScoped:              true,
+            maxWaitTimeInMicroseconds: 30 * 1000 * 1000 /* 30 seconds */,
+        );
+        $logger->addAllContext(compact('procInfo'));
+
+        if (AssertEx::notNull($procInfo->exitCode) === SpawnedProcessBase::FAILURE_PROCESS_EXIT_CODE) {
+            ($loggerProxyError = $logger->ifErrorLevelEnabled(__LINE__, __FUNCTION__)) && $loggerProxyError->log('Process exited with the failure exit code');
+            throw new ComponentTestsInfraException(ExceptionUtil::buildMessage('Process exited with the failure exit code', $logger->getContext()));
+        }
     }
 }

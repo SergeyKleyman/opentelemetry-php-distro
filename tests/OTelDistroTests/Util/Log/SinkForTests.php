@@ -6,6 +6,7 @@ namespace OTelDistroTests\Util\Log;
 
 use DateTime;
 use OpenTelemetry\Distro\Log\LogLevel;
+use OTelDistroTests\ComponentTests\Util\ProcessUtil;
 use OTelDistroTests\Util\TextUtilForTests;
 
 final class SinkForTests extends SinkBase
@@ -26,7 +27,7 @@ final class SinkForTests extends SinkBase
         $formattedRecord = '[OTel PHP Distro tests]';
         $formattedRecord .= ' ' . (new DateTime())->format('Y-m-d H:i:s.v P');
         $formattedRecord .= ' [' . strtoupper($statementLevel->name) . ']';
-        $formattedRecord .= ' [PID: ' . getmypid() . ']';
+        $formattedRecord .= ' [PID: ' . ProcessUtil::getCurrentPid() . ']';
         $formattedRecord .= ' [' . $this->dbgProcessName . ']';
         $formattedRecord .= ' [' . basename($srcCodeFile) . ':' . $srcCodeLine . ']';
         $formattedRecord .= ' [' . $srcCodeFunc . ']';

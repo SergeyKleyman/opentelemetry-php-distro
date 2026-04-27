@@ -263,13 +263,13 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
         );
     }
 
-    public static function appCodeForTestAutoInstrumentation(MixedMap $appCodeArgs): void
+    public static function appCodeForTestAutoInstrumentation(MixedMap $appCodeRequestArgs): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
         self::assertExtensionLoaded();
 
-        $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
+        $isAutoInstrumentationEnabled = $appCodeRequestArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
             $scoperPrefix = OTelDistroProjectProperties::loadAsMap()['php_scoper_prefix'];
             $scopedMySqliInstrumentationClass = $scoperPrefix . '\\OpenTelemetry\\Contrib\\Instrumentation\\MySqli\\MySqliInstrumentation';
@@ -277,17 +277,17 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
             AssertEx::sameConstValues(constant($scopedMySqliInstrumentationClass . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
-        $isOOPApi = $appCodeArgs->getBool(self::IS_OOP_API_KEY);
-        $connectDbName = $appCodeArgs->getNullableString(self::CONNECT_DB_NAME_KEY);
-        $workDbName = $appCodeArgs->getString(self::WORK_DB_NAME_KEY);
-        $queryKind = $appCodeArgs->getString(self::QUERY_KIND_KEY);
-        $wrapInTx = $appCodeArgs->getBool(DbAutoInstrumentationUtilForTests::WRAP_IN_TX_KEY);
-        $rollback = $appCodeArgs->getBool(DbAutoInstrumentationUtilForTests::SHOULD_ROLLBACK_KEY);
+        $isOOPApi = $appCodeRequestArgs->getBool(self::IS_OOP_API_KEY);
+        $connectDbName = $appCodeRequestArgs->getNullableString(self::CONNECT_DB_NAME_KEY);
+        $workDbName = $appCodeRequestArgs->getString(self::WORK_DB_NAME_KEY);
+        $queryKind = $appCodeRequestArgs->getString(self::QUERY_KIND_KEY);
+        $wrapInTx = $appCodeRequestArgs->getBool(DbAutoInstrumentationUtilForTests::WRAP_IN_TX_KEY);
+        $rollback = $appCodeRequestArgs->getBool(DbAutoInstrumentationUtilForTests::SHOULD_ROLLBACK_KEY);
 
-        $host = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::HOST_KEY);
-        $port = $appCodeArgs->getInt(DbAutoInstrumentationUtilForTests::PORT_KEY);
-        $user = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::USER_KEY);
-        $password = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::PASSWORD_KEY);
+        $host = $appCodeRequestArgs->getString(DbAutoInstrumentationUtilForTests::HOST_KEY);
+        $port = $appCodeRequestArgs->getInt(DbAutoInstrumentationUtilForTests::PORT_KEY);
+        $user = $appCodeRequestArgs->getString(DbAutoInstrumentationUtilForTests::USER_KEY);
+        $password = $appCodeRequestArgs->getString(DbAutoInstrumentationUtilForTests::PASSWORD_KEY);
 
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -396,25 +396,25 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
         }
         $dbgCtx->add(compact('expectedDbSpans'));
 
-        $appCodeArgs = $testArgs->clone();
-        $appCodeArgs[DbAutoInstrumentationUtilForTests::HOST_KEY] = AmbientContextForTests::testConfig()->mysqlHost;
-        $appCodeArgs[DbAutoInstrumentationUtilForTests::PORT_KEY] = AmbientContextForTests::testConfig()->mysqlPort;
-        $appCodeArgs[DbAutoInstrumentationUtilForTests::USER_KEY] = AmbientContextForTests::testConfig()->mysqlUser;
-        $appCodeArgs[DbAutoInstrumentationUtilForTests::PASSWORD_KEY] = AmbientContextForTests::testConfig()->mysqlPassword;
+        $appCodeRequestArgs = $testArgs->clone();
+        $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::HOST_KEY] = AmbientContextForTests::testConfig()->mysqlHost;
+        $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::PORT_KEY] = AmbientContextForTests::testConfig()->mysqlPort;
+        $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::USER_KEY] = AmbientContextForTests::testConfig()->mysqlUser;
+        $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::PASSWORD_KEY] = AmbientContextForTests::testConfig()->mysqlPassword;
 
         $testCaseHandle = $this->getTestCaseHandle();
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeParams) use ($isAutoInstrumentationEnabled): void {
+            function (AppCodeHostParams $appCodeHostParams) use ($isAutoInstrumentationEnabled): void {
                 if (!$isAutoInstrumentationEnabled) {
-                    $appCodeParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
+                    $appCodeHostParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
                 }
-                self::disableTimingDependentFeatures($appCodeParams);
+                self::disableTimingDependentFeatures($appCodeHostParams);
             }
         );
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestAutoInstrumentation']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeArgs): void {
-                $appCodeRequestParams->setAppCodeArgs($appCodeArgs);
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
             }
         );
 

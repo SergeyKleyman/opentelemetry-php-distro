@@ -118,7 +118,7 @@ final class HttpClientUtilForTests
     }
 
     /** @noinspection PhpUnused */
-    public static function createCurlHandleToSendRequestToAppCode(UrlParts $urlParts, TestInfraDataPerRequest $dataPerRequest, ResourcesClient $resourcesClient): CurlHandleForTests
+    public static function createCurlHandleToSendRequestToAppCode(UrlParts $urlParts, TestInfraDataPerRequest $dataPerRequest, ResourcesCleanerClient $resourcesClient): CurlHandleForTests
     {
         $curlInitRetVal = curl_init(UrlUtil::buildFullUrl($urlParts));
         Assert::assertInstanceOf(CurlHandle::class, $curlInitRetVal);

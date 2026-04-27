@@ -129,13 +129,13 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
         );
     }
 
-    public static function appCodeForTestAutoInstrumentation(MixedMap $appCodeArgs): void
+    public static function appCodeForTestAutoInstrumentation(MixedMap $appCodeRequestArgs): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
         self::assertTrue(extension_loaded('pdo'));
 
-        $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
+        $isAutoInstrumentationEnabled = $appCodeRequestArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
             $scoperPrefix = OTelDistroProjectProperties::loadAsMap()['php_scoper_prefix'];
             $scopedPDOInstrumentationClass = $scoperPrefix . '\\OpenTelemetry\\Contrib\\Instrumentation\\PDO\\PDOInstrumentation';
@@ -143,9 +143,9 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
             AssertEx::sameConstValues(constant($scopedPDOInstrumentationClass . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
-        $dbName = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::DB_NAME_KEY);
-        $wrapInTx = $appCodeArgs->getBool(DbAutoInstrumentationUtilForTests::WRAP_IN_TX_KEY);
-        $rollback = $appCodeArgs->getBool(DbAutoInstrumentationUtilForTests::SHOULD_ROLLBACK_KEY);
+        $dbName = $appCodeRequestArgs->getString(DbAutoInstrumentationUtilForTests::DB_NAME_KEY);
+        $wrapInTx = $appCodeRequestArgs->getBool(DbAutoInstrumentationUtilForTests::WRAP_IN_TX_KEY);
+        $rollback = $appCodeRequestArgs->getBool(DbAutoInstrumentationUtilForTests::SHOULD_ROLLBACK_KEY);
 
         $pdo = new PDO(self::buildConnectionString($dbName));
         self::assertTrue($pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION));
@@ -192,14 +192,14 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $testCaseHandle = $this->getTestCaseHandle();
 
-        $appCodeArgs = $testArgs->clone();
+        $appCodeRequestArgs = $testArgs->clone();
 
         $dbName = $dbNameArg;
         if ($dbNameArg === self::FILE_DB_NAME) {
             $resourcesClient = $testCaseHandle->getResourcesClient();
             $dbFileFullPath = $resourcesClient->createTempFile('temp DB for ' . ClassNameUtil::fqToShort(__CLASS__));
             $dbName = $dbFileFullPath;
-            $appCodeArgs[DbAutoInstrumentationUtilForTests::DB_NAME_KEY] = $dbName;
+            $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::DB_NAME_KEY] = $dbName;
         }
 
         $expectationsBuilder = (new PDOSpanExpectationsBuilder())->dbSystemName('sqlite')->dbNamespace($dbName === self::TEMP_DB_NAME ? '' : $dbName);
@@ -225,17 +225,17 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
         }
 
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeParams) use ($isAutoInstrumentationEnabled): void {
+            function (AppCodeHostParams $appCodeHostParams) use ($isAutoInstrumentationEnabled): void {
                 if (!$isAutoInstrumentationEnabled) {
-                    $appCodeParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
+                    $appCodeHostParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
                 }
-                self::disableTimingDependentFeatures($appCodeParams);
+                self::disableTimingDependentFeatures($appCodeHostParams);
             }
         );
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestAutoInstrumentation']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeArgs): void {
-                $appCodeRequestParams->setAppCodeArgs($appCodeArgs);
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
             }
         );
 

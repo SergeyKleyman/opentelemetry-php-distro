@@ -20,7 +20,7 @@ final class CurlHandleForTests implements LoggableInterface
 
     public function __construct(
         CurlHandle $curlHandle,
-        private readonly ResourcesClient $resourcesClient
+        private readonly ResourcesCleanerClient $resourcesClient
     ) {
         $this->curlHandle = $curlHandle;
     }

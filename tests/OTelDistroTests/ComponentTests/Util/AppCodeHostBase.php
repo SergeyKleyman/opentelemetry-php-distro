@@ -89,7 +89,7 @@ abstract class AppCodeHostBase extends SpawnedProcessBase
         try {
             $methodToCall = [$appCodeTarget->appCodeClass, $appCodeTarget->appCodeMethod];
             Assert::assertIsCallable($methodToCall, $msg);
-            $appCodeArguments = $dataPerRequest->appCodeArguments;
+            $appCodeArguments = $dataPerRequest->appCodeRequestArgs;
             if ($appCodeArguments === null) {
                 call_user_func($methodToCall);
             } else {

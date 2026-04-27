@@ -26,6 +26,7 @@ ExceptionUtil::runCatchLogRethrow(
         require __DIR__ . '/otel_distro_extension_stubs/load.php';
         require __DIR__ . '/dummyFuncForTestsWithoutNamespace.php';
         require __DIR__ . '/OTelDistroTests/dummyFuncForTestsWithNamespace.php';
+        require __DIR__ . '/OTelDistroTests/ComponentTests/DependenciesScopingTestApp/Consts.php';
     }
 );
 
