@@ -541,4 +541,18 @@ class ComponentTestCaseBase extends TestCaseBase
         $appCodeHostParams->setProdOption(OptionForProdName::transaction_span_enabled, true);
         $appCodeHostParams->setProdOption(OptionForProdName::transaction_span_enabled_cli, true);
     }
+
+    protected static function copyProdOptionsToAppCodeHostParams(MixedMap $testArgs, AppCodeHostParams $appCodeParams): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+        $dbgCtx->pushSubScope();
+        foreach ($testArgs as $testArgKey => $testArgVal) {
+            if ((($optName = OptionForProdName::tryToFindByName($testArgKey)) !== null) && ($testArgVal !== OptionsForProdMetadata::get()[$optName->name]->defaultValue())) {
+                $dbgCtx->resetTopSubScope(compact('testArgKey', 'testArgVal'));
+                self::assertTrue(is_string($testArgVal) || is_int($testArgVal) || is_float($testArgVal) || is_bool($testArgVal));
+                $appCodeParams->setProdOption($optName, $testArgVal);
+            }
+        }
+        $dbgCtx->popSubScope();
+    }
 }
