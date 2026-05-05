@@ -20,7 +20,8 @@ use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\RangeUtil;
 use OTelDistroTests\Util\TextUtilForTests;
-use OpenTelemetry\SemConv\ResourceAttributes;
+use OpenTelemetry\SemConv\Attributes\ServiceAttributes;
+use OpenTelemetry\SemConv\Incubating\Attributes\TelemetryIncubatingAttributes;
 use PHPUnit\Framework\Assert;
 use ReflectionClass;
 
@@ -74,10 +75,10 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
         };
 
         if ($testArgs->getBool(self::SHOULD_SET_SERVICE_NAME_KEY)) {
-            $addToResult(ResourceAttributes::SERVICE_NAME, self::SERVICE_NAME);
+            $addToResult(ServiceAttributes::SERVICE_NAME, self::SERVICE_NAME);
         }
         if ($testArgs->getBool(self::SHOULD_SET_SERVICE_VERSION_KEY)) {
-            $addToResult(ResourceAttributes::SERVICE_VERSION, self::SERVICE_VERSION);
+            $addToResult(ServiceAttributes::SERVICE_VERSION, self::SERVICE_VERSION);
         }
 
         return $result;
@@ -109,21 +110,21 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
         self::implTestForAppCodeSetsHowFinished(
             testArgs: new MixedMap($testArgsEx),
             subAppCode: [__CLASS__, 'appCodeForTestAttributes'],
-            subImplTest: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput) use ($testArgs): void {
+            additionalAssertCode: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput) use ($testArgs): void {
                 $expectedResourceAttributes = [
-                    ResourceAttributes::TELEMETRY_DISTRO_NAME    => 'opentelemetry-php-distro',
-                    ResourceAttributes::TELEMETRY_SDK_LANGUAGE   => 'php',
-                    ResourceAttributes::TELEMETRY_SDK_NAME       => 'opentelemetry',
-                    ResourceAttributes::TELEMETRY_SDK_VERSION    => self::getOTelSdkVersion(),
+                    TelemetryIncubatingAttributes::TELEMETRY_DISTRO_NAME    => 'opentelemetry-php-distro',
+                    TelemetryIncubatingAttributes::TELEMETRY_SDK_LANGUAGE   => 'php',
+                    TelemetryIncubatingAttributes::TELEMETRY_SDK_NAME       => 'opentelemetry',
+                    TelemetryIncubatingAttributes::TELEMETRY_SDK_VERSION    => self::getOTelSdkVersion(),
                 ];
                 $notExpectedAttributes = [];
 
-                $expectedResourceAttributes[ResourceAttributes::SERVICE_NAME] = $testArgs->getBool(self::SHOULD_SET_SERVICE_NAME_KEY) ? self::SERVICE_NAME : self::DEFAULT_SERVICE_NAME;
+                $expectedResourceAttributes[ServiceAttributes::SERVICE_NAME] = $testArgs->getBool(self::SHOULD_SET_SERVICE_NAME_KEY) ? self::SERVICE_NAME : self::DEFAULT_SERVICE_NAME;
 
                 if ($testArgs->getBool(self::SHOULD_SET_SERVICE_VERSION_KEY)) {
-                    $expectedResourceAttributes[ResourceAttributes::SERVICE_VERSION] = self::SERVICE_VERSION;
+                    $expectedResourceAttributes[ServiceAttributes::SERVICE_VERSION] = self::SERVICE_VERSION;
                 } else {
-                    $notExpectedAttributes[] = ResourceAttributes::SERVICE_VERSION;
+                    $notExpectedAttributes[] = ServiceAttributes::SERVICE_VERSION;
                 }
 
                 $rootSpan = $agentBackendComms->singleRootSpan();
@@ -166,7 +167,7 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
                     self::assertSame($phpPartVerWithoutSuffix, $removeVersionSuffix($phpPartVerInAppContext));
                 }
 
-                $expectedResourceAttributes[ResourceAttributes::TELEMETRY_DISTRO_VERSION] = $distroVersionInAppContext;
+                $expectedResourceAttributes[TelemetryIncubatingAttributes::TELEMETRY_DISTRO_VERSION] = $distroVersionInAppContext;
                 $resources = IterableUtil::toList($agentBackendComms->resources());
                 $dbgCtx->add(compact('resources'));
                 AssertEx::isPositiveInt(count($resources));

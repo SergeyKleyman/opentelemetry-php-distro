@@ -114,9 +114,9 @@ class ComponentTestCaseBase extends TestCaseBase
 
     /**
      * @phpstan-param ?callable(MixedMap): (void|array<string, mixed>) $subAppCode
-     * @phpstan-param ?callable(DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void $subImplTest
+     * @phpstan-param ?callable(DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void $additionalAssertCode
      */
-    protected function implTestForAppCodeSetsHowFinished(MixedMap $testArgs, ?callable $subAppCode = null, ?callable $subImplTest = null): void
+    protected function implTestForAppCodeSetsHowFinished(MixedMap $testArgs, ?callable $subAppCode = null, ?callable $additionalAssertCode = null): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
@@ -125,14 +125,7 @@ class ComponentTestCaseBase extends TestCaseBase
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
             function (AppCodeHostParams $appCodeHostParams) use ($testArgs): void {
                 self::ensureTransactionSpanEnabled($appCodeHostParams);
-                foreach ($testArgs as $testArgKey => $testArgValue) {
-                    if (array_key_exists($testArgKey, OptionsForProdMetadata::get())) {
-                        $appCodeHostParams->setProdOptionIfNotDefault(
-                            AssertEx::notNull(OptionForProdName::tryToFindByName($testArgKey)),
-                            AppCodeHostParams::assertValidProdOptionValueType($testArgValue, $testArgKey)
-                        );
-                    }
-                }
+                self::copyProdOptionsToAppCodeHostParams($testArgs, $appCodeHostParams);
             }
         );
 
@@ -157,8 +150,8 @@ class ComponentTestCaseBase extends TestCaseBase
         $dbgCtx->add(compact('appCodeAuxOutput'));
         self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
 
-        if ($subImplTest !== null) {
-            $subImplTest($dbgCtx, $agentBackendComms, $appCodeAuxOutput);
+        if ($additionalAssertCode !== null) {
+            $additionalAssertCode($dbgCtx, $agentBackendComms, $appCodeAuxOutput);
         }
     }
 
@@ -542,15 +535,17 @@ class ComponentTestCaseBase extends TestCaseBase
         $appCodeHostParams->setProdOption(OptionForProdName::transaction_span_enabled_cli, true);
     }
 
-    protected static function copyProdOptionsToAppCodeHostParams(MixedMap $testArgs, AppCodeHostParams $appCodeParams): void
+    protected static function copyProdOptionsToAppCodeHostParams(MixedMap $testArgs, AppCodeHostParams $appCodeHostParams): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
         $dbgCtx->pushSubScope();
         foreach ($testArgs as $testArgKey => $testArgVal) {
-            if ((($optName = OptionForProdName::tryToFindByName($testArgKey)) !== null) && ($testArgVal !== OptionsForProdMetadata::get()[$optName->name]->defaultValue())) {
+            if (array_key_exists($testArgKey, OptionsForProdMetadata::get())) {
                 $dbgCtx->resetTopSubScope(compact('testArgKey', 'testArgVal'));
-                self::assertTrue(is_string($testArgVal) || is_int($testArgVal) || is_float($testArgVal) || is_bool($testArgVal));
-                $appCodeParams->setProdOption($optName, $testArgVal);
+                $appCodeHostParams->setProdOptionIfNotDefault(
+                    AssertEx::notNull(OptionForProdName::tryToFindByName($testArgKey)),
+                    AppCodeHostParams::assertValidProdOptionValueType($testArgVal, $testArgKey)
+                );
             }
         }
         $dbgCtx->popSubScope();

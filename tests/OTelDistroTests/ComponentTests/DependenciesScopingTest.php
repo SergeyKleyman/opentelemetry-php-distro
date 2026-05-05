@@ -57,7 +57,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         self::implTestForAppCodeSetsHowFinished(
             testArgs: new MixedMap([]),
             subAppCode: [__CLASS__, 'appCodeForTest0DistroHasNewPsrLog'],
-            subImplTest: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void {
+            additionalAssertCode: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void {
                 $installedDistroPsrLogVersion = $appCodeAuxOutput->getString(self::INSTALLED_DISTRO_PSR_LOG_VERSION_KEY);
                 $dbgCtx->add(compact('installedDistroPsrLogVersion'));
 
