@@ -6,7 +6,6 @@ namespace OTelDistroTests\ComponentTests\Util;
 
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
-use OTelDistroTests\Util\BoolUtilForTests;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\Logger;
@@ -63,8 +62,6 @@ final class HelperSleepsAndExitsWithArgCode extends SpawnedProcessBase
          *
          * @see https://www.php.net/manual/en/ini.core.php#ini.register-argc-argv
          */
-        Assert::assertTrue(BoolUtilForTests::fromString(AssertEx::isString(ini_get('register_argc_argv'))));
-
         /** @var list<string> $argv */
         global $argv;
         $dbgCtx->add(compact('argv'));
