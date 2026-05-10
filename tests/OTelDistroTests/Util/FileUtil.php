@@ -139,13 +139,13 @@ final class FileUtil
         return $result;
     }
 
-    /** @noinspection PhpUnused */
-    public static function putFileContents(string $filePath, string $contents): int
+    public static function putFileContents(string $filePath, string $contents): void
     {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
         $result = file_put_contents($filePath, $contents);
-        if (!is_int($result)) {
-            throw new RuntimeException("Failed to put file contents; file path: `$filePath'; contents length: " . strlen($contents));
-        }
-        return $result;
+        $dbgCtx->add(compact('result'));
+        $numberOfBytesWritten = AssertEx::isInt($result);
+        $dbgCtx->add(compact('numberOfBytesWritten'));
+        Assert::assertSame(strlen($contents), $numberOfBytesWritten);
     }
 }

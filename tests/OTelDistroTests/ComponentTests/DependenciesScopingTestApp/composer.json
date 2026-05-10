@@ -11,5 +11,9 @@
     ],
     "config": {
         "process-timeout": 0
+    },
+    "require": {
+        "open-telemetry/sdk": "VERSION IS SET BY THE TEST",
+        "psr/log": "VERSION IS SET BY THE TEST"
     }
 }

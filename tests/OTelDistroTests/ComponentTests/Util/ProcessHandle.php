@@ -14,7 +14,7 @@ final class ProcessHandle
 {
     /** @var ?resource $procOpenRetVal */
     private mixed $procOpenRetVal;
-    private ProcessInfo $cachedInfo;
+    private ProcessInfo $lastInfo;
     private readonly Logger $logger;
 
     /**
@@ -25,44 +25,47 @@ final class ProcessHandle
         mixed $procOpenRetVal,
     ) {
         $this->procOpenRetVal = $procOpenRetVal;
+        $this->lastInfo = self::buildInfo($this->procOpenRetVal);
         $this->logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('this'));
+    }
+
+    /**
+     * @param resource $procOpenRetVal
+     */
+    private static function buildInfo(mixed $procOpenRetVal): ProcessInfo
+    {
+        $procStatus = proc_get_status(AssertEx::notNull($procOpenRetVal));
+        /** @noinspection PhpConditionAlreadyCheckedInspection */
+        if (!is_array($procStatus)) { // @phpstan-ignore function.alreadyNarrowedType
+            throw new ComponentTestsInfraException(ExceptionUtil::buildMessage('proc_get_status returned value which means an error', compact('procStatus')));
+        }
+
+        $pid = AssertEx::isInt($procStatus['pid']);
+        $exitCode = AssertEx::isBool($procStatus['running']) ? null : AssertEx::isInt($procStatus['exitcode']);
+        return new ProcessInfo($pid, $exitCode);
     }
 
     public function getCurrentInfo(): ProcessInfo
     {
-        return $this->refresh();
-    }
-
-    private function refresh(): ProcessInfo
-    {
-        if (!$this->cachedInfo->hasExited()) {
-            $procStatus = proc_get_status(AssertEx::notNull($this->procOpenRetVal));
-            /** @noinspection PhpConditionAlreadyCheckedInspection */
-            if (!is_array($procStatus)) { // @phpstan-ignore function.alreadyNarrowedType
-                throw new ComponentTestsInfraException(ExceptionUtil::buildMessage('proc_get_status returned value which means an error', compact('procStatus')));
-            }
-
-            $pid = AssertEx::isInt($procStatus['pid']);
-            $exitCode = AssertEx::isBool($procStatus['running']) ? null : AssertEx::isInt($procStatus['exitcode']);
-            $this->cachedInfo = new ProcessInfo($pid, $exitCode);
+        if (!$this->lastInfo->hasExited()) {
+            $this->lastInfo = self::buildInfo(AssertEx::notNull($this->procOpenRetVal));
         }
-
-        return $this->cachedInfo;
+        return $this->lastInfo;
     }
 
     public function waitForProcessToExit(int $maxWaitTimeInMicroseconds): bool
     {
         $logDebug = $this->logger->inherit()->addAllContext(compact('maxWaitTimeInMicroseconds'))->ifDebugLevelEnabledNoLine(__FUNCTION__);
 
-        (new PollingCheck($this->dbgProcessName . ' exited', $maxWaitTimeInMicroseconds))->run(fn() => $this->refresh()->hasExited());
+        (new PollingCheck($this->dbgProcessName . ' exited', $maxWaitTimeInMicroseconds))->run(fn() => $this->getCurrentInfo()->hasExited());
 
-        if ($this->cachedInfo->hasExited()) {
+        if ($this->getCurrentInfo()->hasExited()) {
             $logDebug?->log(__LINE__, 'Process exited');
         } else {
             $this->logger->ifWarningLevelEnabled(__LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out');
         }
 
-        return $this->cachedInfo->hasExited();
+        return $this->getCurrentInfo()->hasExited();
     }
 
     public function close(): void

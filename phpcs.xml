@@ -33,6 +33,4 @@
     <exclude-pattern>*/tests/polyfills/Override.php</exclude-pattern>
 
     <exclude-pattern>*/tests/substitutes/*/original/*</exclude-pattern>
-
-    <exclude-pattern>*/tests/OTelDistroTests/ComponentTests/DependenciesScopingTestApp/*</exclude-pattern>
 </ruleset>

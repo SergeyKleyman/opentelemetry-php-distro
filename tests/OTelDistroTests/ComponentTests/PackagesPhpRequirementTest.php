@@ -6,18 +6,15 @@ namespace OTelDistroTests\ComponentTests;
 
 use Composer\Semver\Semver;
 use OpenTelemetry\Distro\VendorDir;
-use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
+use OTelDistroTests\ComponentTests\Util\AgentBackendComms;
 use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
-use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
-use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
-use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\EnvVarUtilForTests;
 use OTelDistroTests\ComponentTests\Util\ProcessUtil;
 use OTelDistroTests\ComponentTests\Util\ResourcesCleanerHandle;
-use OTelDistroTests\ComponentTests\Util\WaitForOTelSignalCounts;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\DebugContextScopeRef;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
 use OTelDistroTests\Util\MixedMap;
@@ -228,44 +225,30 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         self::assertSame(0, AssertEx::notNull($procInfo->exitCode));
     }
 
-    public static function appCodeForTestPackagesHaveCorrectPhpVersion(MixedMap $appCodeRequestArgs): void
+    /**
+     * @return array<string, mixed>
+     */
+    public static function appCodeForTestPackagesHaveCorrectPhpVersion(): array
     {
-        AppCodeAuxOutputUtil::writeDataToTempFile([self::INSTALLED_DISTRO_VENDOR_DIR_KEY => AppCodeContextUtil::adaptClassName(VendorDir::class)::$fullPath], $appCodeRequestArgs);
+        return [self::INSTALLED_DISTRO_VENDOR_DIR_KEY => AppCodeContextUtil::adaptClassNameScoping(VendorDir::class)::$fullPath];
     }
 
     private function implTestPackagesHaveCorrectPhpVersion(): void
     {
         self::assertOpcacheEnabled();
 
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+        self::implTestForAppCodeSetsHowFinished(
+            testArgs: new MixedMap(),
+            subAppCode: [__CLASS__, 'appCodeForTestPackagesHaveCorrectPhpVersion'],
+            additionalAssertCode: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void {
+                $installedDistroVendorDir = $appCodeAuxOutput->getString(self::INSTALLED_DISTRO_VENDOR_DIR_KEY);
+                $dbgCtx->add(compact('installedDistroVendorDir'));
 
-        $testCaseHandle = $this->getTestCaseHandle();
-
-        /** @var array<string, mixed> $appCodeRequestArgs */
-        $appCodeRequestArgs = [];
-        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
-
-        $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeHostParams): void {
-                self::ensureTransactionSpanEnabled($appCodeHostParams);
-            }
+                self::verifyPackagesPhpVersion($installedDistroVendorDir);
+                self::validatePhpFilesUseParser($installedDistroVendorDir);
+                self::validatePhpFilesUseOpCache($installedDistroVendorDir, $this->getTestCaseHandle()->getResourcesCleaner());
+            },
         );
-        $appCodeHost->execAppCode(
-            AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestPackagesHaveCorrectPhpVersion']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
-                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
-            }
-        );
-
-        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
-        $dbgCtx->add(compact('agentBackendComms'));
-
-        $installedDistroVendorDir = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs)->getString(self::INSTALLED_DISTRO_VENDOR_DIR_KEY);
-        $dbgCtx->add(compact('installedDistroVendorDir'));
-
-        self::verifyPackagesPhpVersion($installedDistroVendorDir);
-        self::validatePhpFilesUseParser($installedDistroVendorDir);
-        self::validatePhpFilesUseOpCache($installedDistroVendorDir, $testCaseHandle->getResourcesCleaner());
     }
 
     public function testPackagesHaveCorrectPhpVersion(): void

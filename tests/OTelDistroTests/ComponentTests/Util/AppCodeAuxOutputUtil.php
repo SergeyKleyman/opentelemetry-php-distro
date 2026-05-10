@@ -30,12 +30,18 @@ final class AppCodeAuxOutputUtil
         ArrayUtilForTests::addAssertingKeyNew(self::FILE_PATH_KEY, $tempFilePath, /* in,out */ $appCodeRequestArgs);
     }
 
+    public static function getFilePath(MixedMap $appCodeRequestArgs): string
+    {
+        return $appCodeRequestArgs->getString(self::FILE_PATH_KEY);
+    }
+
     /**
      * @param JsonEncodableData $data
      */
     public static function writeDataToTempFile(null|bool|int|float|string|array $data, MixedMap $appCodeRequestArgs): void
     {
-        FileUtil::putFileContents($appCodeRequestArgs->getString(self::FILE_PATH_KEY), JsonUtil::encode(self::assertJsonEncodableData($data)));
+        $dataToWrite = JsonUtil::encode(self::assertJsonEncodableData($data));
+        FileUtil::putFileContents(self::getFilePath($appCodeRequestArgs), $dataToWrite);
     }
 
     /**

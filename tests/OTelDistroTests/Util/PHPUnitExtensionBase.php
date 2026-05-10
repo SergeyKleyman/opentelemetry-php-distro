@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\Util;
 
+use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\Log\LogLevel;
+use OpenTelemetry\DistroTools\Build\BuildToolsLog;
 use OTelDistroTests\ComponentTests\Util\ConfigUtilForTests;
 use OTelDistroTests\ComponentTests\Util\EnvVarUtilForTests;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
@@ -65,6 +67,39 @@ abstract class PHPUnitExtensionBase implements Extension
                 AmbientContextForTests::assertIsInited();
                 DebugContext::ensureInited();
                 ConfigUtilForTests::verifyTracingIsDisabled();
+                BuildToolsLog::configure(
+                    maxEnabledLevel: AmbientContextForTests::testConfig()->logLevel,
+                    formatAndWrite: function (LogLevel $level, string $file, int $line, string $func, string $message, array $context): void {
+                        AmbientContextForTests::logSink()->consume(
+                            statementLevel: $level,
+                            category: LogCategoryForTests::TEST_INFRA,
+                            srcCodeFile: $file,
+                            srcCodeLine: $line,
+                            srcCodeFunc: $func,
+                            message: $message,
+                            context: $context,
+                            includeStacktrace: null,
+                            numberOfStackFramesToSkip: 1
+                        );
+                    },
+                );
+                BootstrapStageLogger::configure(
+                    maxEnabledLevel: AmbientContextForTests::testConfig()->logLevel->value,
+                    phpSrcCodeRootDir: RepoRootDir::getFullPath(),
+                    rootNamespace: ClassNameUtil::fqToNamespace(BootstrapStageLogger::class),
+                    formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
+                        AmbientContextForTests::logSink()->formatAndWrite(
+                            levelInt: $level,
+                            levelString: BootstrapStageLogger::levelIntToString($level),
+                            category: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
+                            srcCodeFile: $file,
+                            srcCodeLine: $line,
+                            srcCodeFunc: $func,
+                            message: $message,
+                            contextAsString: ''
+                        );
+                    },
+                );
             }
         );
 

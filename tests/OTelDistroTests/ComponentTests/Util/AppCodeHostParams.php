@@ -9,6 +9,7 @@ use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\TextUtil;
 use OTelDistroTests\UnitTests\Util\MockConfigRawSnapshotSource;
 use OTelDistroTests\Util\AmbientContextForTests;
+use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\Config\CompositeRawSnapshotSource;
 use OTelDistroTests\Util\Config\ConfigSnapshotForProd;
@@ -37,6 +38,9 @@ class AppCodeHostParams implements LoggableInterface
 
     /** @var OptionsForProdMap */
     private Map $prodOptions;
+
+    /** @var array<string, string> */
+    private array $additionalEnvVars = [];
 
     public string $spawnedProcessInternalId;
 
@@ -86,6 +90,11 @@ class AppCodeHostParams implements LoggableInterface
         if ($optVal !== OptionsForProdMetadata::get()[$optName->name]->defaultValue()) {
             $this->setProdOption($optName, AssertEx::notNull($optVal));
         }
+    }
+
+    public function addEnvVar(string $name, string $val): void
+    {
+        $this->additionalEnvVars[$name] = $val;
     }
 
     /**
@@ -223,7 +232,9 @@ class AppCodeHostParams implements LoggableInterface
      */
     public function buildEnvVarsForAppCodeProcess(): array
     {
-        return self::buildEnvVarsForAppCodeProcessImpl(EnvVarUtilForTests::getAll(), $this->prodOptions);
+        $result = self::buildEnvVarsForAppCodeProcessImpl(EnvVarUtilForTests::getAll(), $this->prodOptions);
+        ArrayUtilForTests::append(from: $this->additionalEnvVars, to: $result);
+        return $result;
     }
 
     public function buildProdConfig(): ConfigSnapshotForProd

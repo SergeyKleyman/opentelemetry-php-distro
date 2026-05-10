@@ -9,7 +9,7 @@ namespace OpenTelemetry\Distro;
 use Closure;
 
 /**
- * @phpstan-type WriteToSink Closure(int $level, int $feature, string $file, int $line, string $func, string $message): void
+ * @phpstan-type FormatAndWrite Closure(int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void
  */
 final class BootstrapStageLogger
 {
@@ -33,7 +33,8 @@ final class BootstrapStageLogger
 
     private static int $maxEnabledLevel = self::LEVEL_OFF;
 
-    private static ?Closure $writeToSink = null;
+    /** @var ?FormatAndWrite */
+    private static ?Closure $formatAndWrite = null;
 
     private static string $phpSrcCodePathPrefixToRemove;
     private static string $classNamePrefixToRemove;
@@ -41,14 +42,14 @@ final class BootstrapStageLogger
     private static ?int $pid = null;
 
     /**
-     * @phpstan-param ?WriteToSink $writeToSink
+     * @phpstan-param ?FormatAndWrite $formatAndWrite
      */
-    public static function configure(int $maxEnabledLevel, string $phpSrcCodeRootDir, string $rootNamespace, ?Closure $writeToSink = null): void
+    public static function configure(int $maxEnabledLevel, string $phpSrcCodeRootDir, string $rootNamespace, ?Closure $formatAndWrite = null): void
     {
         require __DIR__ . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogFeature.php';
 
         self::$maxEnabledLevel = $maxEnabledLevel;
-        self::$writeToSink = $writeToSink;
+        self::$formatAndWrite = $formatAndWrite;
         if (is_int($pid = getmypid())) {
             self::$pid = $pid;
         }
@@ -58,7 +59,7 @@ final class BootstrapStageLogger
 
         self::logDebug(
             'Exiting...'
-            . '; maxEnabledLevel: ' . self::levelToString($maxEnabledLevel)
+            . '; maxEnabledLevel: ' . self::levelIntToString($maxEnabledLevel)
             . '; phpSrcCodePathPrefixToRemove: ' . self::$phpSrcCodePathPrefixToRemove
             . '; classNamePrefixToRemove: ' . self::$classNamePrefixToRemove
             . '; pid: ' . self::nullableToLog(self::$pid),
@@ -69,13 +70,13 @@ final class BootstrapStageLogger
         );
     }
 
-    private static function levelToString(int $level): string
+    public static function levelIntToString(int $level): string
     {
         if (array_key_exists($level, self::LEVEL_AS_STRING)) {
             return self::LEVEL_AS_STRING[$level];
         }
 
-        return "LEVEL ($level)";
+        return "LEVEL $level";
     }
 
     public static function nullableToLog(null|int|string $str): string
@@ -181,13 +182,13 @@ final class BootstrapStageLogger
         self::logWithFeatureAndLevel(Log\LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
     }
 
-    public static function logWithFeatureAndLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    public static function logWithFeatureAndLevel(int $prodLogFeature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
         if (!self::isEnabledForLevel($statementLevel)) {
             return;
         }
 
-        if (self::$writeToSink === null) {
+        if (self::$formatAndWrite === null) {
             /**
              * Use fully qualified names for functions implemented by the extension to make sure scoper correctly detects them
              * @noinspection PhpUnnecessaryFullyQualifiedNameInspection
@@ -195,19 +196,19 @@ final class BootstrapStageLogger
             \OpenTelemetry\Distro\log_feature(
                 0 /* $isForced */,
                 $statementLevel,
-                $feature,
+                $prodLogFeature,
                 self::processSourceCodeFilePathForLog($file),
                 $line,
                 self::processClassFunctionNameForLog($class, $func),
                 $message
             );
         } else {
-            (self::$writeToSink)(
+            (self::$formatAndWrite)(
                 $statementLevel,
-                $feature,
+                $prodLogFeature,
                 self::processSourceCodeFilePathForLog($file),
                 $line,
-                self::processClassFunctionNameForLog($class, $func),
+                $func,
                 $message
             );
         }

@@ -22,7 +22,7 @@ use Override;
  */
 final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
 {
-    private static ?string $scriptToRunFullPath = null;
+    private static ?string $scriptToRun = null;
 
     private readonly Logger $logger;
 
@@ -50,14 +50,14 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         return FileUtil::partsToPath(__DIR__, 'runCliScriptAppCodeHost.php');
     }
 
-    public static function setScriptToRun(?string $scriptToRunFullPath): void
+    public static function setScriptToRun(?string $scriptToRun): void
     {
-        self::$scriptToRunFullPath = $scriptToRunFullPath;
+        self::$scriptToRun = $scriptToRun;
     }
 
     public static function getScriptToRun(): string
     {
-        return self::$scriptToRunFullPath ?? self::defaultScriptToRun();
+        return self::$scriptToRun ?? self::defaultScriptToRun();
     }
 
     /** @inheritDoc */

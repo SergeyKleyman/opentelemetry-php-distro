@@ -23,7 +23,6 @@ if ($repoRootDir === false) {
 $prodPhpDistroPath = $repoRootDir . DIRECTORY_SEPARATOR . 'prod' . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . 'OpenTelemetry' . DIRECTORY_SEPARATOR . 'Distro';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageStdErrWriter.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLoggingClassTrait.php';
 
@@ -38,10 +37,21 @@ $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
 $maxEnabledLogLevel = $getMaxEnabledLogLevelConfig() ?? BuildToolsLog::DEFAULT_LEVEL;
 BuildToolsLog::configure($maxEnabledLogLevel);
 
-$writeToSinkForBootstrapStageLogger = function (int $level, int $feature, string $file, int $line, string $func, string $text): void {
-    BuildToolsLog::writeAsProdSink($level, $feature, $file, $line, $func, $text);
-};
-BootstrapStageLogger::configure($maxEnabledLogLevel->value, $prodPhpDistroPath, __NAMESPACE__, $writeToSinkForBootstrapStageLogger);
+BootstrapStageLogger::configure(
+    maxEnabledLevel: $maxEnabledLogLevel->value,
+    phpSrcCodeRootDir: $prodPhpDistroPath,
+    rootNamespace: __NAMESPACE__,
+    formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
+        BuildToolsLog::defaultFormatAndWrite(
+            levelString: BootstrapStageLogger::levelIntToString($level),
+            featureOrCategoryString: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
+            file: $file,
+            line: $line,
+            func: $func,
+            messageWithContext: $message
+        );
+    }
+);
 
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderDistroOTelClasses.php';
 AutoloaderDistroOTelClasses::register('OpenTelemetry\\Distro', $prodPhpDistroPath);

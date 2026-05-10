@@ -6,5 +6,52 @@ namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
 
 final class Shared
 {
-    private const APP_USES_PSR_LOG_OLD_VERSION_KEY = 'app_expects_psr_log_old_version';
+    public const APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX = 'app_code_aux_output_file_path';
+    public const IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX = 'is_app_compatible_with_psr_log_return_type';
+    public const IS_DEBUG_LOG_ENABLED_ENV_VAR_NAME_SUFFIX = 'is_debug_log_enabled';
+
+    public const OTEL_SDK_PACKAGE_NAME = 'open-telemetry/sdk';
+    public const PSR_LOG_PACKAGE_NAME = 'psr/log';
+    public const ALL_PACKAGE_NAMES = [self::OTEL_SDK_PACKAGE_NAME, self::PSR_LOG_PACKAGE_NAME];
+
+    /** @noinspection PhpFullyQualifiedNameUsageInspection */
+    public const PSR_LOG_ABSTRACT_LOGGER_CLASS_NAME = \Psr\Log\AbstractLogger::class;
+    public const PSR_LOG_ABSTRACT_LOGGER_METHOD_NAME = 'emergency';
+    /** @noinspection PhpFullyQualifiedNameUsageInspection */
+    public const OTEL_SDK_CLASS_NAME = \OpenTelemetry\SDK\Sdk::class;
+    public const ALL_CLASS_NAMES = [self::PSR_LOG_ABSTRACT_LOGGER_CLASS_NAME, self::OTEL_SDK_CLASS_NAME];
+
+    public const DISTRO_ENABLED_CFG_OPT_NAME = 'enabled';
+    public const DEBUG_SCOPER_ENABLED_CFG_OPT_NAME = 'debug_scoper_enabled';
+    public const SCOPING_PREFIX = 'OTelDistroScoped';
+
+    public const PACKAGES_VERSIONS_KEY = 'packages_versions';
+    public const CLASSES_SOURCE_CODE_FILES_PATHS_KEY = 'classes_source_code_files_paths';
+    public const PSR_LOG_HAS_RETURN_TYPE_KEY = 'psr_log_has_return_type';
+
+    public const DISTRO_VENDOR_DIR_PATH_KEY = 'distro_vendor_dir_path';
+    public const APP_VENDOR_DIR_PATH_KEY = 'app_vendor_dir_path';
+
+    public const DID_APP_CODE_FINISH_SUCCESSFULLY_KEY = 'is_app_code_finished_successfully';
+
+    public static function buildEnvVarName(string $envVarNameSuffix): string
+    {
+        return str_replace("\\", '_', __NAMESPACE__) . '_' . $envVarNameSuffix;
+    }
+
+    /**
+     * @phpstan-return 'Distro'|'App'
+     */
+    public static function buildDistroOrAppKey(bool $isDistro): string
+    {
+        return $isDistro ? 'Distro' : 'App';
+    }
+
+    /**
+     * @phpstan-return 'scoped'|'not scoped'
+     */
+    public static function buildScopedKey(bool $isScoped): string
+    {
+        return ($isScoped ? '' : 'not ') . 'scoped';
+    }
 }
