@@ -8,9 +8,10 @@ final class Shared
 {
     public const APP_LOG_LINE_PREFIX = '[OTel PHP Distro tests] [DependenciesScopingTestApp]';
 
+    public const TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX = 'tests_repo_root_dir_path';
     public const APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX = 'app_code_aux_output_file_path';
     public const IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX = 'is_app_compatible_with_psr_log_return_type';
-    public const IS_DEBUG_LOG_ENABLED_ENV_VAR_NAME_SUFFIX = 'is_debug_log_enabled';
+    public const LOG_LEVEL_ENV_VAR_NAME_SUFFIX = 'log_level';
 
     public const OTEL_SDK_PACKAGE_NAME = 'open-telemetry/sdk';
     public const PSR_LOG_PACKAGE_NAME = 'psr/log';

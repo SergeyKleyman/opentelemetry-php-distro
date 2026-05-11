@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\UnitTests\UtilTests\ConfigTests;
 
-use OpenTelemetry\Distro\BootstrapStageLogger;
+use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\PhpPartFacade;
 use OTelDistroTests\Util\AssertEx;
@@ -20,11 +20,11 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
         AssertEx::sameConstValues(PhpPartFacade::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, OptionForProdName::user_bootstrap_php_file->name);
     }
 
-    public function testBootstrapStageLoggerLevels(): void
+    public function testBootstrapStageLogLevelUtil(): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
-        $bootstrapStageLoggerReflClass = new ReflectionClass(BootstrapStageLogger::class);
+        $bootstrapStageLoggerReflClass = new ReflectionClass(BootstrapStageLogLevelUtil::class);
 
         // Verify that number of LEVEL_* consts in BootstrapStageLogger is the same as the number of cases in LogLevel
         $constsNameToVal = array_filter(
@@ -48,7 +48,10 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
             $constVal = $bootstrapStageLoggerReflClass->getConstant($constName);
             self::assertSame($level->value, $constVal);
 
-            self::assertSame(strtoupper($level->name), BootstrapStageLogger::levelIntToString($constVal));
+            self::assertSame(strtoupper($level->name), BootstrapStageLogLevelUtil::levelIntToString($constVal));
+
+            self::assertSame($level->value, BootstrapStageLogLevelUtil::levelStringToInt(strtoupper($level->name)));
+            self::assertSame($level->value, BootstrapStageLogLevelUtil::levelStringToInt(strtolower($level->name)));
         }
         $dbgCtx->popSubScope();
 
@@ -56,7 +59,8 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
         $maxPredefinedIntVal = max(AssertEx::notEmptyList(array_values($constsNameToVal)));
         foreach ([1, 12, 321, 4567] as $delta) {
             $notPredefinedLevelIntVal = $maxPredefinedIntVal + $delta;
-            self::assertSame('LEVEL ' . $notPredefinedLevelIntVal, BootstrapStageLogger::levelIntToString($notPredefinedLevelIntVal));
+            self::assertSame('LEVEL ' . $notPredefinedLevelIntVal, BootstrapStageLogLevelUtil::levelIntToString($notPredefinedLevelIntVal));
+            self::assertNull(BootstrapStageLogLevelUtil::levelStringToInt(BootstrapStageLogLevelUtil::levelIntToString($notPredefinedLevelIntVal)));
         }
     }
 }

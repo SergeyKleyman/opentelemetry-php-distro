@@ -6,6 +6,7 @@ namespace OpenTelemetry\DistroTools\Build;
 
 use OpenTelemetry\Distro\AutoloaderDistroOTelClasses;
 use OpenTelemetry\Distro\BootstrapStageLogger;
+use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
 use RuntimeException;
 
@@ -23,6 +24,7 @@ if ($repoRootDir === false) {
 $prodPhpDistroPath = $repoRootDir . DIRECTORY_SEPARATOR . 'prod' . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . 'OpenTelemetry' . DIRECTORY_SEPARATOR . 'Distro';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLoggingClassTrait.php';
 
@@ -43,7 +45,7 @@ BootstrapStageLogger::configure(
     rootNamespace: __NAMESPACE__,
     formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
         BuildToolsLog::defaultFormatAndWrite(
-            levelString: BootstrapStageLogger::levelIntToString($level),
+            levelString: BootstrapStageLogLevelUtil::levelIntToString($level),
             featureOrCategoryString: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
             file: $file,
             line: $line,

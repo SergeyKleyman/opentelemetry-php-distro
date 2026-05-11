@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\Util;
 
 use OpenTelemetry\Distro\BootstrapStageLogger;
+use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\DistroTools\Build\BuildToolsLog;
 use OTelDistroTests\ComponentTests\Util\ConfigUtilForTests;
@@ -90,7 +91,7 @@ abstract class PHPUnitExtensionBase implements Extension
                     formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
                         AmbientContextForTests::logSink()->formatAndWrite(
                             levelInt: $level,
-                            levelString: BootstrapStageLogger::levelIntToString($level),
+                            levelString: BootstrapStageLogLevelUtil::levelIntToString($level),
                             category: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
                             srcCodeFile: $file,
                             srcCodeLine: $line,

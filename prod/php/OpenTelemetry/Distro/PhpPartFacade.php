@@ -64,6 +64,7 @@ final class PhpPartFacade
     {
         self::$wasBootstrapCalled = true;
 
+        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/StaticClassTrait.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/BoolUtil.php';

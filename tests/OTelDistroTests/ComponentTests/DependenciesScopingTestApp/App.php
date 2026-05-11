@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
 
 use Closure;
+use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use ReflectionClass;
 use ReflectionFunction;
 use RuntimeException;
@@ -12,6 +13,17 @@ use Throwable;
 
 final class App
 {
+    private static ?int $maxEnabledLogLevel = null;
+
+    private static function parseLogLevelConfig(): void
+    {
+        if (!class_exists(BootstrapStageLogLevelUtil::class)) {
+            $testsRepoRootDirPath = self::getEnvVar(Shared::buildEnvVarName(Shared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX));
+            require $testsRepoRootDirPath . '/prod/php/OpenTelemetry/Distro/BootstrapStageLogLevelUtil.php';
+        }
+        self::$maxEnabledLogLevel = BootstrapStageLogLevelUtil::levelStringToInt(self::getEnvVar(Shared::buildEnvVarName(Shared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX)));
+    }
+
     private static function writeLineToStdErr(string $text): void
     {
         /** @var ?bool $isStdErrDefined */
@@ -43,20 +55,38 @@ final class App
 
     /**
      * @param array<string, mixed>  $context
+     */
+    private static function logWithLevel(int $level, int $srcCodeLine, string $message, array $context = []): void
+    {
+        if ($level > self::$maxEnabledLogLevel) {
+            return;
+        }
+
+        $formattedStatement = Shared::APP_LOG_LINE_PREFIX;
+        $formattedStatement .=  ' ' . '[' . BootstrapStageLogLevelUtil::levelIntToString($level) . ']';
+        $formattedStatement .=  ' ' . '[' . __FILE__ . ':' . $srcCodeLine . ']';
+        $formattedStatement .=  ' ' . self::concatMessageAndContext($message, $context);
+        self::writeLineToStdErr($formattedStatement);
+    }
+
+    /**
+     * @param array<string, mixed>  $context
      *
      * @noinspection PhpSameParameterValueInspection
      */
     private static function logDebug(int $srcCodeLine, string $message, array $context = []): void
     {
-        /** @var ?bool $isDebugLogEnabled */
-        static $isDebugLogEnabled = null;
-        if ($isDebugLogEnabled === null) {
-            $isDebugLogEnabled = self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_DEBUG_LOG_ENABLED_ENV_VAR_NAME_SUFFIX)));
-        }
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_DEBUG, $srcCodeLine, $message, $context);
+    }
 
-        if ($isDebugLogEnabled) {
-            self::writeLineToStdErr(Shared::APP_LOG_LINE_PREFIX . '[' . __FILE__ . ':' . $srcCodeLine . '] ' . self::concatMessageAndContext($message, $context));
-        }
+    /**
+     * @param array<string, mixed>  $context
+     *
+     * @noinspection PhpSameParameterValueInspection
+     */
+    private static function logWarning(int $srcCodeLine, string $message, array $context = []): void
+    {
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_WARNING, $srcCodeLine, $message, $context);
     }
 
     /**
@@ -319,12 +349,18 @@ final class App
 
     public static function run(): void
     {
+        self::parseLogLevelConfig();
+
         $appCodeAuxOutput = self::generateAuxOutput();
 
         $appCodeAuxOutputFilePath = self::getEnvVar(Shared::buildEnvVarName(Shared::APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX));
-        self::logDebug(__LINE__, '', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
         self::putFileContents($appCodeAuxOutputFilePath, self::assertIsString(json_encode($appCodeAuxOutput)));
+        self::logDebug(__LINE__, 'Written app code aux output', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
 
-        self::usePsrLoggerImpl(self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX))));
+        $isCompatibleWithNewPsrLog = self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX)));
+        if (!$isCompatibleWithNewPsrLog) {
+            self::logWarning(__LINE__, 'About to use psr/log in a way that is expected to fail...');
+        }
+        self::usePsrLoggerImpl($isCompatibleWithNewPsrLog);
     }
 }

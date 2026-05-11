@@ -13,25 +13,7 @@ use Closure;
  */
 final class BootstrapStageLogger
 {
-    public const LEVEL_OFF = 0;
-    public const LEVEL_CRITICAL = 1;
-    public const LEVEL_ERROR = 2;
-    public const LEVEL_WARNING = 3;
-    public const LEVEL_INFO = 4;
-    public const LEVEL_DEBUG = 5;
-    public const LEVEL_TRACE = 6;
-
-    private const LEVEL_AS_STRING = [
-        self::LEVEL_OFF => 'OFF',
-        self::LEVEL_CRITICAL => 'CRITICAL',
-        self::LEVEL_ERROR => 'ERROR',
-        self::LEVEL_WARNING => 'WARNING',
-        self::LEVEL_INFO => 'INFO',
-        self::LEVEL_DEBUG => 'DEBUG',
-        self::LEVEL_TRACE => 'TRACE',
-    ];
-
-    private static int $maxEnabledLevel = self::LEVEL_OFF;
+    private static int $maxEnabledLevel = BootstrapStageLogLevelUtil::LEVEL_OFF;
 
     /** @var ?FormatAndWrite */
     private static ?Closure $formatAndWrite = null;
@@ -59,7 +41,7 @@ final class BootstrapStageLogger
 
         self::logDebug(
             'Exiting...'
-            . '; maxEnabledLevel: ' . self::levelIntToString($maxEnabledLevel)
+            . '; maxEnabledLevel: ' . BootstrapStageLogLevelUtil::levelIntToString($maxEnabledLevel)
             . '; phpSrcCodePathPrefixToRemove: ' . self::$phpSrcCodePathPrefixToRemove
             . '; classNamePrefixToRemove: ' . self::$classNamePrefixToRemove
             . '; pid: ' . self::nullableToLog(self::$pid),
@@ -68,15 +50,6 @@ final class BootstrapStageLogger
             __CLASS__,
             __FUNCTION__
         );
-    }
-
-    public static function levelIntToString(int $level): string
-    {
-        if (array_key_exists($level, self::LEVEL_AS_STRING)) {
-            return self::LEVEL_AS_STRING[$level];
-        }
-
-        return "LEVEL $level";
     }
 
     public static function nullableToLog(null|int|string $str): string
@@ -89,7 +62,7 @@ final class BootstrapStageLogger
      */
     public static function logCritical(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_CRITICAL, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_CRITICAL, $message, $file, $line, $class, $func);
     }
 
     /**
@@ -97,7 +70,7 @@ final class BootstrapStageLogger
      */
     public static function logError(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_ERROR, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_ERROR, $message, $file, $line, $class, $func);
     }
 
     /**
@@ -105,7 +78,7 @@ final class BootstrapStageLogger
      */
     public static function logWarning(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_WARNING, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_WARNING, $message, $file, $line, $class, $func);
     }
 
     /**
@@ -113,7 +86,7 @@ final class BootstrapStageLogger
      */
     public static function logInfo(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_INFO, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_INFO, $message, $file, $line, $class, $func);
     }
 
     /**
@@ -121,7 +94,7 @@ final class BootstrapStageLogger
      */
     public static function logDebug(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_DEBUG, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_DEBUG, $message, $file, $line, $class, $func);
     }
 
     /**
@@ -129,7 +102,7 @@ final class BootstrapStageLogger
      */
     public static function logTrace(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithLevel(self::LEVEL_TRACE, $message, $file, $line, $class, $func);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE, $message, $file, $line, $class, $func);
     }
 
     public static function isEnabledForLevel(int $statementLevel): bool
@@ -219,6 +192,6 @@ final class BootstrapStageLogger
      */
     public static function possiblySecuritySensitive(mixed $value): mixed
     {
-        return self::isEnabledForLevel(self::LEVEL_TRACE) ? $value : 'REDACTED (POSSIBLY SECURITY SENSITIVE) DATA';
+        return self::isEnabledForLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE) ? $value : 'REDACTED (POSSIBLY SECURITY SENSITIVE) DATA';
     }
 }

@@ -31,6 +31,7 @@ use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
 use OTelDistroTests\Util\Log\SinkForTests;
 use OTelDistroTests\Util\MixedMap;
+use OTelDistroTests\Util\RepoRootDir;
 
 /**
  * @group smoke
@@ -319,10 +320,8 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
                     Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX),
                     BoolUtil::toString($isAppCompatibleWithPsrLogReturnType)
                 );
-                $appCodeHostParams->addEnvVar(
-                    Shared::buildEnvVarName(Shared::IS_DEBUG_LOG_ENABLED_ENV_VAR_NAME_SUFFIX),
-                    BoolUtil::toString(AmbientContextForTests::loggerFactory()->isEnabledForLevel(LogLevel::debug))
-                );
+                $appCodeHostParams->addEnvVar(Shared::buildEnvVarName(Shared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX), AmbientContextForTests::testConfig()->logLevel->name);
+                $appCodeHostParams->addEnvVar(Shared::buildEnvVarName(Shared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX), RepoRootDir::getFullPath());
             }
         );
 
