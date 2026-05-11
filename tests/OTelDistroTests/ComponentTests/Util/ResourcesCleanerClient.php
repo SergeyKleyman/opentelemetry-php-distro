@@ -73,8 +73,7 @@ final class ResourcesCleanerClient
         && $loggerProxy->log('Successfully registered process to terminate with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('pid', 'isTestScoped'));
     }
 
-    /** @noinspection PhpSameParameterValueInspection */
-    private function registerFileToDelete(string $fullPath, bool $isTestScoped): void
+    public function registerFileToDelete(string $fullPath, bool $isTestScoped): void
     {
         ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__))
         && $loggerProxy->log('Registering file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('fullPath', 'isTestScoped'));
@@ -93,9 +92,9 @@ final class ResourcesCleanerClient
         && $loggerProxy->log('Successfully registered file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('fullPath', 'isTestScoped'));
     }
 
-    public function createTempFile(?string $dbgTempFilePurpose = null, bool $shouldBeDeletedOnTestExit = true): string
+    public function createTempFile(string $fileNamePrefix, bool $shouldBeDeletedOnTestExit = true): string
     {
-        $tempFileFullPath = FileUtil::createTempFile($dbgTempFilePurpose);
+        $tempFileFullPath = FileUtil::createTempFile($fileNamePrefix);
         if ($shouldBeDeletedOnTestExit) {
             $this->registerFileToDelete($tempFileFullPath, isTestScoped: true);
         }

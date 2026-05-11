@@ -8,9 +8,11 @@ use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ExceptionUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
+use OTelDistroTests\Util\Log\LoggableInterface;
 use OTelDistroTests\Util\Log\Logger;
+use OTelDistroTests\Util\Log\LogStreamInterface;
 
-final class ProcessHandle
+final class ProcessHandle implements LoggableInterface
 {
     /** @var ?resource $procOpenRetVal */
     private mixed $procOpenRetVal;
@@ -79,5 +81,10 @@ final class ProcessHandle
         if (PHP_VERSION_ID >= 80300 && $procCloseRetVal === -1) {
             throw new ComponentTestsInfraException(ExceptionUtil::buildMessage('proc_close returned value which means an error', $this->logger->getContext()));
         }
+    }
+
+    public function toLog(LogStreamInterface $stream): void
+    {
+        $stream->toLogAs(['lastInfo' => $this->lastInfo, 'is closed' => ($this->procOpenRetVal === null)]);
     }
 }

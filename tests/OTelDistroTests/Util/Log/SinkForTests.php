@@ -10,7 +10,7 @@ use Override;
 
 final class SinkForTests extends SinkBase
 {
-    private const LOG_LINE_PREFIX = '[OTel PHP Distro tests]';
+    public const LOG_LINE_PREFIX = '[OTel PHP Distro tests]';
 
     private const DEFAULT_SYSLOG_LEVEL = LOG_DEBUG;
 

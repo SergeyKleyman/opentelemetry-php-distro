@@ -88,7 +88,7 @@ final class TransactionSpanTest extends ComponentTestCaseBase
         );
 
         $appCodeRequestArgs = $testArgs->cloneAsArray();
-        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, [__CLASS__, 'appCodeForTestTransactionSpan'], /* in,out */ $appCodeRequestArgs);
         $appCodeHost->execAppCode(

@@ -7,6 +7,7 @@ namespace OTelDistroTests\ComponentTests\Util;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
+use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
 use OTelDistroTests\Util\MixedMap;
@@ -24,9 +25,11 @@ final class AppCodeAuxOutputUtil
     /**
      * @param array<string, mixed> &$appCodeRequestArgs
      */
-    public static function createTempFile(TestCaseHandle $testCaseHandle, /* in,out */ array &$appCodeRequestArgs): void
+    public static function createTempFile(string $calledFromClass, TestCaseHandle $testCaseHandle, /* in,out */ array &$appCodeRequestArgs): void
     {
-        $tempFilePath = $testCaseHandle->getResourcesClient()->createTempFile(dbgTempFilePurpose: self::FILE_PATH_KEY);
+        $tempFilePath = $testCaseHandle->getResourcesCleanerClient()->createTempFile(
+            FileUtil::generateTempFileNamePrefix(ClassNameUtil::fqToShortFromRawString($calledFromClass) . '_' . self::FILE_PATH_KEY)
+        );
         ArrayUtilForTests::addAssertingKeyNew(self::FILE_PATH_KEY, $tempFilePath, /* in,out */ $appCodeRequestArgs);
     }
 

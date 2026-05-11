@@ -84,7 +84,7 @@ final class ProcessUtilTest extends ComponentTestCaseBase
             dbgProcessName:            $dbgProcessName,
             command:                   $command,
             envVars:                   $envVars,
-            resourcesCleanerClient:    $testCaseHandle->getResourcesClient(),
+            resourcesCleanerClient:    $testCaseHandle->getResourcesCleanerClient(),
             isTestScoped:              true,
             maxWaitTimeInMicroseconds: $waitForHelperToExitSecondsInMicroseconds
         );

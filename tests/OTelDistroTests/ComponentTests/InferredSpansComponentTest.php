@@ -135,7 +135,7 @@ final class InferredSpansComponentTest extends ComponentTestCaseBase
 
         /** @var array<string, mixed> $appCodeRequestArgs */
         $appCodeRequestArgs = [];
-        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
             function (AppCodeHostParams $appCodeHostParams) use ($isInferredSpansEnabled, $shouldCaptureSleeps): void {

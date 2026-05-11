@@ -189,7 +189,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
             },
             dbgInstanceName: 'client for cUrl request',
         );
-        $resourcesClient = $testCaseHandle->getResourcesClient();
+        $resourcesClient = $testCaseHandle->getResourcesCleanerClient();
 
         $clientAppCode->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeClient']),

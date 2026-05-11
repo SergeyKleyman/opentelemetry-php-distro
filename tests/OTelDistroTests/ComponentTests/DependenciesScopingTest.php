@@ -11,9 +11,11 @@ use OpenTelemetry\Distro\OTelDistroScoperConfig;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\DistroTools\Build\BuildToolsUtil;
 use OpenTelemetry\DistroTools\Build\ComposerUtil;
+use OTelDistroTests\ComponentTests\DependenciesScopingTestApp\App;
 use OTelDistroTests\ComponentTests\DependenciesScopingTestApp\Shared;
 use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
+use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\CliScriptAppCodeHostHandle;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
@@ -21,11 +23,13 @@ use OTelDistroTests\ComponentTests\Util\WaitForOTelSignalCounts;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
+use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\JsonUtil;
+use OTelDistroTests\Util\Log\SinkForTests;
 use OTelDistroTests\Util\MixedMap;
 
 /**
@@ -56,7 +60,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
 
     private static function getOTelSdkVersionWithDistro(): string
     {
-        return AssertEx::isString(InstalledVersions::getVersion(Shared::OTEL_SDK_PACKAGE_NAME));
+        return AssertEx::isString(InstalledVersions::getPrettyVersion(Shared::OTEL_SDK_PACKAGE_NAME));
     }
 
     private static function isPsrLogVersionWithReturnType(string $version): bool
@@ -69,6 +73,10 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         AssertEx::sameConstValues(OptionForProdName::enabled->name, Shared::DISTRO_ENABLED_CFG_OPT_NAME);
         AssertEx::sameConstValues(OTelDistroScoperConfig::PREFIX, Shared::SCOPING_PREFIX);
         AssertEx::sameConstValues(OptionForProdName::debug_scoper_enabled->name, Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME);
+
+        $expectedAppLogLinePrefix = SinkForTests::LOG_LINE_PREFIX . ' [' . ClassNameUtil::fqToShortFromRawString(__CLASS__) . ClassNameUtil::fqToShort(App::class) . ']';
+        /** @noinspection PhpUnitMisorderedAssertEqualsArgumentsInspection */
+        self::assertSame($expectedAppLogLinePrefix, Shared::APP_LOG_LINE_PREFIX);
     }
 
     public function test0SemverComparator(): void
@@ -174,6 +182,119 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         self::fail('This code should not be executed');
     }
 
+    /**
+     * @see App::generatePackagesVersions
+     */
+    private static function verifyPackagesVersions(MixedMap $testArgs, MixedMap $appCodeAuxOutput, bool $isDistroEnabled, string $psrLogVersionToInstallForApp, string $psrLogVersionWithDistro): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $expectedDistroOrAppKeys = [Shared::buildDistroOrAppKey(isDistro: false)];
+        if ($isDistroEnabled) {
+            $expectedDistroOrAppKeys[] = Shared::buildDistroOrAppKey(isDistro: true);
+        }
+        $dbgCtx->add(compact('expectedDistroOrAppKeys'));
+
+        $expectedVersionsWithApp = [
+            Shared::OTEL_SDK_PACKAGE_NAME => $testArgs->getString(self::OTEL_SDK_VERSION_TO_INSTALL_FOR_APP_KEY),
+            Shared::PSR_LOG_PACKAGE_NAME => $psrLogVersionToInstallForApp,
+        ];
+        AssertEx::equalScalarLists(Shared::ALL_PACKAGE_NAMES, array_keys($expectedVersionsWithApp));
+        $expectedVersions = [];
+        foreach ($expectedVersionsWithApp as $packageName => $expectedVersionWithApp) {
+            self::assertArrayNotHasKey($packageName, $expectedVersions);
+            $expectedVersions[$packageName] = [];
+            $expectedVersions[$packageName][Shared::buildDistroOrAppKey(isDistro: false)] = $expectedVersionWithApp;
+        }
+        if ($isDistroEnabled) {
+            foreach (Shared::ALL_PACKAGE_NAMES as $packageName) {
+                $expectedVersions[$packageName][Shared::buildDistroOrAppKey(isDistro: true)] = InstalledVersions::getPrettyVersion($packageName);
+            }
+
+            // Verify that psr/log package version with Distro is equal or higher that the first major version with return type
+            self::assertTrue(self::isPsrLogVersionWithReturnType($psrLogVersionWithDistro));
+        }
+
+        $packagesVersions = AssertEx::isArray(AssertEx::arrayHasKey(Shared::PACKAGES_VERSIONS_KEY, $appCodeAuxOutput->cloneAsArray()));
+        AssertEx::equalScalarLists(Shared::ALL_PACKAGE_NAMES, array_keys($packagesVersions));
+        $dbgCtx->pushSubScope();
+        foreach (Shared::ALL_PACKAGE_NAMES as $packageName) {
+            $dbgCtx->resetTopSubScope(compact('packageName'));
+            $distroOrAppToVersion = AssertEx::isArray(AssertEx::arrayHasKey($packageName, $packagesVersions));
+            AssertEx::equalScalarLists($expectedDistroOrAppKeys, array_keys($distroOrAppToVersion));
+            $dbgCtx->pushSubScope();
+            foreach ($expectedDistroOrAppKeys as $distroOrAppKey) {
+                $dbgCtx->resetTopSubScope(compact('distroOrAppKey'));
+                $expectedVersion = AssertEx::isString(AssertEx::arrayHasKey($distroOrAppKey, AssertEx::arrayHasKey($packageName, $expectedVersions)));
+                $dbgCtx->add(compact('expectedVersion'));
+                $actualVersion = AssertEx::isString(AssertEx::arrayHasKey($distroOrAppKey, $distroOrAppToVersion));
+                $dbgCtx->add(compact('actualVersion'));
+                self::assertTrue(ComposerSemverComparator::equalTo($expectedVersion, $actualVersion));
+            }
+            $dbgCtx->popSubScope();
+        }
+        $dbgCtx->popSubScope();
+    }
+
+    /**
+     * @param list<'scoped'|'not scoped'> $expectedScopedKeys
+     *
+     * @see App::generateClassesSourceCodeFilesPaths
+     */
+    private static function verifyClassesSourceCodeFilesPaths(MixedMap $appCodeAuxOutput, bool $isDistroEnabled, bool $isScopingEnabled, array $expectedScopedKeys): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $distroVendorDir = $isDistroEnabled ? AssertEx::isString($appCodeAuxOutput[Shared::DISTRO_VENDOR_DIR_PATH_KEY]) : null;
+        $appVendorDir = AssertEx::isString($appCodeAuxOutput[Shared::APP_VENDOR_DIR_PATH_KEY]);
+
+        $expectedIsScopedToVendorDir =
+            $isDistroEnabled
+                ? ($isScopingEnabled
+                    ? [Shared::buildScopedKey(false) => $appVendorDir, Shared::buildScopedKey(true) => $distroVendorDir]
+                    : [Shared::buildScopedKey(false) => $distroVendorDir])
+                : [Shared::buildScopedKey(false) => $appVendorDir];
+
+        $classesSourceCodeFilesPaths = AssertEx::isArray(AssertEx::arrayHasKey(Shared::CLASSES_SOURCE_CODE_FILES_PATHS_KEY, $appCodeAuxOutput->cloneAsArray()));
+        AssertEx::equalScalarLists(Shared::ALL_CLASS_NAMES, array_keys($classesSourceCodeFilesPaths));
+        $dbgCtx->pushSubScope();
+        foreach (Shared::ALL_CLASS_NAMES as $fqClassName) {
+            $dbgCtx->resetTopSubScope(compact('fqClassName'));
+            $isScopedToFilePath = AssertEx::isArray(AssertEx::arrayHasKey($fqClassName, $classesSourceCodeFilesPaths));
+            AssertEx::equalScalarLists($expectedScopedKeys, array_keys($isScopedToFilePath));
+            $dbgCtx->pushSubScope();
+            foreach ($expectedScopedKeys as $scopedKey) {
+                $dbgCtx->resetTopSubScope(compact('scopedKey'));
+                self::assertStringStartsWith(
+                    AssertEx::isNonEmptyString(AssertEx::arrayHasKey($scopedKey, $expectedIsScopedToVendorDir)),
+                    AssertEx::isString(AssertEx::arrayHasKey($scopedKey, $isScopedToFilePath)),
+                );
+            }
+            $dbgCtx->popSubScope();
+        }
+        $dbgCtx->popSubScope();
+    }
+
+    /**
+     * @see App::generatePsrLogHasReturnType
+     */
+    private static function verifyPsrLogHasReturnType(
+        MixedMap $appCodeAuxOutput,
+        bool $isDistroEnabled,
+        bool $isScopingEnabled,
+        string $psrLogVersionLoadedByApp,
+        string $psrLogVersionWithDistro,
+    ): void {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $expectedPsrLogHasReturnType = [Shared::buildScopedKey(false) => self::isPsrLogVersionWithReturnType($psrLogVersionLoadedByApp)];
+        if ($isDistroEnabled && $isScopingEnabled) {
+            ArrayUtilForTests::addAssertingKeyNew(Shared::buildScopedKey(true), self::isPsrLogVersionWithReturnType($psrLogVersionWithDistro), $expectedPsrLogHasReturnType);
+        }
+
+        AssertEx::equalMaps($expectedPsrLogHasReturnType, AssertEx::isArray(AssertEx::arrayHasKey(Shared::PSR_LOG_HAS_RETURN_TYPE_KEY, $appCodeAuxOutput->cloneAsArray())));
+    }
+
     private function implTestOnAppWithConflict(MixedMap $testArgs, string $installedAppDir): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
@@ -186,7 +307,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
 
         /** @var array<string, mixed> $appCodeRequestArgsArr */
         $appCodeRequestArgsArr = $testArgs->cloneAsArray();
-        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgsArr);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgsArr);
         $appCodeRequestArgs = new MixedMap($appCodeRequestArgsArr);
 
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
@@ -207,10 +328,21 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
 
         CliScriptAppCodeHostHandle::setScriptToRun(FileUtil::partsToPath($installedAppDir, 'run.php'));
 
-        $appCodeHost->execAppCode(AppCodeTarget::asRouted([__CLASS__, 'dummyAppCodeForTestOnAppWithConflict']));
+        $appCodeProcessExitCode = $appCodeHost->execAppCode(
+            AppCodeTarget::asRouted([__CLASS__, 'dummyAppCodeForTestOnAppWithConflict']),
+            function (AppCodeRequestParams $appCodeReqParams): void {
+                // Component Tests infrastructure should not fail on non-zero App code process exit code
+                // which will be verified below
+                $appCodeReqParams->setExpectedAppCodeProcessExitCode(null);
+            }
+        );
+        $dbgCtx->add(compact('appCodeProcessExitCode'));
+        self::assertNotNull($appCodeProcessExitCode);
 
-        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
-        $dbgCtx->add(compact('agentBackendComms'));
+        if ($isDistroEnabled) {
+            $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
+            $dbgCtx->add(compact('agentBackendComms'));
+        }
 
         // Assert
 
@@ -226,116 +358,26 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         }
         $expectedScopedKeys = array_map(fn($isScoped) => Shared::buildScopedKey($isScoped), $expectedIsScopedVariants);
         sort(/* ref */ $expectedScopedKeys);
+        /** @var list<'scoped'|'not scoped'> $expectedScopedKeys */
         $dbgCtx->add(compact('expectedIsScopedVariants', 'expectedScopedKeys'));
 
-        $psrLogVersionWithDistro = AssertEx::isString(InstalledVersions::getVersion(Shared::PSR_LOG_PACKAGE_NAME));
+        $psrLogVersionWithDistro = AssertEx::isString(InstalledVersions::getPrettyVersion(Shared::PSR_LOG_PACKAGE_NAME));
 
-        $verifyPackagesVersions = function () use ($testArgs, $appCodeAuxOutput, $isDistroEnabled, $psrLogVersionToInstallForApp, $psrLogVersionWithDistro): void {
-            DebugContext::getCurrentScope(/* out */ $dbgCtx);
+        self::verifyPackagesVersions($testArgs, $appCodeAuxOutput, $isDistroEnabled, $psrLogVersionToInstallForApp, $psrLogVersionWithDistro);
 
-            $expectedDistroOrAppKeys = [Shared::buildDistroOrAppKey(isDistro: false)];
-            if ($isDistroEnabled) {
-                $expectedDistroOrAppKeys[] = Shared::buildDistroOrAppKey(isDistro: true);
-            }
-            $dbgCtx->add(compact('expectedDistroOrAppKeys'));
-
-            $expectedVersionsWithApp = [
-                Shared::OTEL_SDK_PACKAGE_NAME => $testArgs->getString(self::OTEL_SDK_VERSION_TO_INSTALL_FOR_APP_KEY),
-                Shared::PSR_LOG_PACKAGE_NAME => $psrLogVersionToInstallForApp,
-            ];
-            AssertEx::equalScalarLists(Shared::ALL_PACKAGE_NAMES, array_keys($expectedVersionsWithApp));
-            $expectedVersions = [];
-            foreach ($expectedVersionsWithApp as $packageName => $expectedVersionWithApp) {
-                self::assertArrayNotHasKey($packageName, $expectedVersions);
-                $expectedVersions[$packageName] = [];
-                $expectedVersions[$packageName][Shared::buildDistroOrAppKey(isDistro: false)] = $expectedVersionWithApp;
-            }
-            if ($isDistroEnabled) {
-                foreach (Shared::ALL_PACKAGE_NAMES as $packageName) {
-                    $expectedVersions[$packageName][Shared::buildDistroOrAppKey(isDistro: true)] = InstalledVersions::getVersion($packageName);
-                }
-
-                // Verify that psr/log package version with Distro is equal or higher that the first major version with return type
-                self::assertTrue(self::isPsrLogVersionWithReturnType($psrLogVersionWithDistro));
-            }
-
-            $packagesVersions = AssertEx::isArray(AssertEx::arrayHasKey(Shared::PACKAGES_VERSIONS_KEY, $appCodeAuxOutput->cloneAsArray()));
-            AssertEx::equalScalarLists(Shared::ALL_PACKAGE_NAMES, array_keys($packagesVersions));
-            $dbgCtx->pushSubScope();
-            foreach (Shared::ALL_PACKAGE_NAMES as $packageName) {
-                $dbgCtx->resetTopSubScope(compact('packageName'));
-                $distroOrAppToVersion = AssertEx::isArray(AssertEx::arrayHasKey($packageName, $packagesVersions));
-                AssertEx::equalScalarLists($expectedDistroOrAppKeys, array_keys($distroOrAppToVersion));
-                $dbgCtx->pushSubScope();
-                foreach ($expectedDistroOrAppKeys as $distroOrAppKey) {
-                    $dbgCtx->resetTopSubScope(compact('distroOrAppKey'));
-                    $expectedVersion = AssertEx::isString(AssertEx::arrayHasKey($distroOrAppKey, AssertEx::arrayHasKey($packageName, $expectedVersions)));
-                    $actualVersion = AssertEx::isString(AssertEx::arrayHasKey($distroOrAppKey, $distroOrAppToVersion));
-                    $dbgCtx->resetTopSubScope(compact('actualVersion'));
-                    self::assertTrue(ComposerSemverComparator::equalTo($expectedVersion, $actualVersion));
-                }
-                $dbgCtx->popSubScope();
-            }
-            $dbgCtx->popSubScope();
-        };
-        $verifyPackagesVersions();
-
-        $verifyClassesSourceCodeFilesPaths = function () use ($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $expectedScopedKeys): void {
-            DebugContext::getCurrentScope(/* out */ $dbgCtx);
-
-            $distroVendorDir = AssertEx::isString($appCodeAuxOutput[Shared::DISTRO_VENDOR_DIR_PATH_KEY]);
-            $appVendorDir = AssertEx::isString($appCodeAuxOutput[Shared::APP_VENDOR_DIR_PATH_KEY]);
-
-            $expectedIsScopedToVendorDir =
-                $isDistroEnabled
-                ? ($isScopingEnabled
-                    ? [Shared::buildScopedKey(false) => $appVendorDir, Shared::buildScopedKey(true) => $distroVendorDir]
-                    : [Shared::buildScopedKey(false) => $distroVendorDir])
-                : [Shared::buildScopedKey(false) => $appVendorDir];
-
-            $classesSourceCodeFilesPaths = AssertEx::isArray(AssertEx::arrayHasKey(Shared::CLASSES_SOURCE_CODE_FILES_PATHS_KEY, $appCodeAuxOutput->cloneAsArray()));
-            AssertEx::equalScalarLists(Shared::ALL_CLASS_NAMES, array_keys($classesSourceCodeFilesPaths));
-            $dbgCtx->pushSubScope();
-            foreach (Shared::ALL_CLASS_NAMES as $fqClassName) {
-                $dbgCtx->resetTopSubScope(compact('fqClassName'));
-                $isScopedToFilePath = AssertEx::isArray(AssertEx::arrayHasKey($fqClassName, $classesSourceCodeFilesPaths));
-                AssertEx::equalScalarLists($expectedScopedKeys, array_keys($isScopedToFilePath));
-                $dbgCtx->pushSubScope();
-                foreach ($expectedScopedKeys as $scopedKey) {
-                    $dbgCtx->resetTopSubScope(compact('scopedKey'));
-                    self::assertStringStartsWith(
-                        AssertEx::isNonEmptyString(AssertEx::arrayHasKey($scopedKey, $expectedIsScopedToVendorDir)),
-                        AssertEx::isString(AssertEx::arrayHasKey($scopedKey, $isScopedToFilePath))
-                    );
-                }
-                $dbgCtx->popSubScope();
-            }
-            $dbgCtx->popSubScope();
-        };
-        $verifyClassesSourceCodeFilesPaths();
+        self::verifyClassesSourceCodeFilesPaths($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $expectedScopedKeys);
 
         $psrLogVersionLoadedByApp = ($isDistroEnabled && !$isScopingEnabled) ? $psrLogVersionWithDistro : $psrLogVersionToInstallForApp;
 
-        $verifyPsrLogHasReturnType = function () use ($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $psrLogVersionLoadedByApp, $psrLogVersionWithDistro): void {
-            DebugContext::getCurrentScope(/* out */ $dbgCtx);
+        self::verifyPsrLogHasReturnType($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $psrLogVersionLoadedByApp, $psrLogVersionWithDistro);
 
-            $expectedPsrLogHasReturnType = [Shared::buildScopedKey(false) => self::isPsrLogVersionWithReturnType($psrLogVersionLoadedByApp)];
-            if ($isDistroEnabled && $isScopingEnabled) {
-                ArrayUtilForTests::addAssertingKeyNew(Shared::buildScopedKey(true), self::isPsrLogVersionWithReturnType($psrLogVersionWithDistro), $expectedPsrLogHasReturnType);
-            }
-
-            AssertEx::equalMaps($expectedPsrLogHasReturnType, AssertEx::isArray(AssertEx::arrayHasKey(Shared::PSR_LOG_HAS_RETURN_TYPE_KEY, $appCodeAuxOutput->cloneAsArray())));
-        };
-        $verifyPsrLogHasReturnType();
-
-            // App is expected to fail if and only if psr/log version loaded by app has return type but app is configured to be incompatible with return type
-        $psrLogVersionLoadedByApp = ($isDistroEnabled && !$isScopingEnabled) ? $psrLogVersionWithDistro : $psrLogVersionToInstallForApp;
+        // App's use of psr/log is expected to fail if and only if psr/log version loaded by App has return type but App is configured to be incompatible with return type
         $dbgCtx->add(compact('psrLogVersionLoadedByApp'));
         $isPsrLogLoadedByAppHasReturnType = ComposerSemverComparator::lessThanOrEqualTo(self::majorToFullVersion(self::PSR_LOG_FIRST_MAJOR_VERSION_WITH_RETURN_TYPE), $psrLogVersionLoadedByApp);
         $dbgCtx->add(compact('isPsrLogLoadedByAppHasReturnType'));
-        $isAppExpectedToFail = $isPsrLogLoadedByAppHasReturnType && !$isAppCompatibleWithPsrLogReturnType;
-        $dbgCtx->add(compact('isAppExpectedToFail'));
-        self::assertSame(!$isAppExpectedToFail, $appCodeAuxOutput[self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY]);
+        $isUsePsrLogExpectedToFail = $isPsrLogLoadedByAppHasReturnType && !$isAppCompatibleWithPsrLogReturnType;
+        $dbgCtx->add(compact('isUsePsrLogExpectedToFail'));
+        self::assertSame($isUsePsrLogExpectedToFail, $appCodeProcessExitCode !== 0);
     }
 
     /**
@@ -353,7 +395,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
                 self::buildDbgDescForTestWithArgs(__CLASS__, __FUNCTION__, $testArgs),
                 function () use ($testArgs): void {
                     BuildToolsUtil::runCodeOnUniqueNameTempDir(
-                        tempDirNamePrefix: BuildToolsUtil::fqClassNameToShort(__CLASS__) . '_installed_test_app_',
+                        tempDirNamePrefix: FileUtil::generateTempFileNamePrefix(ClassNameUtil::fqToShortFromRawString(__CLASS__) . '_app'),
                         code: function (string $installedAppDir) use ($testArgs): void {
                             $this->installTestApp($testArgs, $installedAppDir);
                             $this->implTestOnAppWithConflict($testArgs, $installedAppDir);

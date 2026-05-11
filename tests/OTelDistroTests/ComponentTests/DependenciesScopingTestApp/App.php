@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
 
+use Closure;
 use ReflectionClass;
+use ReflectionFunction;
 use RuntimeException;
+use Throwable;
 
 final class App
 {
@@ -40,8 +43,10 @@ final class App
 
     /**
      * @param array<string, mixed>  $context
+     *
+     * @noinspection PhpSameParameterValueInspection
      */
-    private static function logDebug(int $srcCodeLine, string $msg, array $context = []): void
+    private static function logDebug(int $srcCodeLine, string $message, array $context = []): void
     {
         /** @var ?bool $isDebugLogEnabled */
         static $isDebugLogEnabled = null;
@@ -50,7 +55,7 @@ final class App
         }
 
         if ($isDebugLogEnabled) {
-            self::writeLineToStdErr(__FILE__ . ':' . $srcCodeLine . ' ' . self::concatMessageAndContext($msg, $context));
+            self::writeLineToStdErr(Shared::APP_LOG_LINE_PREFIX . '[' . __FILE__ . ':' . $srcCodeLine . '] ' . self::concatMessageAndContext($message, $context));
         }
     }
 
@@ -252,6 +257,27 @@ final class App
         $array[$key] = $value;
     }
 
+    private static function toJsonEncodable(mixed $val): mixed
+    {
+        if (is_scalar($val) || ($val === null)) {
+            return $val;
+        }
+
+        if ($val instanceof Closure) {
+            return ['class' => get_class($val), 'source code file' => (new ReflectionFunction($val))->getFileName()];
+        }
+
+        if (is_object($val)) {
+            return ['class' => get_class($val), 'source code file' => (new ReflectionClass($val))->getFileName()];
+        }
+
+        if (is_array($val)) {
+            return array_map(fn($arrVal) => self::toJsonEncodable($arrVal), $val);
+        }
+
+        return ['type' => get_debug_type($val)];
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -260,9 +286,14 @@ final class App
         $appCodeAuxOutput = [
             Shared::DISTRO_ENABLED_CFG_OPT_NAME => self::isDistroEnabled(),
             Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME => self::isScopingEnabled(),
-            Shared::DISTRO_VENDOR_DIR_PATH_KEY => self::getDistroVendorDir(),
             Shared::APP_VENDOR_DIR_PATH_KEY => self::getAppVendorDir(),
+            'spl_autoload_functions()' => self::toJsonEncodable(spl_autoload_functions()),
+            'spl_autoload_extensions()' => spl_autoload_extensions(),
         ];
+
+        if (self::isDistroEnabled()) {
+            $appCodeAuxOutput[Shared::DISTRO_VENDOR_DIR_PATH_KEY] = self::getDistroVendorDir();
+        }
 
         self::addAssertingKeyNew(Shared::PACKAGES_VERSIONS_KEY, self::generatePackagesVersions(), /* ref */ $appCodeAuxOutput);
         self::addAssertingKeyNew(Shared::CLASSES_SOURCE_CODE_FILES_PATHS_KEY, self::generateClassesSourceCodeFilesPaths(), /* ref */ $appCodeAuxOutput);
@@ -271,6 +302,9 @@ final class App
         return $appCodeAuxOutput;
     }
 
+    /**
+     * @throws Throwable
+     */
     private static function usePsrLoggerImpl(bool $isCompatibleWithNewPsrLog): void
     {
         if ($isCompatibleWithNewPsrLog) {
@@ -287,16 +321,10 @@ final class App
     {
         $appCodeAuxOutput = self::generateAuxOutput();
 
-        $appCodeAuxOutput[Shared::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY] = false;
-
         $appCodeAuxOutputFilePath = self::getEnvVar(Shared::buildEnvVarName(Shared::APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX));
-        self::logDebug(__LINE__, 'Before trying to use Psr/log implementation', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
+        self::logDebug(__LINE__, '', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
         self::putFileContents($appCodeAuxOutputFilePath, self::assertIsString(json_encode($appCodeAuxOutput)));
 
         self::usePsrLoggerImpl(self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX))));
-
-        $appCodeAuxOutput[Shared::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY] = true;
-        self::logDebug(__LINE__, 'After trying to use Psr/log implementation', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
-        self::putFileContents($appCodeAuxOutputFilePath, self::assertIsString(json_encode($appCodeAuxOutput)));
     }
 }

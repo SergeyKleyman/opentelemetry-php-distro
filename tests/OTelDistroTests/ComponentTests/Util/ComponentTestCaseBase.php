@@ -42,6 +42,8 @@ class ComponentTestCaseBase extends TestCaseBase
     protected const DID_APP_CODE_FINISH_SUCCESSFULLY_KEY = 'is_app_code_finished_successfully';
     protected const THROWABLE_FROM_APP_CODE_KEY = 'throwable_from_app_code';
 
+    public const SIGNAL_APP_FINISHED_FILE_KEY = 'signal_app_finished_file';
+
     private ?TestCaseHandle $testCaseHandle = null;
 
     protected function initTestCaseHandle(?LogLevel $escalatedLogLevelForProdCode = null): TestCaseHandle
@@ -131,7 +133,7 @@ class ComponentTestCaseBase extends TestCaseBase
 
         /** @var array<string, mixed> $appCodeRequestArgs */
         $appCodeRequestArgs = $testArgs->cloneAsArray();
-        AppCodeAuxOutputUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, $subAppCode, /* in,out */ $appCodeRequestArgs);
         $appCodeHost->execAppCode(

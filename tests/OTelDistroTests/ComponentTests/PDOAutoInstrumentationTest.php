@@ -18,6 +18,7 @@ use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\FileUtil;
 use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\OTelDistroProjectProperties;
 use OTelDistroTests\Util\MixedMap;
@@ -196,8 +197,8 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $dbName = $dbNameArg;
         if ($dbNameArg === self::FILE_DB_NAME) {
-            $resourcesClient = $testCaseHandle->getResourcesClient();
-            $dbFileFullPath = $resourcesClient->createTempFile('temp DB for ' . ClassNameUtil::fqToShort(__CLASS__));
+            $resourcesClient = $testCaseHandle->getResourcesCleanerClient();
+            $dbFileFullPath = $resourcesClient->createTempFile(FileUtil::generateTempFileNamePrefix(ClassNameUtil::fqToShortFromRawString(__CLASS__) . '_temp_DB'));
             $dbName = $dbFileFullPath;
             $appCodeRequestArgs[DbAutoInstrumentationUtilForTests::DB_NAME_KEY] = $dbName;
         }

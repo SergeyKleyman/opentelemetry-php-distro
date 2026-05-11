@@ -6,6 +6,8 @@ namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
 
 final class Shared
 {
+    public const APP_LOG_LINE_PREFIX = '[OTel PHP Distro tests] [DependenciesScopingTestApp]';
+
     public const APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX = 'app_code_aux_output_file_path';
     public const IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX = 'is_app_compatible_with_psr_log_return_type';
     public const IS_DEBUG_LOG_ENABLED_ENV_VAR_NAME_SUFFIX = 'is_debug_log_enabled';
@@ -31,8 +33,6 @@ final class Shared
 
     public const DISTRO_VENDOR_DIR_PATH_KEY = 'distro_vendor_dir_path';
     public const APP_VENDOR_DIR_PATH_KEY = 'app_vendor_dir_path';
-
-    public const DID_APP_CODE_FINISH_SUCCESSFULLY_KEY = 'is_app_code_finished_successfully';
 
     public static function buildEnvVarName(string $envVarNameSuffix): string
     {

@@ -119,8 +119,8 @@ final class ProcessUtil
         $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__);
         $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars', 'isBackground'));
 
-        $loggerProxyDebug = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
-        $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Starting process...');
+        $logDebug = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
+        $logDebug?->log(__LINE__, "Starting process $dbgProcessName ($command) ...");
 
         $pipes = [];
         $procOpenRetVal = proc_open($command, /* descriptor_spec: */ [], /* ref */ $pipes, /* cwd: */ null, $envVars);
@@ -133,7 +133,8 @@ final class ProcessUtil
         $processHandle = new ProcessHandle($dbgProcessName, $procOpenRetVal);
         $resourcesCleanerClient?->registerProcessToTerminate($dbgProcessName, $processHandle->getCurrentInfo()->pid, $isTestScoped);
 
-        ($loggerProxy = $logger->ifInfoLevelEnabled(__LINE__, __FUNCTION__)) && $loggerProxy->log('Started process', compact('processHandle'));
+        $logInfo = $logger->ifInfoLevelEnabledNoLine(__FUNCTION__);
+        $logInfo?->log(__LINE__, "Started process $dbgProcessName ($command)", compact('processHandle'));
         return $processHandle;
     }
 
