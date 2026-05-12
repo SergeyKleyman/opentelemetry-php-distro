@@ -7,12 +7,13 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use OpenTelemetry\Distro\Log\LogFeature;
-use RuntimeException;
 use Throwable;
 
 final class KeepAutoloadCallbacksUpFront
 {
     use BootstrapStageLoggingClassTrait;
+
+    private const SPL_AUTOLOAD_REGISTER_FUNC_NAME = 'spl_autoload_register';
 
     private bool $shouldIgnoreRegisterCalls = false;
 
@@ -27,26 +28,59 @@ final class KeepAutoloadCallbacksUpFront
     }
 
     /**
-     * @param list<callable> $callbacks
+     * @return list<callable>
      */
-    public function setCallbacks(array $callbacks): void
+    public function getCallbacks(): array
     {
-        self::unregisterCallbacks();
-        $this->callbacks = $callbacks;
-        self::registerCallbacks();
+        return $this->callbacks;
+    }
+
+    /**
+     * @param list<callable> $callbacksToKeepUpFront
+     */
+    public function setCallbacks(array $callbacksToKeepUpFront): void
+    {
+        $callbacksToKeepUpFrontCount = count($callbacksToKeepUpFront);
+        $registeredCallbacks = spl_autoload_functions();
+        $registeredCallbacksCount = count($registeredCallbacks);
+        /**
+         * @return array<string, mixed>
+         */
+        $buildBaseCtx = function () use ($callbacksToKeepUpFront, $callbacksToKeepUpFrontCount, $registeredCallbacks, $registeredCallbacksCount): array {
+            return compact('callbacksToKeepUpFrontCount', 'registeredCallbacksCount')
+                + [
+                    'callbacksToKeepUpFront' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($callbacksToKeepUpFront),
+                    'registeredCallbacks' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($registeredCallbacks),
+                ];
+        };
+
+        if ($callbacksToKeepUpFrontCount > $registeredCallbacksCount) {
+            throw new DistroRuntimeException('callbacksToKeepUpFrontCount is larger than registeredCallbacksCount', context: $buildBaseCtx());
+        }
+
+        for ($callbackIndex = 0; $callbackIndex != $callbacksToKeepUpFrontCount; ++$callbackIndex) {
+            if ($registeredCallbacks[$callbackIndex] !== $callbacksToKeepUpFront[$callbackIndex]) {
+                $ctx = compact('callbackIndex') + $buildBaseCtx();
+                throw new DistroRuntimeException('callbacksToKeepUpFront is not a prefix of registeredCallbacks', context: $ctx);
+            }
+        }
+
+        $this->callbacks = $callbacksToKeepUpFront;
     }
 
     private function hookSplAutoloadRegister(): void
     {
         $hookRetVal = $this->instrumBridge->hook(
             class: null,
-            function: 'spl_autoload_register',
+            function: self::SPL_AUTOLOAD_REGISTER_FUNC_NAME,
             post: $this->splAutoloadRegisterPostHookToKeepDistroFirst(...),
         );
 
         if (!$hookRetVal) {
-            throw new RuntimeException('hook() return false');
+            throw new DistroRuntimeException('hook() return false');
         }
+
+        self::logDebug(__LINE__, __FUNCTION__, 'Registered hook for ' . self::SPL_AUTOLOAD_REGISTER_FUNC_NAME);
     }
 
     /**
@@ -58,6 +92,8 @@ final class KeepAutoloadCallbacksUpFront
         mixed $returnValue,
         ?Throwable $throwable,
     ): void {
+        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Entered');
+
         if ($this->shouldIgnoreRegisterCalls) {
             self::logDebug(__LINE__, __FUNCTION__, 'shouldIgnoreRegisterCalls is true - not doing anything');
             return;
@@ -81,17 +117,15 @@ final class KeepAutoloadCallbacksUpFront
 
         self::unregisterCallbacks();
         self::registerCallbacks();
+
+        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Exiting...');
     }
 
     private function unregisterCallbacks(): void
     {
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Entered');
-
         foreach ($this->callbacks as $callback) {
             spl_autoload_unregister($callback);
         }
-
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Exiting');
     }
 
     private function registerCallbacks(): void
@@ -103,7 +137,7 @@ final class KeepAutoloadCallbacksUpFront
             $callbacksCount = count($this->callbacks);
             for ($i = 0; $i != $callbacksCount; ++$i) {
                 // iterate over callbacks array in reverse order
-                spl_autoload_register($this->callbacks[$callbacksCount - $i], prepend: true);
+                spl_autoload_register($this->callbacks[$callbacksCount - $i - 1], prepend: true);
             }
         } finally {
             $this->shouldIgnoreRegisterCalls = false;

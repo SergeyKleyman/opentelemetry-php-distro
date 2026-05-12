@@ -97,11 +97,8 @@ final class PhpPartFacade
 
             self::prepareForOTelSdk();
 
-            self::logAutoloadFunctions('Before self::registerAutoloaderForDistroVendorDir');
-            $autoloadForDistroVendorDir = self::registerAutoloaderForDistroVendorDir();
-            self::logAutoloadFunctions('After self::registerAutoloaderForDistroVendorDir');
-            $keepDistroAutoloadUpFront->setCallbacks([$autoloadForDistroClasses, $autoloadForDistroVendorDir]);
-            self::logAutoloadFunctions('After $keepDistroAutoloadUpFront->setCallbacks');
+            $autoloadsForDistroVendorDir = self::registerAutoloaderForDistroVendorDir();
+            $keepDistroAutoloadUpFront->setCallbacks(array_merge($keepDistroAutoloadUpFront->getCallbacks(), $autoloadsForDistroVendorDir));
 
             // User's bootstrap .php file might register remote config handler so it has to be called before remote config handler
             self::loadUserBootstrapPhpFile();
@@ -190,7 +187,7 @@ final class PhpPartFacade
     public static function setEnvVar(string $envVarName, string $envVarValue): void
     {
         if (!putenv($envVarName . '=' . $envVarValue)) {
-            throw new RuntimeException('putenv returned false; $envVarName: ' . $envVarName . '; envVarValue: ' . $envVarValue);
+            throw new DistroRuntimeException('putenv returned false', compact('envVarName', 'envVarValue'));
         }
     }
 
@@ -235,41 +232,49 @@ final class PhpPartFacade
     }
 
     /**
-     * @param array<callable> $splAutoloadFunctionsBefore
-     * @param array<callable> $splAutoloadFunctionsAfter
+     * @param array<callable> $callbacksBefore
+     * @param array<callable> $callbacksAfter
      *
-     * @return callable
+     * @return list<callable>
      */
-    private static function diffAutoloaderForDistroVendorDir(array $splAutoloadFunctionsBefore, array $splAutoloadFunctionsAfter): callable
+    private static function diffAutoloaderForDistroVendorDir(array $callbacksBefore, array $callbacksAfter): array
     {
-        $countBefore = count($splAutoloadFunctionsBefore);
+        $callbacksBeforeCount = count($callbacksBefore);
+        $callbacksAfterCount = count($callbacksAfter);
         /**
          * @return array<string, mixed>
          */
-        $buildBaseCtx = function () use ($countBefore, $splAutoloadFunctionsBefore, $splAutoloadFunctionsAfter): array {
-            return [
-                'callbacks-count-before' => $countBefore,
-                'callbacks-count-after' => count($splAutoloadFunctionsAfter),
-                'callbacks-before' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($splAutoloadFunctionsBefore),
-                'callbacks-after' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($splAutoloadFunctionsAfter),
+        $buildBaseCtx = function () use ($callbacksBefore, $callbacksBeforeCount, $callbacksAfter, $callbacksAfterCount): array {
+            return compact('callbacksBeforeCount', 'callbacksAfterCount')
+                + [
+                'callbacksBefore' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($callbacksBefore),
+                'callbacksAfter' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($callbacksAfter),
             ];
         };
 
-        if (($countBefore + 1) !== count($splAutoloadFunctionsAfter)) {
-            throw new RuntimeException('count-after is not count-before + 1' . ' | ' . json_encode($buildBaseCtx()));
+        if ($callbacksBeforeCount >= $callbacksAfterCount) {
+            throw new DistroRuntimeException('callbacksBeforeCount is larger than or equal to callbacksAfterCount', context: $buildBaseCtx());
         }
 
-        for ($callbackIndex = 0; $callbackIndex != $countBefore; ++$callbackIndex) {
-            if ($splAutoloadFunctionsBefore[$callbackIndex] !== $splAutoloadFunctionsAfter[$callbackIndex]) {
-                $ctx = compact('callbackIndex') + $buildBaseCtx();
-                throw new RuntimeException('callbacks-before differs from prefix of callbacks-after ' . ' | ' . json_encode($ctx));
+        for ($i = 0; $i != $callbacksBeforeCount; ++$i) {
+            if ($callbacksBefore[$i] !== $callbacksAfter[$i]) {
+                $ctx = compact('i') + $buildBaseCtx();
+                throw new DistroRuntimeException('callbacksBefore is not a prefix of callbacksAfter', context: $ctx);
             }
         }
 
-        return $splAutoloadFunctionsAfter[$countBefore];
+        $diff = [];
+        for ($i = $callbacksBeforeCount; $i != $callbacksAfterCount; ++$i) {
+            $diff[] = $callbacksBefore[$i];
+        }
+
+        return $diff;
     }
 
-    private static function registerAutoloaderForDistroVendorDir(): callable
+    /**
+     * @return list<callable>
+     */
+    private static function registerAutoloaderForDistroVendorDir(): array
     {
         $vendorAutoloadPhp = VendorDir::$fullPath . DIRECTORY_SEPARATOR . 'autoload.php';
         if (!file_exists($vendorAutoloadPhp)) {
@@ -300,12 +305,12 @@ final class PhpPartFacade
             self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'After require ' . $vendorAutoloadPhp, $logCtx);
         }
 
-        $autoloadForDistroVendorDir = self::diffAutoloaderForDistroVendorDir($splAutoloadFunctionsBefore, $splAutoloadFunctionsAfter);
+        $autoloadsForDistroVendorDir = self::diffAutoloaderForDistroVendorDir($splAutoloadFunctionsBefore, $splAutoloadFunctionsAfter);
         if (self::isLogEnabledForLevel($logLevel)) {
-            $logCtx += ['autoloadForDistroVendorDir' => SplAutoloadFunctionsLogUtil::callbackToLoggable($autoloadForDistroVendorDir)];
+            $logCtx += ['autoloadsForDistroVendorDir' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($autoloadsForDistroVendorDir)];
             self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'Finished successfully', $logCtx);
         }
-        return $autoloadForDistroVendorDir;
+        return $autoloadsForDistroVendorDir;
     }
 
     private static function registerAsyncTransportFactory(): void

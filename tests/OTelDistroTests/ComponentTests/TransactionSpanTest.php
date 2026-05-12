@@ -12,6 +12,7 @@ use OTelDistroTests\ComponentTests\Util\AttributesExpectations;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\HttpAppCodeHostHandle;
 use OTelDistroTests\ComponentTests\Util\HttpAppCodeRequestParams;
+use OTelDistroTests\ComponentTests\Util\OTelUtil;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
 use OTelDistroTests\ComponentTests\Util\OtlpData\SpanKind;
 use OTelDistroTests\ComponentTests\Util\SpanExpectationsBuilder;
@@ -32,6 +33,8 @@ use OpenTelemetry\SemConv\TraceAttributes;
  */
 final class TransactionSpanTest extends ComponentTestCaseBase
 {
+    private const SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY = 'should_app_code_cause_fatal_error';
+
     public static function isTransactionSpanEnabled(?bool $transactionSpanEnabled, ?bool $transactionSpanEnabledCli): bool
     {
         return self::isMainAppCodeHostHttp()
@@ -52,11 +55,14 @@ final class TransactionSpanTest extends ComponentTestCaseBase
                 foreach (BoolUtilForTests::ALL_NULLABLE_VALUES as $transactionSpanEnabledCli) {
                     $shouldAppCodeCreateDummySpanValues = self::isTransactionSpanEnabled($transactionSpanEnabled, $transactionSpanEnabledCli) ? BoolUtilForTests::ALL_VALUES : [true];
                     foreach ($shouldAppCodeCreateDummySpanValues as $shouldAppCodeCreateDummySpan) {
-                        yield [
-                            OptionForProdName::transaction_span_enabled->name     => $transactionSpanEnabled,
-                            OptionForProdName::transaction_span_enabled_cli->name => $transactionSpanEnabledCli,
-                            self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY           => $shouldAppCodeCreateDummySpan,
-                        ];
+                        foreach ([false, true] as $shouldAppCodeCauseFatalError) {
+                            yield [
+                                OptionForProdName::transaction_span_enabled->name     => $transactionSpanEnabled,
+                                OptionForProdName::transaction_span_enabled_cli->name => $transactionSpanEnabledCli,
+                                self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY           => $shouldAppCodeCreateDummySpan,
+                                self::SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY           => $shouldAppCodeCauseFatalError,
+                            ];
+                        }
                     }
                 }
             }
@@ -68,6 +74,11 @@ final class TransactionSpanTest extends ComponentTestCaseBase
     public static function appCodeForTestTransactionSpan(MixedMap $appCodeRequestArgs): void
     {
         self::appCodeCreatesDummySpan($appCodeRequestArgs);
+
+        if ($appCodeRequestArgs->getBool(self::SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY)) {
+            /** @noinspection PhpIncludeInspection */
+            require __DIR__ . DIRECTORY_SEPARATOR . 'non_existent_file.php';
+        }
     }
 
     public function implTestTransactionSpan(MixedMap $testArgs): void

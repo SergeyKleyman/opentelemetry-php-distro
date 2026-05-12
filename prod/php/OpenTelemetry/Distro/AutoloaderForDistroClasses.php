@@ -7,7 +7,6 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use OpenTelemetry\Distro\Log\LogFeature;
-use RuntimeException;
 
 final class AutoloaderForDistroClasses
 {
@@ -28,7 +27,7 @@ final class AutoloaderForDistroClasses
     {
         $callback = (new self($rootNamespace, $rootNamespaceDir))->autoloadCodeForClass(...);
         if (!spl_autoload_register($callback)) {
-            throw new RuntimeException('spl_autoload_register() returned false' . ' | ' . json_encode(compact('rootNamespace', 'rootNamespaceDir'), JSON_THROW_ON_ERROR));
+            throw new DistroRuntimeException('spl_autoload_register() returned false', context: compact('rootNamespace', 'rootNamespaceDir'));
         }
         return $callback;
     }

@@ -105,8 +105,11 @@ trait BootstrapStageLoggingClassTrait
      */
     private static function logCriticalThrowable(int $line, string $func, Throwable $throwable, string $message, array $context = []): void
     {
-        $updatedCtx = ['Throwable' => ['class' => get_class($throwable), 'message' => $throwable->getMessage(), 'stack trace' => $throwable->getTraceAsString()]] + $context;
-        // getCurrentSourceCodeFile() and getCurrentSourceCodeClass() must be defined in class using BootstrapStageLoggingClassTrait
+        $throwableCtx = ['class' => get_class($throwable), 'message' => $throwable->getMessage(), 'stack trace' => $throwable->getTraceAsString()];
+        if ($throwable instanceof GetContextInterface) {
+            $throwableCtx += ['context' => $throwable->getConext()];
+        }
+        $updatedCtx = ['Throwable' => $throwableCtx] + $context;
         self::logCritical($line, $func, $message, $updatedCtx);
     }
 
@@ -125,6 +128,6 @@ trait BootstrapStageLoggingClassTrait
             $jsonEncodedCtx = 'Failed to JSON encode context: ' . $exception->getMessage();
         }
 
-        return $message . '; ' . $jsonEncodedCtx;
+        return $message . ' | ' . $jsonEncodedCtx;
     }
 }

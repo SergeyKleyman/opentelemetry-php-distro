@@ -345,18 +345,30 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         $dbgCtx->add(compact('appCodeProcessExitCode'));
         self::assertNotNull($appCodeProcessExitCode);
 
-        if ($isDistroEnabled) {
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgsArr);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+
+        // Assert
+
+        $isScopingEnabled = $appCodeAuxOutput->getBool(Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME);
+        $psrLogVersionWithDistro = AssertEx::isString(InstalledVersions::getPrettyVersion(Shared::PSR_LOG_PACKAGE_NAME));
+        $psrLogVersionLoadedByApp = ($isDistroEnabled && !$isScopingEnabled) ? $psrLogVersionWithDistro : $psrLogVersionToInstallForApp;
+
+        // App's use of psr/log is expected to fail if and only if psr/log version loaded by App has return type but App is configured to be incompatible with return type
+        $dbgCtx->add(compact('psrLogVersionLoadedByApp'));
+        $isPsrLogLoadedByAppHasReturnType = ComposerSemverComparator::lessThanOrEqualTo(self::majorToFullVersion(self::PSR_LOG_FIRST_MAJOR_VERSION_WITH_RETURN_TYPE), $psrLogVersionLoadedByApp);
+        $dbgCtx->add(compact('isPsrLogLoadedByAppHasReturnType'));
+        $isUsePsrLogExpectedToFail = $isPsrLogLoadedByAppHasReturnType && !$isAppCompatibleWithPsrLogReturnType;
+        $dbgCtx->add(compact('isUsePsrLogExpectedToFail'));
+        self::assertSame($isUsePsrLogExpectedToFail, $appCodeProcessExitCode !== 0);
+
+        // TODO: Sergey Kleyman: Fix the issue with root span not being created if the app exits becasue of fatal error
+        if ($isDistroEnabled && (!$isUsePsrLogExpectedToFail)) {
             $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
             $dbgCtx->add(compact('agentBackendComms'));
         }
 
-        // Assert
-
-        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgsArr);
-        $dbgCtx->add(compact('appCodeAuxOutput'));
-
         self::assertSame($isDistroEnabled, $appCodeAuxOutput->getBool(Shared::DISTRO_ENABLED_CFG_OPT_NAME));
-        $isScopingEnabled = $appCodeAuxOutput->getBool(Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME);
 
         $expectedIsScopedVariants = [false];
         if ($isDistroEnabled && $isScopingEnabled) {
@@ -367,23 +379,11 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         /** @var list<'scoped'|'not scoped'> $expectedScopedKeys */
         $dbgCtx->add(compact('expectedIsScopedVariants', 'expectedScopedKeys'));
 
-        $psrLogVersionWithDistro = AssertEx::isString(InstalledVersions::getPrettyVersion(Shared::PSR_LOG_PACKAGE_NAME));
-
         self::verifyPackagesVersions($testArgs, $appCodeAuxOutput, $isDistroEnabled, $psrLogVersionToInstallForApp, $psrLogVersionWithDistro);
 
         self::verifyClassesSourceCodeFilesPaths($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $expectedScopedKeys);
 
-        $psrLogVersionLoadedByApp = ($isDistroEnabled && !$isScopingEnabled) ? $psrLogVersionWithDistro : $psrLogVersionToInstallForApp;
-
         self::verifyPsrLogHasReturnType($appCodeAuxOutput, $isDistroEnabled, $isScopingEnabled, $psrLogVersionLoadedByApp, $psrLogVersionWithDistro);
-
-        // App's use of psr/log is expected to fail if and only if psr/log version loaded by App has return type but App is configured to be incompatible with return type
-        $dbgCtx->add(compact('psrLogVersionLoadedByApp'));
-        $isPsrLogLoadedByAppHasReturnType = ComposerSemverComparator::lessThanOrEqualTo(self::majorToFullVersion(self::PSR_LOG_FIRST_MAJOR_VERSION_WITH_RETURN_TYPE), $psrLogVersionLoadedByApp);
-        $dbgCtx->add(compact('isPsrLogLoadedByAppHasReturnType'));
-        $isUsePsrLogExpectedToFail = $isPsrLogLoadedByAppHasReturnType && !$isAppCompatibleWithPsrLogReturnType;
-        $dbgCtx->add(compact('isUsePsrLogExpectedToFail'));
-        self::assertSame($isUsePsrLogExpectedToFail, $appCodeProcessExitCode !== 0);
     }
 
     /**

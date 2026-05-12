@@ -29,7 +29,7 @@ final class SplAutoloadFunctionsLogUtil
     /**
      * @return array<string, mixed>
      */
-    public static function callbackToLoggable(mixed $callback): array
+    private static function callbackToLoggable(mixed $callback): array
     {
         if ($callback instanceof Closure) {
             $reflFunc = new ReflectionFunction($callback);
