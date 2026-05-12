@@ -11,4 +11,4 @@ parameters:
 
     excludePaths:
         - ./tests/substitutes/*/original/*
-        - ./tests/OTelDistroTests/ComponentTests/DependenciesScopingTestApp/IncompatibleWithPsrLogReturnType.php
+        - ./tests/OTelDistroTests/ComponentTests/DependenciesScopingTestApp/IncompatibleWithPsrLogReturnType.php (?)
