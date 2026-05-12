@@ -56,6 +56,5 @@ BootstrapStageLogger::configure(
 );
 
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForDistroClasses.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderDistroOTelClasses.php';
 AutoloaderForDistroClasses::register('OpenTelemetry\\Distro', $prodPhpDistroPath);
 AutoloaderForDistroClasses::register(__NAMESPACE__, __DIR__);
