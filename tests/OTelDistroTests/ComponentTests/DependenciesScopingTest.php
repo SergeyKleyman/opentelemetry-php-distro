@@ -11,6 +11,8 @@ use OpenTelemetry\Distro\OTelDistroScoperConfig;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\DistroTools\Build\BuildToolsUtil;
 use OpenTelemetry\DistroTools\Build\ComposerUtil;
+use OpenTelemetry\SDK\Sdk as OTelSdk;
+use OpenTelemetry\SDK\Trace\ImmutableSpan as OTelSdkImmutableSpan;
 use OTelDistroTests\ComponentTests\DependenciesScopingTestApp\App;
 use OTelDistroTests\ComponentTests\DependenciesScopingTestApp\Shared;
 use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
@@ -32,6 +34,7 @@ use OTelDistroTests\Util\JsonUtil;
 use OTelDistroTests\Util\Log\SinkForTests;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\RepoRootDir;
+use Psr\Log\AbstractLogger as PsrLogAbstractLogger;
 
 /**
  * @group smoke
@@ -78,6 +81,10 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         $expectedAppLogLinePrefix = SinkForTests::LOG_LINE_PREFIX . ' [' . ClassNameUtil::fqToShortFromRawString(__CLASS__) . ClassNameUtil::fqToShort(App::class) . ']';
         /** @noinspection PhpUnitMisorderedAssertEqualsArgumentsInspection */
         self::assertSame($expectedAppLogLinePrefix, Shared::APP_LOG_LINE_PREFIX);
+
+        AssertEx::sameConstValues(PsrLogAbstractLogger::class, Shared::PSR_LOG_ABSTRACTLOGGER_CLASS_NAME);
+        AssertEx::sameConstValues(OTelSdk::class, Shared::OPENTELEMETRY_SDK_SDK_CLASS_NAME);
+        AssertEx::sameConstValues(OTelSdkImmutableSpan::class, Shared::OPENTELEMETRY_SDK_IMMUTABLESPAN_TRACE_CLASS_NAME);
     }
 
     public function test0SemverComparator(): void
@@ -125,7 +132,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
 
         return self::adaptDataProviderForTestBuilderToSmokeToDescToMixedMap(
             (new DataProviderForTestBuilder())
-                ->addProdBoolConfigOptionKeyedDimensionAllValuesCombinable(OptionForProdName::enabled->name)
+                 ->addProdBoolConfigOptionKeyedDimensionAllValuesCombinable(OptionForProdName::enabled->name)
                 ->addKeyedDimensionAllValuesCombinable(self::PSR_LOG_VERSION_TO_INSTALL_FOR_APP_KEY, $psrLogVersionsForApp)
                 ->addKeyedDimensionAllValuesCombinable(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX, [false, true])
                 ->addKeyedDimensionAllValuesCombinable(self::OTEL_SDK_VERSION_TO_INSTALL_FOR_APP_KEY, $otelSdkVersionsForApp)
@@ -141,7 +148,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
         $logDebug = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
 
         $fileContents = BuildToolsUtil::getFileContents($composerJsonFilePath);
-        $logDebug?->log(__LINE__, '', compact('composerJsonFilePath', 'fileContents'));
+        $logDebug?->log(__LINE__, 'Before setting versions ...', compact('composerJsonFilePath', 'fileContents'));
         $decodedJson = AssertEx::isArray(JsonUtil::decode($fileContents));
         $requireSection = AssertEx::isArray(AssertEx::arrayHasKey(ComposerUtil::COMPOSER_JSON_REQUIRE_KEY, $decodedJson));
         $requireSectionUpdated = $requireSection;
@@ -150,7 +157,7 @@ final class DependenciesScopingTest extends ComponentTestCaseBase
             $requireSectionUpdated[$packageName] = $packageVersion;
         }
         $decodedJsonUpdated[ComposerUtil::COMPOSER_JSON_REQUIRE_KEY] = $requireSectionUpdated;
-        $logDebug?->log(__LINE__, '', compact('decodedJsonUpdated'));
+        $logDebug?->log(__LINE__, 'After setting versions', compact('decodedJsonUpdated'));
         BuildToolsUtil::putFileContents($composerJsonFilePath, JsonUtil::encode($decodedJsonUpdated));
     }
 

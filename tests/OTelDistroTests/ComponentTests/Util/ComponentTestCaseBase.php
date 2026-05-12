@@ -334,7 +334,9 @@ class ComponentTestCaseBase extends TestCaseBase
             $loggerProxyOutsideIt && $loggerProxyOutsideIt->log(__LINE__, 'Test failed but $this->testCaseHandle is null - NOT re-running the test with escalated log levels');
             throw $initiallyFailedTestException;
         }
-        $initiallyFailedTestLogLevels = $this->getCurrentLogLevels($this->testCaseHandle);
+        $escalatedProdLogLevelOptName = AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName();
+        $logger->addAllContext(compact('escalatedProdLogLevelOptName'));
+        $initiallyFailedTestLogLevels = $this->getCurrentLogLevels($this->testCaseHandle, $escalatedProdLogLevelOptName);
         if (ArrayUtilForTests::isEmpty($initiallyFailedTestLogLevels)) {
             $loggerProxyOutsideIt && $loggerProxyOutsideIt->log(__LINE__, 'Test failed but not even one app code host has started successfully - NOT re-running the test with escalated log levels');
             throw $initiallyFailedTestException;
@@ -390,15 +392,13 @@ class ComponentTestCaseBase extends TestCaseBase
     }
 
     /**
-     * @param TestCaseHandle $testCaseHandle
-     *
      * @return array<string, LogLevel>
      */
-    private function getCurrentLogLevels(TestCaseHandle $testCaseHandle): array
+    private function getCurrentLogLevels(TestCaseHandle $testCaseHandle, OptionForProdName $logLevelOptName): array
     {
         /** @var array<string, LogLevel> $result */
         $result = [];
-        $prodCodeLogLevels = $testCaseHandle->getProdCodeLogLevels();
+        $prodCodeLogLevels = $testCaseHandle->getProdCodeLogLevels($logLevelOptName);
         if (ArrayUtilForTests::isEmpty($prodCodeLogLevels)) {
             return [];
         }

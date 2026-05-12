@@ -17,12 +17,11 @@ final class Shared
     public const PSR_LOG_PACKAGE_NAME = 'psr/log';
     public const ALL_PACKAGE_NAMES = [self::OTEL_SDK_PACKAGE_NAME, self::PSR_LOG_PACKAGE_NAME];
 
-    /** @noinspection PhpFullyQualifiedNameUsageInspection */
-    public const PSR_LOG_ABSTRACT_LOGGER_CLASS_NAME = \Psr\Log\AbstractLogger::class;
+    public const PSR_LOG_ABSTRACTLOGGER_CLASS_NAME = 'Psr\Log\AbstractLogger';
     public const PSR_LOG_ABSTRACT_LOGGER_METHOD_NAME = 'emergency';
-    /** @noinspection PhpFullyQualifiedNameUsageInspection */
-    public const OTEL_SDK_CLASS_NAME = \OpenTelemetry\SDK\Sdk::class;
-    public const ALL_CLASS_NAMES = [self::PSR_LOG_ABSTRACT_LOGGER_CLASS_NAME, self::OTEL_SDK_CLASS_NAME];
+    public const OPENTELEMETRY_SDK_SDK_CLASS_NAME = 'OpenTelemetry\SDK\Sdk';
+    public const OPENTELEMETRY_SDK_IMMUTABLESPAN_TRACE_CLASS_NAME = 'OpenTelemetry\SDK\Trace\ImmutableSpan';
+    public const ALL_CLASS_NAMES = [self::PSR_LOG_ABSTRACTLOGGER_CLASS_NAME, self::OPENTELEMETRY_SDK_SDK_CLASS_NAME, self::OPENTELEMETRY_SDK_IMMUTABLESPAN_TRACE_CLASS_NAME];
 
     public const DISTRO_ENABLED_CFG_OPT_NAME = 'enabled';
     public const DEBUG_SCOPER_ENABLED_CFG_OPT_NAME = 'debug_scoper_enabled';

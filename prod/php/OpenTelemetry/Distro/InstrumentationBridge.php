@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use Closure;
+use OpenTelemetry\Distro\Log\LogFeature;
 use OpenTelemetry\Distro\Log\LogLevel;
 use RuntimeException;
 use Throwable;
@@ -17,11 +18,11 @@ use OpenTelemetry\Distro\Util\SingletonInstanceTrait;
  *
  * @internal
  *
- * @phpstan-type PreHook Closure(?object $thisObj, array<mixed> $params, string $class, string $function, ?string $filename, ?int $lineno): (void|array<mixed>)
- *                  return value is modified parameters
+ * @phpstan-type PreHook Closure(?object $thisObj, list<mixed> $params, string $class, string $function, ?string $filename, ?int $lineno): (void|list<mixed>)
+ *                  if not void then the return value is modified parameters
  *
- * @phpstan-type PostHook Closure(?object $thisObj, array<mixed> $params, mixed $returnValue, ?Throwable $throwable): mixed
- *                  return value is modified return value
+ * @phpstan-type PostHook Closure(?object $thisObj, list<mixed> $params, mixed $returnValue, ?Throwable $throwable): (void|mixed)
+ *                  if not void then the return value is modified return value
  */
 final class InstrumentationBridge
 {
@@ -216,5 +217,13 @@ final class InstrumentationBridge
     private static function getCurrentSourceCodeClass(): string
     {
         return __CLASS__;
+    }
+
+    /**
+     * Must be defined in class using BootstrapStageLoggingClassTrait
+     */
+    private static function getCurrentLogFeature(): int
+    {
+        return LogFeature::INSTRUMENTATION;
     }
 }

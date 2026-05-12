@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\DistroTools\Build;
 
-use OpenTelemetry\Distro\AutoloaderDistroOTelClasses;
+use OpenTelemetry\Distro\AutoloaderForDistroClasses;
 use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
@@ -55,6 +55,7 @@ BootstrapStageLogger::configure(
     }
 );
 
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForDistroClasses.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderDistroOTelClasses.php';
-AutoloaderDistroOTelClasses::register('OpenTelemetry\\Distro', $prodPhpDistroPath);
-AutoloaderDistroOTelClasses::register(__NAMESPACE__, __DIR__);
+AutoloaderForDistroClasses::register('OpenTelemetry\\Distro', $prodPhpDistroPath);
+AutoloaderForDistroClasses::register(__NAMESPACE__, __DIR__);

@@ -6,6 +6,7 @@ namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
 
 use Closure;
 use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
+use OpenTelemetry\Distro\SplAutoloadFunctionsLogUtil;
 use ReflectionClass;
 use ReflectionFunction;
 use RuntimeException;
@@ -14,15 +15,6 @@ use Throwable;
 final class App
 {
     private static ?int $maxEnabledLogLevel = null;
-
-    private static function parseLogLevelConfig(): void
-    {
-        if (!class_exists(BootstrapStageLogLevelUtil::class)) {
-            $testsRepoRootDirPath = self::getEnvVar(Shared::buildEnvVarName(Shared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX));
-            require $testsRepoRootDirPath . '/prod/php/OpenTelemetry/Distro/BootstrapStageLogLevelUtil.php';
-        }
-        self::$maxEnabledLogLevel = BootstrapStageLogLevelUtil::levelStringToInt(self::getEnvVar(Shared::buildEnvVarName(Shared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX)));
-    }
 
     private static function writeLineToStdErr(string $text): void
     {
@@ -35,7 +27,7 @@ final class App
                 $openedFileResource = fopen('php://stderr', 'w');
                 $isStdErrDefined = is_resource($openedFileResource);
                 if ($isStdErrDefined) {
-                    define('STDERR', fopen('php://stderr', 'w'));
+                    define('STDERR', $openedFileResource);
                 }
             }
         }
@@ -45,26 +37,87 @@ final class App
         }
     }
 
-    /**
-     * @param array<string, mixed>  $context
-     */
-    private static function concatMessageAndContext(string $msg, array $context = []): string
+    private static function requirePhpFileOutsideApp(string $pathFromRepoRoot): void
     {
-        return $msg . (count($context) === 0 ? '' : (' ; ' . json_encode($context)));
+        /** @var ?string $testsRepoRootDirPath */
+        static $testsRepoRootDirPath = null;
+        if ($testsRepoRootDirPath === null) {
+            $testsRepoRootDirPath = self::getEnvVar(Shared::buildEnvVarName(Shared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX));
+        }
+
+        require $testsRepoRootDirPath . DIRECTORY_SEPARATOR . $pathFromRepoRoot;
+    }
+
+    private static function parseLogLevelConfig(): void
+    {
+        if (!class_exists(BootstrapStageLogLevelUtil::class)) {
+            self::requirePhpFileOutsideApp(pathFromRepoRoot: 'prod/php/OpenTelemetry/Distro/BootstrapStageLogLevelUtil.php');
+        }
+
+        self::$maxEnabledLogLevel = BootstrapStageLogLevelUtil::levelStringToInt(self::getEnvVar(Shared::buildEnvVarName(Shared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX)));
+
+        self::logDebug(__LINE__, __FUNCTION__, 'maxEnabledLogLevel: ' . (self::$maxEnabledLogLevel === null ? 'null' : BootstrapStageLogLevelUtil::levelIntToString(self::$maxEnabledLogLevel)));
+    }
+
+    private static function logIfClassesExist(): void
+    {
+        foreach (Shared::ALL_CLASS_NAMES as $fqClassName) {
+            $msgSuffix = class_exists($fqClassName, autoload: false)
+                ? 'exists (source code file: ' . (new ReflectionClass($fqClassName))->getFileName() . ')'
+                : 'does NOT exist';
+            self::logDebug(__LINE__, __FUNCTION__, 'class ' . $fqClassName . ' ' . $msgSuffix);
+        }
+    }
+
+    private static function logAutoloadFunctions(string $message): void
+    {
+        if (!class_exists(SplAutoloadFunctionsLogUtil::class)) {
+            self::requirePhpFileOutsideApp(pathFromRepoRoot: 'prod/php/OpenTelemetry/Distro/SplAutoloadFunctionsLogUtil.php');
+        }
+
+        /**
+         * @var int $logLevel
+         *
+         * @noinspection PhpRedundantVariableDocTypeInspection
+         */
+        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_DEBUG;
+        if (self::isLogEnabledForLevel($logLevel)) {
+            self::logWithLevel($logLevel, __LINE__, __FUNCTION__, $message, ['spl_autoload_functions()' => SplAutoloadFunctionsLogUtil::callbacksToLoggable(spl_autoload_functions())]);
+        }
+    }
+
+    private static function logInitialState(): void
+    {
+        self::logAutoloadFunctions('Initial state');
+        self::logIfClassesExist();
     }
 
     /**
      * @param array<string, mixed>  $context
      */
-    private static function logWithLevel(int $level, int $srcCodeLine, string $message, array $context = []): void
+    private static function concatMessageAndContext(string $message, array $context = []): string
     {
-        if ($level > self::$maxEnabledLogLevel) {
+        return $message . (count($context) === 0 ? '' : (' | ' . json_encode($context)));
+    }
+
+    private static function isLogEnabledForLevel(int $level): bool
+    {
+        return $level <= self::$maxEnabledLogLevel;
+    }
+
+    /**
+     * @param array<string, mixed>  $context
+     */
+    private static function logWithLevel(int $level, int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
+    {
+        if (!self::isLogEnabledForLevel($level)) {
             return;
         }
 
         $formattedStatement = Shared::APP_LOG_LINE_PREFIX;
         $formattedStatement .=  ' ' . '[' . BootstrapStageLogLevelUtil::levelIntToString($level) . ']';
-        $formattedStatement .=  ' ' . '[' . __FILE__ . ':' . $srcCodeLine . ']';
+        $formattedStatement .=  ' ' . '[' . basename(__FILE__) . ':' . $srcCodeLine . ']';
+        $formattedStatement .=  ' ' . '[' . $srcCodeFunc . ']';
         $formattedStatement .=  ' ' . self::concatMessageAndContext($message, $context);
         self::writeLineToStdErr($formattedStatement);
     }
@@ -74,9 +127,9 @@ final class App
      *
      * @noinspection PhpSameParameterValueInspection
      */
-    private static function logDebug(int $srcCodeLine, string $message, array $context = []): void
+    private static function logTrace(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
     {
-        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_DEBUG, $srcCodeLine, $message, $context);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE, $srcCodeLine, $srcCodeFunc, $message, $context);
     }
 
     /**
@@ -84,9 +137,19 @@ final class App
      *
      * @noinspection PhpSameParameterValueInspection
      */
-    private static function logWarning(int $srcCodeLine, string $message, array $context = []): void
+    private static function logDebug(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
     {
-        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_WARNING, $srcCodeLine, $message, $context);
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_DEBUG, $srcCodeLine, $srcCodeFunc, $message, $context);
+    }
+
+    /**
+     * @param array<string, mixed>  $context
+     *
+     * @noinspection PhpSameParameterValueInspection
+     */
+    private static function logWarning(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
+    {
+        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_WARNING, $srcCodeLine, $srcCodeFunc, $message, $context);
     }
 
     /**
@@ -118,6 +181,38 @@ final class App
     {
         self::assert(is_string($actualVal), "value is not an string", ["value type" => get_debug_type($actualVal), 'value' => $actualVal]);
         /** @var string $actualVal */
+        return $actualVal;
+    }
+
+    /**
+     * @template T of numeric|string|object|resource
+     *
+     * @param T|false $actualVal
+     *
+     * @return T
+     *
+     * @phpstan-assert !false $actualVal
+     */
+    public static function assertNotFalse(mixed $actualVal): mixed
+    {
+        self::assert($actualVal !== false, "value is false");
+        /** @var T $actualVal */
+        return $actualVal;
+    }
+
+    /**
+     * @template T of numeric|string|object|resource
+     *
+     * @param ?T $actualVal
+     *
+     * @return T
+     *
+     * @phpstan-assert !null $actualVal
+     */
+    public static function assertIsNotNull(mixed $actualVal): mixed
+    {
+        self::assert($actualVal !== null, "value is null");
+        /** @var T $actualVal */
         return $actualVal;
     }
 
@@ -263,7 +358,7 @@ final class App
 
         $result = [];
         foreach ($isScopedVariants as $isScoped) {
-            $reflClass = new ReflectionClass(self::adaptClassNameScoping(Shared::PSR_LOG_ABSTRACT_LOGGER_CLASS_NAME, $isScoped));
+            $reflClass = new ReflectionClass(self::adaptClassNameScoping(Shared::PSR_LOG_ABSTRACTLOGGER_CLASS_NAME, $isScoped));
             /**
              * @see https://github.com/php-fig/log/blob/2.0.0/src/LoggerTrait.php#L23
              * @see https://github.com/php-fig/log/blob/3.0.0/src/LoggerTrait.php#L23
@@ -314,6 +409,7 @@ final class App
     private static function generateAuxOutput(): array
     {
         $appCodeAuxOutput = [
+            'maxEnabledLogLevel' => BootstrapStageLogLevelUtil::levelIntToString(self::assertIsNotNull(self::$maxEnabledLogLevel)),
             Shared::DISTRO_ENABLED_CFG_OPT_NAME => self::isDistroEnabled(),
             Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME => self::isScopingEnabled(),
             Shared::APP_VENDOR_DIR_PATH_KEY => self::getAppVendorDir(),
@@ -332,6 +428,11 @@ final class App
         return $appCodeAuxOutput;
     }
 
+    private static function logClassAutoload(string $fqClassName): void
+    {
+        self::logTrace(__LINE__, __FUNCTION__, 'Trying to autoload class ' . $fqClassName);
+    }
+
     /**
      * @throws Throwable
      */
@@ -341,25 +442,39 @@ final class App
             require __DIR__ . DIRECTORY_SEPARATOR . 'CompatibleWithPsrLogReturnType.php';
             $logger = new CompatibleWithPsrLogReturnType();
         } else {
-            require __DIR__ . DIRECTORY_SEPARATOR . 'IncompatibleNewPsrLogReturnType.php';
-            $logger = new IncompatibleNewPsrLogReturnType();
+            require __DIR__ . DIRECTORY_SEPARATOR . 'IncompatibleWithPsrLogReturnType.php';
+            $logger = new IncompatibleWithPsrLogReturnType();
         }
         $logger->debug('Dummy message');
     }
 
     public static function run(): void
     {
+        require __DIR__ . DIRECTORY_SEPARATOR . 'Shared.php';
+
         self::parseLogLevelConfig();
+
+        self::logInitialState();
+
+        if (self::isLogEnabledForLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE)) {
+            spl_autoload_register(self::logClassAutoload(...), prepend: true);
+            self::logAutoloadFunctions('After registering self::logClassAutoload()');
+        }
+
+        $appAutoloadPhp = __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+        require $appAutoloadPhp;
+
+        self::logAutoloadFunctions('After requiring ' . $appAutoloadPhp);
 
         $appCodeAuxOutput = self::generateAuxOutput();
 
         $appCodeAuxOutputFilePath = self::getEnvVar(Shared::buildEnvVarName(Shared::APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX));
         self::putFileContents($appCodeAuxOutputFilePath, self::assertIsString(json_encode($appCodeAuxOutput)));
-        self::logDebug(__LINE__, 'Written app code aux output', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
+        self::logDebug(__LINE__, __FUNCTION__, 'Written app code aux output', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
 
         $isCompatibleWithNewPsrLog = self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX)));
         if (!$isCompatibleWithNewPsrLog) {
-            self::logWarning(__LINE__, 'About to use psr/log in a way that is expected to fail...');
+            self::logWarning(__LINE__, __FUNCTION__, 'About to use psr/log in a way that is expected to fail...');
         }
         self::usePsrLoggerImpl($isCompatibleWithNewPsrLog);
     }

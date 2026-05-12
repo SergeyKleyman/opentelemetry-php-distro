@@ -279,6 +279,21 @@ final class AssertEx
     }
 
     /**
+     * @template TObject of object
+     *
+     * @param class-string<TObject> $expectedType
+     *
+     * @return TObject
+     *
+     * @phpstan-assert TObject $actualValue
+     */
+    public static function isInstanceOf(string $expectedType, mixed $actualValue, string $message = ''): object
+    {
+        Assert::assertInstanceOf($expectedType, $actualValue, $message);
+        return $actualValue;
+    }
+
+    /**
      * @template TKey of array-key
      * @template TValue
      *

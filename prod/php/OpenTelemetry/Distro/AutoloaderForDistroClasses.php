@@ -6,7 +6,10 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
 
-final class AutoloaderDistroOTelClasses
+use OpenTelemetry\Distro\Log\LogFeature;
+use RuntimeException;
+
+final class AutoloaderForDistroClasses
 {
     use BootstrapStageLoggingClassTrait;
 
@@ -21,9 +24,13 @@ final class AutoloaderDistroOTelClasses
         $this->srcFilePathPrefix = $rootNamespaceDir . DIRECTORY_SEPARATOR;
     }
 
-    public static function register(string $rootNamespace, string $rootNamespaceDir): void
+    public static function register(string $rootNamespace, string $rootNamespaceDir): callable
     {
-        spl_autoload_register((new self($rootNamespace, $rootNamespaceDir))->autoloadCodeForClass(...));
+        $callback = (new self($rootNamespace, $rootNamespaceDir))->autoloadCodeForClass(...);
+        if (!spl_autoload_register($callback)) {
+            throw new RuntimeException('spl_autoload_register() returned false' . ' | ' . json_encode(compact('rootNamespace', 'rootNamespaceDir'), JSON_THROW_ON_ERROR));
+        }
+        return $callback;
     }
 
     private function shouldAutoloadCodeForClass(string $fqClassName): bool
@@ -73,5 +80,13 @@ final class AutoloaderDistroOTelClasses
     private static function getCurrentSourceCodeClass(): string
     {
         return __CLASS__;
+    }
+
+    /**
+     * Must be defined in class using BootstrapStageLoggingClassTrait
+     */
+    private static function getCurrentLogFeature(): int
+    {
+        return LogFeature::BOOTSTRAP;
     }
 }

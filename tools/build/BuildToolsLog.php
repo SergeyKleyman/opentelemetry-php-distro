@@ -92,7 +92,7 @@ final class BuildToolsLog
                 file: $file,
                 line: $line,
                 func: self::fqMethodToFunc($fqMethod),
-                messageWithContext: self::concatMessageAndContext($message, (empty($context) ? '' : json_encode($context, JSON_THROW_ON_ERROR))),
+                messageWithContext: self::concatMessageAndContext($message, ((count($context) === 0) ? '' : json_encode($context, JSON_THROW_ON_ERROR))),
             );
         } else {
             (self::$formatAndWrite)(
