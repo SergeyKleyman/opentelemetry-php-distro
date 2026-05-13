@@ -64,6 +64,10 @@ AgentGlobals::AgentGlobals(std::shared_ptr<LoggerInterface> logger,
     {
         forkableRegistry_->registerForkable(workerRegistrar_);
 
+        if (vendorCustomizations_) {
+            vendorCustomizations_->setLogger(logger_);
+        }
+
         config_->addConfigUpdateWatcher(loggerConfigUpdateFunc);
 }
 

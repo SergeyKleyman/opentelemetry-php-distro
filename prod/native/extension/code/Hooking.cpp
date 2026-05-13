@@ -113,13 +113,21 @@ static zend_op_array *otel_compile_file(zend_file_handle *file_handle, int type)
     return ret;
 }
 
-void Hooking::replaceHooks(bool enableInferredSpansHooks, bool enableDepenecyAutoloaderGuard) {
+void Hooking::enableInferredSpansHooks() {
+    if (inferredSpansHooksInstalled_) {
+        return;
+    }
+    ELOGF_DEBUG(OTEL_G(globals)->logger_, HOOKS, "Hooked into zend_execute_internal and zend_interrupt_function");
+    zend_execute_internal = otel_execute_internal;
+    zend_interrupt_function = otel_interrupt_function;
+    inferredSpansHooksInstalled_ = true;
+}
+
+void Hooking::replaceHooks(bool enableInferredSpansHook, bool enableDepenecyAutoloaderGuard) {
     zend_observer_error_register(otel_observer_error_cb);
 
-    if (enableInferredSpansHooks) {
-        ELOGF_DEBUG(OTEL_G(globals)->logger_, HOOKS, "Hooked into zend_execute_internal and zend_interrupt_function");
-        zend_execute_internal = otel_execute_internal;
-        zend_interrupt_function = otel_interrupt_function;
+    if (enableInferredSpansHook) {
+        enableInferredSpansHooks();
     }
 
     if (enableDepenecyAutoloaderGuard) {

@@ -41,6 +41,7 @@ public:
     }
 
     void replaceHooks(bool enableInferredSpansHooks, bool enableDepenecyAutoloaderGuard);
+    void enableInferredSpansHooks();
 
 private:
     Hooking(Hooking const &) = delete;
@@ -50,6 +51,7 @@ private:
     zend_execute_internal_t original_execute_internal_ = nullptr;
     zend_interrupt_function_t original_zend_interrupt_function_ = nullptr;
     zend_compile_file_t original_zend_compile_file_ = nullptr;
+    bool inferredSpansHooksInstalled_ = false;
 };
 
 } // namespace opentelemetry::php

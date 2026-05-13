@@ -70,6 +70,22 @@ public:
         configUpdatedWatchers_.disconnect_all_slots();
     }
 
+    void updateHeartbeatInterval(std::chrono::milliseconds interval) {
+        if (interval.count() > 0) {
+            ELOG_DEBUG(log_, OPAMP, "Updating heartbeat interval to {}ms", interval.count());
+            heartbeatInterval_ = interval;
+            pauseCondition_.notify_all();
+        }
+    }
+
+    void updatePollingInterval(std::chrono::milliseconds interval) {
+        if (interval.count() > 0) {
+            ELOG_DEBUG(log_, OPAMP, "Updating polling interval to {}ms", interval.count());
+            pollingInterval_ = interval;
+            pauseCondition_.notify_all();
+        }
+    }
+
 protected:
     void sendInitialAgentToServer();
     void handleServerToAgent(const char *data, std::size_t size);
@@ -107,18 +123,37 @@ protected:
 
         opentelemetry::utils::blockApacheAndPHPSignals();
 
+        auto now = std::chrono::steady_clock::now();
+        auto nextHeartbeat = now + heartbeatInterval_.load();
+        auto nextPoll = now + pollingInterval_.load();
+
         std::unique_lock<std::mutex> lock(mutex_);
         while (working_) {
-            pauseCondition_.wait_for(lock, heartbeatInterval_.load(), [this]() -> bool { return !working_; });
+            auto waitUntil = std::min(nextHeartbeat, nextPoll);
+            pauseCondition_.wait_until(lock, waitUntil, [this, &waitUntil]() -> bool { return !working_ || std::chrono::steady_clock::now() >= waitUntil; });
 
             if (!working_ && !forceFlushOnDestruction_) {
                 break;
             }
 
-            try {
-                sendHeartbeat();
-            } catch (std::exception const &e) {
-                ELOG_WARNING(log_, OPAMP, "Unable to send heartbeat {}", e.what());
+            now = std::chrono::steady_clock::now();
+            bool shouldSend = false;
+
+            if (now >= nextHeartbeat) {
+                shouldSend = true;
+                nextHeartbeat = now + heartbeatInterval_.load();
+            }
+            if (now >= nextPoll) {
+                shouldSend = true;
+                nextPoll = now + pollingInterval_.load();
+            }
+
+            if (shouldSend) {
+                try {
+                    sendHeartbeat();
+                } catch (std::exception const &e) {
+                    ELOG_WARNING(log_, OPAMP, "Unable to send heartbeat {}", e.what());
+                }
             }
         }
     }
@@ -137,7 +172,8 @@ private:
     std::shared_ptr<opentelemetry::php::ConfigurationStorage> config_;
     std::shared_ptr<opentelemetry::php::transport::HttpTransportAsyncInterface> transport_;
     boost::uuids::uuid agentUid_{boost::uuids::random_generator()()};
-    std::atomic<std::chrono::seconds> heartbeatInterval_ = 30s;
+    std::atomic<std::chrono::milliseconds> heartbeatInterval_{std::chrono::milliseconds{30000}};
+    std::atomic<std::chrono::milliseconds> pollingInterval_{std::chrono::milliseconds{30000}};
 
     std::mutex configAccessMutex_;
     std::string currentConfigHash_;

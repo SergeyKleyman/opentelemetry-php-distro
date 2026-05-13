@@ -23,6 +23,7 @@
 #include "ModuleFunctions.h"
 #include "PhpBridge.h"
 #include "PhpBridgeInterface.h"
+#include "Hooking.h"
 #include "RequestScope.h"
 #include "ResourceDetector.h"
 #include "SigSegvHandler.h"
@@ -38,6 +39,12 @@ ZEND_DECLARE_MODULE_GLOBALS( opentelemetry_distro )
 
 PHP_RINIT_FUNCTION(opentelemetry_distro) {
     OTEL_G(globals)->requestScope_->onRequestInit();
+
+    // Install inferred spans hooks if enabled (handles remote config enabling after MINIT)
+    if (OTEL_G(globals)->config_->get().inferred_spans_enabled) {
+        opentelemetry::php::Hooking::getInstance().enableInferredSpansHooks();
+    }
+
     return SUCCESS;
 }
 

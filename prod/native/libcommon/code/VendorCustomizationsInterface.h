@@ -1,7 +1,9 @@
 #pragma once
 
 #include "config/OptionValueProviderInterface.h"
+#include "LoggerInterface.h"
 
+#include <map>
 #include <string>
 #include <memory>
 #include <utility>
@@ -22,6 +24,10 @@ public:
     virtual std::string getUserAgent() const = 0;
 
     virtual std::pair<int, std::shared_ptr<opentelemetry::php::config::OptionValueProviderInterface>>  getOptionValueProvider() = 0;
+
+    virtual void setLogger(std::shared_ptr<LoggerInterface> logger) = 0;
+
+    virtual std::map<std::string, std::string> getAdditionalResourceAttributes() = 0;
 };
 
 }
