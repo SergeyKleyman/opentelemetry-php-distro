@@ -12,7 +12,6 @@ use OTelDistroTests\ComponentTests\Util\AttributesExpectations;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\HttpAppCodeHostHandle;
 use OTelDistroTests\ComponentTests\Util\HttpAppCodeRequestParams;
-use OTelDistroTests\ComponentTests\Util\OTelUtil;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
 use OTelDistroTests\ComponentTests\Util\OtlpData\SpanKind;
 use OTelDistroTests\ComponentTests\Util\SpanExpectationsBuilder;

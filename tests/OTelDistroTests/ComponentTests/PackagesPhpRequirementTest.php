@@ -230,7 +230,7 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
      */
     public static function appCodeForTestPackagesHaveCorrectPhpVersion(): array
     {
-        AppCodeContextDataUtil::writeDataToTempFile([self::APP_CODE_CTX_VENDOR_DIR_KEY => AppCodeContextUtil::adaptClassNameToScoping(VendorDir::class)::$fullPath], $appCodeArgs);
+        return [self::INSTALLED_DISTRO_VENDOR_DIR_KEY => AppCodeContextUtil::adaptClassNameToScoping(VendorDir::class)::$fullPath];
     }
 
     private function implTestPackagesHaveCorrectPhpVersion(): void
