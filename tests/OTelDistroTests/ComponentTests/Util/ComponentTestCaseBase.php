@@ -107,7 +107,7 @@ class ComponentTestCaseBase extends TestCaseBase
     public static function appCodeCreatesDummySpan(MixedMap $appCodeArgs): void
     {
         if ($appCodeArgs->tryToGetBool(self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY) ?? true) {
-            OTelUtil::startEndSpan(self::APP_CODE_DUMMY_SPAN_NAME);
+            OTelUtilForTests::startEndSpan(self::APP_CODE_DUMMY_SPAN_NAME);
         }
     }
 

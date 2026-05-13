@@ -26,7 +26,7 @@ final class PgSqlDbSpanDataExpectationsBuilder extends DbSpanExpectationsBuilder
     public function buildForPgFunction(string $funcName, ?string $dbQueryText = null): SpanExpectations
     {
         $builderClone = clone $this;
-        $builderClone->nameAndCodeAttributesUsingFuncName($funcName);
+        $builderClone->nameAndCodeAttributesForFunction($funcName);
         $builderClone->optionalDbQueryTextAndOperationName($dbQueryText);
         return $builderClone->build();
     }

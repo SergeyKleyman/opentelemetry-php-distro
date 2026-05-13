@@ -22,7 +22,7 @@ use Throwable;
  * @phpstan-type OTelAttributesMapIterable iterable<non-empty-string, OTelAttributeValue>
  * @phpstan-type IntLimitedToOTelSpanKind OTelSpanKind::KIND_*
  */
-final class OTelUtil
+final class OTelUtilForTests
 {
     /**
      * Use PHPDoc tags instead of PHP language native type hints to avoid runtime enforcement

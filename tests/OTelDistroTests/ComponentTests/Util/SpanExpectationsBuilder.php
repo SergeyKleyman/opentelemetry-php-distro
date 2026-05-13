@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Util\OTelUtil;
 use OTelDistroTests\ComponentTests\Util\OtlpData\SpanKind;
-use OTelDistroTests\Util\AssertEx;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
+use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 
 /**
  * @phpstan-import-type ArrayValue from AttributesExpectations as SpanAttributesExpectationsArrayValue
  */
 class SpanExpectationsBuilder
 {
-    private const CLASS_AND_METHOD_SEPARATOR = '::';
-
     protected StringExpectations $name;
 
     /** @var LeafExpectations<SpanKind> */
@@ -73,50 +72,18 @@ class SpanExpectationsBuilder
     /**
      * @return $this
      */
-    public function nameAndCodeAttributesUsingFuncName(string $funcName): self
+    public function nameAndCodeAttributesForFunction(string $fqFuncName): self
     {
-        $this->name($funcName);
-        return $this->addAttribute(TraceAttributes::CODE_FUNCTION_NAME, $funcName);
+        $this->name($fqFuncName);
+        return $this->addAttribute(CodeAttributes::CODE_FUNCTION_NAME, $fqFuncName);
     }
 
     /**
      * @return $this
      */
-    public function nameUsingClassMethod(string $className, string $methodName, ?bool $isStaticMethod = null): self
+    public function nameAndCodeAttributesForClassMethod(string $fqClassName, string $methodName): self
     {
-        return $this->name(AssertEx::notNull(self::buildNameFromClassMethod($className, $methodName, $isStaticMethod)));
-    }
-
-    /**
-     * @return $this
-     */
-    public function nameAndCodeAttributesUsingClassMethod(string $className, string $methodName, ?bool $isStaticMethod = null): self
-    {
-        $this->nameUsingClassMethod($className, $methodName, $isStaticMethod);
-        $this->addAttribute(TraceAttributes::CODE_NAMESPACE, $className);
-        return $this->addAttribute(TraceAttributes::CODE_FUNCTION_NAME, $methodName);
-    }
-
-    /**
-     * @return $this
-     */
-    public function nameAndCodeFunctionUsingClassMethod(string $className, string $methodName, ?bool $isStaticMethod = null): self
-    {
-        $this->nameUsingClassMethod($className, $methodName, $isStaticMethod);
-        return $this->addAttribute(TraceAttributes::CODE_FUNCTION_NAME, $className . self::CLASS_AND_METHOD_SEPARATOR . $methodName);
-    }
-
-    private static function buildNameFromClassMethod(?string $classicName, ?string $methodName, /** @noinspection PhpUnusedParameterInspection */ ?bool $isStaticMethod = null): ?string
-    {
-        if ($methodName === null) {
-            return null;
-        }
-
-        if ($classicName === null) {
-            return $methodName;
-        }
-
-        return $classicName . self::CLASS_AND_METHOD_SEPARATOR . $methodName;
+        return $this->nameAndCodeAttributesForFunction(OTelUtil::buildFqFunctionName($fqClassName, $methodName));
     }
 
     /**
@@ -144,7 +111,7 @@ class SpanExpectationsBuilder
      */
     public function serverAddress(string $value): self
     {
-        return $this->addAttribute(TraceAttributes::SERVER_ADDRESS, $value);
+        return $this->addAttribute(ServerAttributes::SERVER_ADDRESS, $value);
     }
 
     /**
@@ -152,7 +119,7 @@ class SpanExpectationsBuilder
      */
     public function serverPort(int $value): self
     {
-        return $this->addAttribute(TraceAttributes::SERVER_PORT, $value);
+        return $this->addAttribute(ServerAttributes::SERVER_PORT, $value);
     }
 
     /**
@@ -160,7 +127,7 @@ class SpanExpectationsBuilder
      */
     public function stackTrace(StackTraceExpectations $stackTrace): self
     {
-        return $this->addAttribute(TraceAttributes::CODE_STACKTRACE, $stackTrace);
+        return $this->addAttribute(CodeAttributes::CODE_STACKTRACE, $stackTrace);
     }
 
     public function build(): SpanExpectations

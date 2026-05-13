@@ -29,11 +29,11 @@ class InferredSpanExpectationsBuilder extends SpanExpectationsBuilder
 
     public function buildForStaticMethod(string $className, string $methodName, StackTraceExpectations $stackTrace, ?int $codeLineNumber = null): SpanExpectations
     {
-        return self::buildFor((clone $this)->nameAndCodeAttributesUsingClassMethod($className, $methodName, isStaticMethod: true), $stackTrace, $codeLineNumber);
+        return self::buildFor((clone $this)->nameAndCodeAttributesForClassMethod($className, $methodName), $stackTrace, $codeLineNumber);
     }
 
     public function buildForFunction(string $funcName, StackTraceExpectations $stackTrace, ?int $codeLineNumber = null): SpanExpectations
     {
-        return self::buildFor((clone $this)->nameAndCodeAttributesUsingFuncName($funcName), $stackTrace, $codeLineNumber);
+        return self::buildFor((clone $this)->nameAndCodeAttributesForFunction($funcName), $stackTrace, $codeLineNumber);
     }
 }

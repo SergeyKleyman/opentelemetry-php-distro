@@ -16,8 +16,9 @@ use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextStorageScopeInterface;
+use OpenTelemetry\Distro\Util\OTelUtil;
 use OpenTelemetry\SDK\Trace\Span;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\API\Common\Time\Clock;
 use OpenTelemetry\SemConv\Version;
 use OpenTelemetry\Context\ContextInterface;
@@ -156,7 +157,7 @@ class InferredSpans
             $first = false;
 
             if ($this->attachStackTrace) {
-                $newFrame[self::METADATA_SPAN]->get()?->setAttribute(TraceAttributes::CODE_STACKTRACE, $this->getStackTrace($this->lastStackTrace));
+                $newFrame[self::METADATA_SPAN]->get()?->setAttribute(CodeAttributes::CODE_STACKTRACE, $this->getStackTrace($this->lastStackTrace));
             }
 
             if ($index == 0 && $topFrameIsInternalFunction) {
@@ -340,6 +341,14 @@ class InferredSpans
 
     /**
      * @phpstan-param DebugBackTraceFrame $frame
+     */
+    private static function getNonEmptyStringFrameValue(array $frame, string $frameKey): ?string
+    {
+        return (ArrayUtil::getValueIfKeyExists($frameKey, $frame, /* out */ $frameValue) && is_string($frameValue) && !empty($frameValue)) ? $frameValue : null;
+    }
+
+    /**
+     * @phpstan-param DebugBackTraceFrame $frame
      *
      * @phpstan-return ExtendedStackTraceFrame
      */
@@ -355,10 +364,11 @@ class InferredSpans
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->setAttribute(self::IS_INFERRED_ATTRIBUTE_NAME, true);
 
-        self::setAttributeToFrameValue($frame, 'function', $builder, TraceAttributes::CODE_FUNCTION_NAME);
-        self::setAttributeToFrameValue($frame, 'class', $builder, TraceAttributes::CODE_NAMESPACE);
-        self::setAttributeToFrameValue($frame, 'file', $builder, TraceAttributes::CODE_FILE_PATH);
-        self::setAttributeToFrameValue($frame, 'line', $builder, TraceAttributes::CODE_LINE_NUMBER);
+        if (!empty($frameFunction = self::getNonEmptyStringFrameValue($frame, 'function'))) {
+            $builder->setAttribute(CodeAttributes::CODE_FUNCTION_NAME, OTelUtil::buildFqFunctionName(self::getNonEmptyStringFrameValue($frame, 'class'), $frameFunction));
+        }
+        self::setAttributeToFrameValue($frame, 'file', $builder, CodeAttributes::CODE_FILE_PATH);
+        self::setAttributeToFrameValue($frame, 'line', $builder, CodeAttributes::CODE_LINE_NUMBER);
 
         $span = $builder->startSpan(); //OpenTelemetry\API\Trace\SpanInterface
         $context = $span->storeInContext($parent); //OpenTelemetry\Context\ContextInterface
