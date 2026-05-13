@@ -31,16 +31,11 @@ final class InstrumentationBridge
      */
     use SingletonInstanceTrait;
 
-    /**
-     * @var array<array{string, string, ?Closure, ?Closure}>
-     */
-    public array $delayedHooks = [];
-
     private bool $enableDebugHooks;
 
     public function bootstrap(): void
     {
-        self::nativeHook(null, 'spl_autoload_register', null, $this->retryDelayedHooks(...));
+        self::logDebug(__LINE__, __FUNCTION__, 'Entered');
 
         $instrumentationHookPhp = ProdPhpDir::$fullPath . DIRECTORY_SEPARATOR . 'Instrumentation' . DIRECTORY_SEPARATOR . 'hook.php';
         if (!file_exists($instrumentationHookPhp)) {
@@ -56,7 +51,7 @@ final class InstrumentationBridge
          */
         $this->enableDebugHooks = (bool)\OpenTelemetry\Distro\get_config_option_by_name('debug_php_hooks_enabled');
 
-        self::logDebug(__LINE__, __FUNCTION__, 'Finished successfully');
+        self::logDebug(__LINE__, __FUNCTION__, 'Exiting');
     }
 
     /**
@@ -67,29 +62,14 @@ final class InstrumentationBridge
     {
         self::logTrace(__LINE__, __FUNCTION__, 'Entered', compact('class', 'function'));
 
-        if ($class !== null && !self::classOrInterfaceExists($class)) {
-            $this->addToDelayedHooks($class, $function, $pre, $post);
-            return true;
-        }
-
         $success = self::nativeHookNoThrow($class, $function, $pre, $post);
 
         if ($this->enableDebugHooks) {
             self::placeDebugHooks($class, $function);
         }
 
+        self::logTrace(__LINE__, __FUNCTION__, 'Exiting', compact('success', 'class', 'function'));
         return $success;
-    }
-
-    /**
-     * @phpstan-param PreHook  $pre
-     * @phpstan-param PostHook $post
-     */
-    private function addToDelayedHooks(string $class, string $function, ?Closure $pre = null, ?Closure $post = null): void
-    {
-        self::logTrace(__LINE__, __FUNCTION__, 'Adding to delayed hooks', compact('class', 'function'));
-
-        $this->delayedHooks[] = [$class, $function, $pre, $post];
     }
 
     /**
@@ -127,35 +107,6 @@ final class InstrumentationBridge
             self::logCriticalThrowable(__LINE__, __FUNCTION__, $throwable, 'Call to nativeHook has thrown', compact('class', 'function'));
             return false;
         }
-    }
-
-    public function retryDelayedHooks(): void
-    {
-        self::logTrace(__LINE__, __FUNCTION__, 'Entered', ['delayedHooks count' => count($this->delayedHooks)]);
-
-        if (count($this->delayedHooks) === 0) {
-            return;
-        }
-
-        $delayedHooksToKeep = [];
-        foreach ($this->delayedHooks as $delayedHookTuple) {
-            $class = $delayedHookTuple[0];
-            if (!self::classOrInterfaceExists($class)) {
-                self::logTrace(__LINE__, __FUNCTION__, 'Class/Interface still does not exist - keeping delayed hook', compact('class'));
-                $delayedHooksToKeep[] = $delayedHookTuple;
-                continue;
-            }
-
-            self::nativeHook(...$delayedHookTuple);
-        }
-
-        $this->delayedHooks = $delayedHooksToKeep;
-        self::logTrace(__LINE__, __FUNCTION__, 'Exiting', ['delayedHooks count' => count($this->delayedHooks)]);
-    }
-
-    private static function classOrInterfaceExists(string $classOrInterface): bool
-    {
-        return class_exists($classOrInterface) || interface_exists($classOrInterface);
     }
 
     private static function placeDebugHooks(?string $class, string $function): void
