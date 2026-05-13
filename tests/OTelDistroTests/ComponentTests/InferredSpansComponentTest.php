@@ -21,7 +21,7 @@ use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\StackTraceUtil;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 
 use function debug_backtrace;
 
@@ -175,8 +175,8 @@ final class InferredSpansComponentTest extends ComponentTestCaseBase
 
         $stackTraceExpectations = StackTraceExpectations::fromDebugBacktrace($expectedHelperData[$appCodeMethodName][self::STACK_TRACE_KEY]);
         $appCodeSpanExpectations = (new InferredSpanExpectationsBuilder())
-            ->addNotAllowedAttribute(TraceAttributes::CODE_FILE_PATH) // appCodeForTestInferredSpans method is called by call_user_func so there is no CODE_FILE_PATH
-            ->addNotAllowedAttribute(TraceAttributes::CODE_LINE_NUMBER) // appCodeForTestInferredSpans method is called by call_user_func so there is no CODE_LINE_NUMBER
+            ->addNotAllowedAttribute(CodeAttributes::CODE_FILE_PATH) // appCodeForTestInferredSpans method is called by call_user_func so there is no CODE_FILE_PATH
+            ->addNotAllowedAttribute(CodeAttributes::CODE_LINE_NUMBER) // appCodeForTestInferredSpans method is called by call_user_func so there is no CODE_LINE_NUMBER
             ->buildForStaticMethod(__CLASS__, $appCodeMethodName, $stackTraceExpectations);
         $appCodeSpan = $agentBackendComms->singleSpanByName($appCodeSpanExpectations->name->expectedValue->getValue());
         self::assertTrue($agentBackendComms->isSpanDescendantOf($appCodeSpan, $rootSpan));
@@ -186,7 +186,7 @@ final class InferredSpansComponentTest extends ComponentTestCaseBase
             return;
         }
 
-        $sleepSpansExpectationsBuilder = (new InferredSpanExpectationsBuilder())->addAttribute(TraceAttributes::CODE_FILE_PATH, __FILE__);
+        $sleepSpansExpectationsBuilder = (new InferredSpanExpectationsBuilder())->addAttribute(CodeAttributes::CODE_FILE_PATH, __FILE__);
         $expectedSleepSpans = [];
         $actualSleepSpans = [];
         foreach (self::SLEEP_FUNC_NAMES as $sleepFunc) {

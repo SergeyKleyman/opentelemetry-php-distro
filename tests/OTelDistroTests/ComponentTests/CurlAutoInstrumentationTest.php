@@ -33,6 +33,7 @@ use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\RangeUtil;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
@@ -211,7 +212,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
 
         $curlClientSpanAttributesExpectations = new AttributesExpectations(
             [
-                TraceAttributes::CODE_FUNCTION_NAME        => 'curl_exec',
+                CodeAttributes::CODE_FUNCTION_NAME        => 'curl_exec',
                 TraceAttributes::HTTP_REQUEST_METHOD       => HttpMethods::GET,
                 TraceAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
                 ServerAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
