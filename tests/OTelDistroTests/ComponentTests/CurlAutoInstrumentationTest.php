@@ -110,7 +110,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
 
         $enableCurlInstrumentationForClient = $appCodeArgs->getBool(self::ENABLE_CURL_INSTRUMENTATION_FOR_CLIENT_KEY);
         if ($enableCurlInstrumentationForClient) {
-            $curlInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\Curl\\CurlInstrumentation');
+            $curlInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameRawStringToScoping('OpenTelemetry\\Contrib\\Instrumentation\\Curl\\CurlInstrumentation');
             self::assertTrue(class_exists($curlInstrumentationFqClassName, autoload: false));
             AssertEx::sameConstValues(constant($curlInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
