@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests;
 
 use CurlHandle;
-use OpenTelemetry\Contrib\Instrumentation\Curl\CurlInstrumentation;
 use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
@@ -111,8 +110,9 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
 
         $enableCurlInstrumentationForClient = $appCodeArgs->getBool(self::ENABLE_CURL_INSTRUMENTATION_FOR_CLIENT_KEY);
         if ($enableCurlInstrumentationForClient) {
-            self::assertTrue(class_exists(AppCodeContextUtil::adaptClassNameToScoping(CurlInstrumentation::class), autoload: false));
-            AssertEx::sameConstValues(AppCodeContextUtil::adaptClassNameToScoping(CurlInstrumentation::class)::NAME, self::AUTO_INSTRUMENTATION_NAME);
+            $curlInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\Curl\\CurlInstrumentation');
+            self::assertTrue(class_exists($curlInstrumentationFqClassName, autoload: false));
+            AssertEx::sameConstValues(constant($curlInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
         $requestParams = $appCodeArgs->getObject(self::HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY, HttpAppCodeRequestParams::class);

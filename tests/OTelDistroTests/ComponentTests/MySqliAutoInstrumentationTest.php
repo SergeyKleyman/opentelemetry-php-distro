@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests;
 
-use OpenTelemetry\Contrib\Instrumentation\MySqli\MySqliInstrumentation;
 use OpenTelemetry\Distro\Util\TextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
@@ -272,8 +271,9 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            self::assertTrue(class_exists(AppCodeContextUtil::adaptClassNameToScoping(MySqliInstrumentation::class), autoload: false));
-            AssertEx::sameConstValues(AppCodeContextUtil::adaptClassNameToScoping(MySqliInstrumentation::class)::NAME, self::AUTO_INSTRUMENTATION_NAME);
+            $mySqliInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\\MySqli\\MySqliInstrumentation'); // @phpstan-ignore argument.type
+            self::assertTrue(class_exists($mySqliInstrumentationFqClassName, autoload: false));
+            AssertEx::sameConstValues(constant($mySqliInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
         $isOOPApi = $appCodeArgs->getBool(self::IS_OOP_API_KEY);
