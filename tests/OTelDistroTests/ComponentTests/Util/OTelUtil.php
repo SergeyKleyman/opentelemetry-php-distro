@@ -34,7 +34,7 @@ final class OTelUtil
      */
     private static function getTracer()
     {
-        return AppCodeContextUtil::adaptClassName(Globals::class)::tracerProvider()->getTracer(name: 'org.opentelemetry.php.distro.component-tests', version: Version::VERSION_1_27_0->value);
+        return AppCodeContextUtil::adaptClassNameToScoping(Globals::class)::tracerProvider()->getTracer(name: 'org.opentelemetry.php.distro.component-tests', version: Version::VERSION_1_27_0->value);
     }
 
     /**
@@ -42,7 +42,7 @@ final class OTelUtil
      */
     private static function contextClass(): string
     {
-        return AppCodeContextUtil::adaptClassName(Context::class);
+        return AppCodeContextUtil::adaptClassNameToScoping(Context::class);
     }
 
     /**
@@ -50,7 +50,7 @@ final class OTelUtil
      */
     private static function apiSpanClass(): string
     {
-        return AppCodeContextUtil::adaptClassName(OTelApiSpan::class);
+        return AppCodeContextUtil::adaptClassNameToScoping(OTelApiSpan::class);
     }
 
     /**

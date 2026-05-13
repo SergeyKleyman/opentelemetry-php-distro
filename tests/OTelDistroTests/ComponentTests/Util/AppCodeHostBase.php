@@ -55,7 +55,7 @@ abstract class AppCodeHostBase extends SpawnedProcessBase
                         . ' php_ini_loaded_file(): ' . php_ini_loaded_file() . '.'
                     );
                 }
-                $adaptedClassName = AppCodeContextUtil::adaptClassName(PhpPartFacade::class);
+                $adaptedClassName = AppCodeContextUtil::adaptClassNameToScoping(PhpPartFacade::class);
                 if (!$adaptedClassName::$wasBootstrapCalled) {
                     throw new ComponentTestsInfraException($adaptedClassName . '::$wasBootstrapCalled is false while it should be true for the process with app code');
                 }

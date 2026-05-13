@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests;
 
 use ArrayAccess;
+use OpenTelemetry\Contrib\Instrumentation\PDO\PDOInstrumentation;
+use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
@@ -19,7 +21,6 @@ use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LoggableToString;
-use OTelDistroTests\Util\OTelDistroProjectProperties;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\AssertEx;
 use OpenTelemetry\SemConv\TraceAttributes;
@@ -137,10 +138,8 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            $scoperPrefix = OTelDistroProjectProperties::loadAsMap()['php_scoper_prefix'];
-            $scopedPDOInstrumentationClass = $scoperPrefix . '\\OpenTelemetry\\Contrib\\Instrumentation\\PDO\\PDOInstrumentation';
-            self::assertTrue(class_exists($scopedPDOInstrumentationClass, autoload: false));
-            AssertEx::sameConstValues(constant($scopedPDOInstrumentationClass . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
+            self::assertTrue(class_exists(AppCodeContextUtil::adaptClassNameToScoping(PDOInstrumentation::class), autoload: false));
+            AssertEx::sameConstValues(AppCodeContextUtil::adaptClassNameToScoping(PDOInstrumentation::class)::NAME, self::AUTO_INSTRUMENTATION_NAME);
         }
 
         $dbName = $appCodeArgs->getString(DbAutoInstrumentationUtilForTests::DB_NAME_KEY);

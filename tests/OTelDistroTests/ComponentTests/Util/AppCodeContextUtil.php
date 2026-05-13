@@ -19,7 +19,7 @@ final class AppCodeContextUtil
      *
      * @return class-string<T>
      */
-    public static function adaptClassName(string $unscopedClassName): string
+    public static function adaptClassNameToScoping(string $unscopedClassName): string
     {
         /** @noinspection PhpFullyQualifiedNameUsageInspection */
         $isScoperEnabled = \OpenTelemetry\Distro\get_config_option_by_name(OptionForProdName::debug_scoper_enabled->name);
