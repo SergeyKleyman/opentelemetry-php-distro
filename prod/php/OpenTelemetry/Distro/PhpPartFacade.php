@@ -20,7 +20,6 @@ use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\SemConv\TraceAttributes;
 use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Version;
 use RuntimeException;
@@ -311,7 +310,6 @@ final class PhpPartFacade
         );
 
         $parent = Context::getCurrent();
-        /** @noinspection PhpDeprecationInspection */
         $fqFunctionName = OTelUtil::buildFqFunctionName($class, $function);
         $span = $tracer->spanBuilder($fqFunctionName) // @phpstan-ignore argument.type
                        ->setSpanKind(SpanKind::KIND_CLIENT)
@@ -349,8 +347,7 @@ final class PhpPartFacade
         $span->setAttribute('call.return_value', print_r($retval, true));
 
         if ($exception) {
-            /** @noinspection PhpDeprecationInspection */
-            $span->recordException($exception, [TraceAttributes::EXCEPTION_ESCAPED => true]);
+            $span->recordException($exception);
             $span->setStatus(StatusCode::STATUS_ERROR, $exception->getMessage());
         }
 
