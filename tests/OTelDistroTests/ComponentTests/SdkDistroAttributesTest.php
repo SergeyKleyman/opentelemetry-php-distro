@@ -89,7 +89,7 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
      */
     public static function appCodeForTestAttributes(): array
     {
-        $overrideOTelSdkResourceAttributesClassName = AppCodeContextUtil::adaptClassNameScoping(OverrideOTelSdkResourceAttributes::class);
+        $overrideOTelSdkResourceAttributesClassName = AppCodeContextUtil::adaptClassNameToScoping(OverrideOTelSdkResourceAttributes::class);
         return [
             "$overrideOTelSdkResourceAttributesClassName class is defined in file" => (new ReflectionClass($overrideOTelSdkResourceAttributesClassName))->getFileName(),
             self::DISTRO_VERSION_IN_APP_CONTEXT                                    => $overrideOTelSdkResourceAttributesClassName::getDistroVersion(),

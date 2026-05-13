@@ -70,7 +70,7 @@ final class InstrumentationBridge
             self::placeDebugHooks($class, $function);
         }
 
-        self::logDebug(__LINE__, __FUNCTION__, 'Exiting', compact('success'));
+        self::logTrace(__LINE__, __FUNCTION__, 'Exiting', compact('success', 'class', 'function'));
         return $success;
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests;
 
 use OpenTelemetry\Distro\Util\TextUtil;
+use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
@@ -24,7 +25,6 @@ use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\Log\LoggableToString;
-use OTelDistroTests\Util\OTelDistroProjectProperties;
 use OTelDistroTests\Util\MixedMap;
 use OpenTelemetry\SemConv\TraceAttributes;
 
@@ -271,10 +271,9 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeRequestArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            $scoperPrefix = OTelDistroProjectProperties::loadAsMap()['php_scoper_prefix'];
-            $scopedMySqliInstrumentationClass = $scoperPrefix . '\\OpenTelemetry\\Contrib\\Instrumentation\\MySqli\\MySqliInstrumentation';
-            self::assertTrue(class_exists($scopedMySqliInstrumentationClass, autoload: false));
-            AssertEx::sameConstValues(constant($scopedMySqliInstrumentationClass . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
+            $mySqliInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameRawStringToScoping('OpenTelemetry\\Contrib\\Instrumentation\\MySqli\\MySqliInstrumentation');
+            self::assertTrue(class_exists($mySqliInstrumentationFqClassName, autoload: false));
+            AssertEx::sameConstValues(constant($mySqliInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
 
         $isOOPApi = $appCodeRequestArgs->getBool(self::IS_OOP_API_KEY);
