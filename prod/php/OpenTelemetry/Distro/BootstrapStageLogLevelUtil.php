@@ -6,8 +6,12 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
 
+use OpenTelemetry\Distro\Util\StaticClassTrait;
+
 final class BootstrapStageLogLevelUtil
 {
+    use StaticClassTrait;
+
     public const LEVEL_OFF = 0;
     public const LEVEL_CRITICAL = 1;
     public const LEVEL_ERROR = 2;

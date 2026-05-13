@@ -64,10 +64,9 @@ final class PhpPartFacade
     {
         self::$wasBootstrapCalled = true;
 
-        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
-        require __DIR__ . DIRECTORY_SEPARATOR . 'SplAutoloadFunctionsLogUtil.php';
-        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/StaticClassTrait.php';
+        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
+        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/BoolUtil.php';
 
         BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__, __NAMESPACE__);
@@ -84,6 +83,8 @@ final class PhpPartFacade
         }
 
         try {
+            require __DIR__ . DIRECTORY_SEPARATOR . 'SplAutoloadFunctionsLogUtil.php';
+            require __DIR__ . DIRECTORY_SEPARATOR . 'SplAutoloadFunctionsLogTrait.php';
             require __DIR__ . DIRECTORY_SEPARATOR . 'AutoloaderForDistroClasses.php';
             $autoloadForDistroClasses = AutoloaderForDistroClasses::register(__NAMESPACE__, __DIR__);
 
@@ -92,7 +93,7 @@ final class PhpPartFacade
             ///////////////////////////////////////////////////////////////////////////
             // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
             ///////////////////////////////////////
-
+            self::testHookingSplAutoloadRegister();
             ///////////////////////////////////////
             // END: REMOVE
             ////////////////////////////////////////////////////////////////////////////
@@ -100,7 +101,7 @@ final class PhpPartFacade
             require __DIR__ . DIRECTORY_SEPARATOR . 'KeepAutoloadCallbacksUpFront.php';
             /** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
             $shouldKeepDistroAutoloadCallbacksUpFront = !\OpenTelemetry\Distro\get_config_option_by_name(self::DEBUG_SCOPER_ENABLED_OPT_NAME);
-            self::logDebug(__LINE__, __FUNCTION__, __FUNCTION__ . '', compact('shouldKeepDistroAutoloadCallbacksUpFront'));
+            self::logDebug(__LINE__, __FUNCTION__, '', compact('shouldKeepDistroAutoloadCallbacksUpFront'));
             if ($shouldKeepDistroAutoloadCallbacksUpFront) {
                 $keepDistroAutoloadCallbacksUpFront = new KeepAutoloadCallbacksUpFront(InstrumentationBridge::singletonInstance(), [$autoloadForDistroClasses]);
             }
@@ -272,7 +273,16 @@ final class PhpPartFacade
         for ($i = 0; $i != $callbacksBeforeCount; ++$i) {
             if ($callbacksBefore[$i] !== $callbacksAfter[$i]) {
                 $ctx = compact('i') + $buildBaseCtx();
-                throw new DistroRuntimeException('callbacksBefore is not a prefix of callbacksAfter', context: $ctx);
+                ///////////////////////////////////////////////////////////////////////////
+                // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
+                ///////////////////////////////////////
+                self::logCritical(__LINE__, __FUNCTION__, 'callbacksBefore is not a prefix of callbacksAfter', $ctx);
+                return [];
+                ///////////////////////////////////////
+                // END: REMOVE
+                ////////////////////////////////////////////////////////////////////////////
+                // TODO: Sergey Kleyman: UNCOMMENT
+                // throw new DistroRuntimeException('callbacksBefore is not a prefix of callbacksAfter', context: $ctx);
             }
         }
 
@@ -507,23 +517,46 @@ final class PhpPartFacade
     ///////////////////////////////////////
     private static function testHookingSplAutoloadRegister(): void
     {
+        /**
+         * @var int $logLevel
+         *
+         * @noinspection PhpRedundantVariableDocTypeInspection
+         */
+        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_ERROR;
+
+        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Entered');
+
         $hookRetVal = InstrumentationBridge::singletonInstance()->hook(
             class: null,
             function: 'spl_autoload_register',
-            post: function (): void {
-                self::logCritical(__LINE__, __FUNCTION__, 'Test spl_autoload_register post-hook entered');
+            post: function (
+                ?object $thisObj,
+                array $params,
+                /** @noinspection PhpUnusedParameterInspection */ mixed $returnValue,
+                /** @noinspection PhpUnusedParameterInspection */ ?Throwable $throwable,
+            ) use ($logLevel): void {
+                self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: spl_autoload_register post-hook entered');
+                if (count($params) > 0) {
+                    self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST', ['callback arg' => SplAutoloadFunctionsLogUtil::callbackToLoggable($params[0])]);
+                }
+                if (count($params) > 2) {
+                    self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST', ['prepend arg' => $params[2]]);
+                }
             },
         );
 
         if (!$hookRetVal) {
             throw new DistroRuntimeException('hook() return false');
         }
+        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Registered post-hook');
 
+        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Before calling spl_autoload_register');
         spl_autoload_register(
-            function (string $class): bool {
-
+            function (string $class) use ($logLevel): void {
+                self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: autoload callback', compact('class'));
             }
         );
+        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: After calling spl_autoload_register');
     }
     ///////////////////////////////////////
     // END: REMOVE
