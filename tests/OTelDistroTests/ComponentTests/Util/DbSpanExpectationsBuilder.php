@@ -6,7 +6,7 @@ namespace OTelDistroTests\ComponentTests\Util;
 
 use OTelDistroTests\ComponentTests\Util\OtlpData\SpanKind;
 use OTelDistroTests\Util\AssertEx;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\DbAttributes;
 
 class DbSpanExpectationsBuilder extends SpanExpectationsBuilder
 {
@@ -22,7 +22,7 @@ class DbSpanExpectationsBuilder extends SpanExpectationsBuilder
      */
     public function dbSystemName(string $value): self
     {
-        return $this->addAttribute(TraceAttributes::DB_SYSTEM_NAME, $value);
+        return $this->addAttribute(DbAttributes::DB_SYSTEM_NAME, $value);
     }
 
     /**
@@ -30,7 +30,7 @@ class DbSpanExpectationsBuilder extends SpanExpectationsBuilder
      */
     public function dbNamespace(string $value): self
     {
-        return $this->addAttribute(TraceAttributes::DB_NAMESPACE, $value);
+        return $this->addAttribute(DbAttributes::DB_NAMESPACE, $value);
     }
 
     /**
@@ -38,7 +38,7 @@ class DbSpanExpectationsBuilder extends SpanExpectationsBuilder
      */
     public function dbQueryText(string $value): self
     {
-        return $this->addAttribute(TraceAttributes::DB_QUERY_TEXT, $value);
+        return $this->addAttribute(DbAttributes::DB_QUERY_TEXT, $value);
     }
 
     /**
@@ -46,7 +46,7 @@ class DbSpanExpectationsBuilder extends SpanExpectationsBuilder
      */
     public function dbOperationName(string $value): self
     {
-        return $this->addAttribute(TraceAttributes::DB_OPERATION_NAME, $value);
+        return $this->addAttribute(DbAttributes::DB_OPERATION_NAME, $value);
     }
 
     /**

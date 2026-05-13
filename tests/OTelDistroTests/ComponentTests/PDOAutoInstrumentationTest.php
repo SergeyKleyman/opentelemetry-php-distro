@@ -22,7 +22,7 @@ use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\AssertEx;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\DbAttributes;
 use PDO;
 
 /**
@@ -245,7 +245,7 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $actualDbSpans = [];
         foreach ($agentBackendComms->spans() as $span) {
-            if ($span->attributes->keyExists(TraceAttributes::DB_SYSTEM_NAME)) {
+            if ($span->attributes->keyExists(DbAttributes::DB_SYSTEM_NAME)) {
                 $actualDbSpans[] = $span;
             }
         }
