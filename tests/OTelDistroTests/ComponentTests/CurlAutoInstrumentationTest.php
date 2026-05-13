@@ -33,6 +33,7 @@ use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\RangeUtil;
+use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
 /**
@@ -213,8 +214,8 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
                 TraceAttributes::CODE_FUNCTION_NAME        => 'curl_exec',
                 TraceAttributes::HTTP_REQUEST_METHOD       => HttpMethods::GET,
                 TraceAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
-                TraceAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
-                TraceAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
+                ServerAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
+                ServerAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
                 TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
                 TraceAttributes::URL_SCHEME                => $appCodeRequestParamsForServer->urlParts->scheme,
             ]
@@ -225,8 +226,8 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
             [
                 TraceAttributes::HTTP_REQUEST_METHOD       => HttpMethods::GET,
                 TraceAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
-                TraceAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
-                TraceAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
+                ServerAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
+                ServerAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
                 TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
                 TraceAttributes::URL_PATH                  => $appCodeRequestParamsForServer->urlParts->path,
                 TraceAttributes::URL_SCHEME                => $appCodeRequestParamsForServer->urlParts->scheme,
@@ -251,7 +252,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
             $expectationsForCurlClientSpan->assertMatches($curlClientSpan);
             $serverTxSpan = $agentBackendComms->singleChildSpan($curlClientSpan->id);
         } else {
-            $serverTxSpan = IterableUtil::singleValue($agentBackendComms->findSpansWithAttributeValue(TraceAttributes::SERVER_PORT, $appCodeRequestParamsForServer->urlParts->port));
+            $serverTxSpan = IterableUtil::singleValue($agentBackendComms->findSpansWithAttributeValue(ServerAttributes::SERVER_PORT, $appCodeRequestParamsForServer->urlParts->port));
             self::assertNull($serverTxSpan->parentId);
             $clientTxSpan = IterableUtil::singleValue(IterableUtil::findByPredicateOnValue($agentBackendComms->spans(), fn(Span $span) => $span->parentId === null && $span !== $serverTxSpan));
             self::assertNotEquals($serverTxSpan->traceId, $clientTxSpan->traceId);

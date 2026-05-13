@@ -18,6 +18,7 @@ use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SDK\Common\Configuration\Configuration;
 use OpenTelemetry\SDK\Common\Util\ShutdownHandler;
+use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 use OpenTelemetry\SemConv\Version;
 use Psr\Http\Message\ServerRequestInterface;
@@ -91,8 +92,8 @@ class RootSpan
                     TraceAttributes::HTTP_REQUEST_METHOD    => $request->getMethod(),
                     TraceAttributes::HTTP_REQUEST_BODY_SIZE => $request->getHeaderLine('Content-Length'),
                     TraceAttributes::USER_AGENT_ORIGINAL    => $request->getHeaderLine('User-Agent'),
-                    TraceAttributes::SERVER_ADDRESS         => $request->getUri()->getHost(),
-                    TraceAttributes::SERVER_PORT            => $request->getUri()->getPort(),
+                    ServerAttributes::SERVER_ADDRESS         => $request->getUri()->getHost(),
+                    ServerAttributes::SERVER_PORT            => $request->getUri()->getPort(),
                     TraceAttributes::URL_SCHEME             => $request->getUri()->getScheme(),
                     TraceAttributes::URL_PATH               => $request->getUri()->getPath(),
                 ]

@@ -24,6 +24,7 @@ use OTelDistroTests\Util\Config\OptionsForProdDefaultValues;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\MixedMap;
+use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
 /**
@@ -124,8 +125,8 @@ final class TransactionSpanTest extends ComponentTestCaseBase
             $rootSpanAttributesExpectations = new AttributesExpectations(
                 [
                     TraceAttributes::HTTP_REQUEST_METHOD       => HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_METHOD,
-                    TraceAttributes::SERVER_ADDRESS            => $expectedRootSpanUrlParts->host,
-                    TraceAttributes::SERVER_PORT               => $expectedRootSpanUrlParts->port,
+                    ServerAttributes::SERVER_ADDRESS            => $expectedRootSpanUrlParts->host,
+                    ServerAttributes::SERVER_PORT               => $expectedRootSpanUrlParts->port,
                     TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($expectedRootSpanUrlParts),
                     TraceAttributes::URL_PATH                  => $expectedRootSpanUrlParts->path,
                     TraceAttributes::URL_SCHEME                => $expectedRootSpanUrlParts->scheme,
@@ -134,16 +135,16 @@ final class TransactionSpanTest extends ComponentTestCaseBase
         } else {
             $expectedRootSpanKind = SpanKind::server;
             $rootSpanAttributesExpectations = new AttributesExpectations(
-                attributes:           [],
+                attributes: [],
                 notAllowedAttributes: [
-                                          TraceAttributes::HTTP_REQUEST_METHOD,
-                                          TraceAttributes::HTTP_REQUEST_BODY_SIZE,
-                                          TraceAttributes::SERVER_ADDRESS,
-                                          TraceAttributes::URL_FULL,
-                                          TraceAttributes::URL_PATH,
-                                          TraceAttributes::URL_SCHEME,
-                                          TraceAttributes::USER_AGENT_ORIGINAL,
-                                      ]
+                    TraceAttributes::HTTP_REQUEST_METHOD,
+                    TraceAttributes::HTTP_REQUEST_BODY_SIZE,
+                    ServerAttributes::SERVER_ADDRESS,
+                    TraceAttributes::URL_FULL,
+                    TraceAttributes::URL_PATH,
+                    TraceAttributes::URL_SCHEME,
+                    TraceAttributes::USER_AGENT_ORIGINAL,
+                ],
             );
         }
         $expectationsForRootSpan = (new SpanExpectationsBuilder())->name(self::getExpectedTransactionSpanName())->kind($expectedRootSpanKind)->attributes($rootSpanAttributesExpectations)->build();
