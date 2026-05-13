@@ -24,7 +24,9 @@ use OTelDistroTests\Util\Config\OptionsForProdDefaultValues;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\MixedMap;
+use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
+use OpenTelemetry\SemConv\Incubating\Attributes\HttpIncubatingAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
 /**
@@ -124,21 +126,21 @@ final class TransactionSpanTest extends ComponentTestCaseBase
             $expectedRootSpanUrlParts = UrlUtil::buildUrlPartsWithDefaults(port: $appCodeHost->httpServerHandle->getMainPort());
             $rootSpanAttributesExpectations = new AttributesExpectations(
                 [
-                    TraceAttributes::HTTP_REQUEST_METHOD       => HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_METHOD,
-                    ServerAttributes::SERVER_ADDRESS            => $expectedRootSpanUrlParts->host,
-                    ServerAttributes::SERVER_PORT               => $expectedRootSpanUrlParts->port,
-                    TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($expectedRootSpanUrlParts),
-                    TraceAttributes::URL_PATH                  => $expectedRootSpanUrlParts->path,
-                    TraceAttributes::URL_SCHEME                => $expectedRootSpanUrlParts->scheme,
-                ]
+                    HttpAttributes::HTTP_REQUEST_METHOD => HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_METHOD,
+                    ServerAttributes::SERVER_ADDRESS => $expectedRootSpanUrlParts->host,
+                    ServerAttributes::SERVER_PORT => $expectedRootSpanUrlParts->port,
+                    TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($expectedRootSpanUrlParts),
+                    TraceAttributes::URL_PATH => $expectedRootSpanUrlParts->path,
+                    TraceAttributes::URL_SCHEME => $expectedRootSpanUrlParts->scheme,
+                ],
             );
         } else {
             $expectedRootSpanKind = SpanKind::server;
             $rootSpanAttributesExpectations = new AttributesExpectations(
                 attributes: [],
                 notAllowedAttributes: [
-                    TraceAttributes::HTTP_REQUEST_METHOD,
-                    TraceAttributes::HTTP_REQUEST_BODY_SIZE,
+                    HttpAttributes::HTTP_REQUEST_METHOD,
+                    HttpIncubatingAttributes::HTTP_REQUEST_BODY_SIZE,
                     ServerAttributes::SERVER_ADDRESS,
                     TraceAttributes::URL_FULL,
                     TraceAttributes::URL_PATH,

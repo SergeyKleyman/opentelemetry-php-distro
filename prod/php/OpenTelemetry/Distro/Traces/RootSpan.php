@@ -18,7 +18,9 @@ use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SDK\Common\Configuration\Configuration;
 use OpenTelemetry\SDK\Common\Util\ShutdownHandler;
+use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
+use OpenTelemetry\SemConv\Incubating\Attributes\HttpIncubatingAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 use OpenTelemetry\SemConv\Version;
 use Psr\Http\Message\ServerRequestInterface;
@@ -88,15 +90,15 @@ class RootSpan
         if (!self::isCliSapi()) {
             $spanBuilder->setAttributes(
                 [
-                    TraceAttributes::URL_FULL               => strval($request->getUri()),
-                    TraceAttributes::HTTP_REQUEST_METHOD    => $request->getMethod(),
-                    TraceAttributes::HTTP_REQUEST_BODY_SIZE => $request->getHeaderLine('Content-Length'),
-                    TraceAttributes::USER_AGENT_ORIGINAL    => $request->getHeaderLine('User-Agent'),
-                    ServerAttributes::SERVER_ADDRESS         => $request->getUri()->getHost(),
-                    ServerAttributes::SERVER_PORT            => $request->getUri()->getPort(),
-                    TraceAttributes::URL_SCHEME             => $request->getUri()->getScheme(),
-                    TraceAttributes::URL_PATH               => $request->getUri()->getPath(),
-                ]
+                    TraceAttributes::URL_FULL => strval($request->getUri()),
+                    HttpAttributes::HTTP_REQUEST_METHOD => $request->getMethod(),
+                    HttpIncubatingAttributes::HTTP_REQUEST_BODY_SIZE => $request->getHeaderLine('Content-Length'),
+                    TraceAttributes::USER_AGENT_ORIGINAL => $request->getHeaderLine('User-Agent'),
+                    ServerAttributes::SERVER_ADDRESS => $request->getUri()->getHost(),
+                    ServerAttributes::SERVER_PORT => $request->getUri()->getPort(),
+                    TraceAttributes::URL_SCHEME => $request->getUri()->getScheme(),
+                    TraceAttributes::URL_PATH => $request->getUri()->getPath(),
+                ],
             );
         }
         $span = $spanBuilder->startSpan();
@@ -154,10 +156,10 @@ class RootSpan
         $span = Span::fromContext($scope->context());
 
         if (is_int(http_response_code())) {
-            $span->setAttribute(TraceAttributes::HTTP_RESPONSE_STATUS_CODE, http_response_code());
+            $span->setAttribute(HttpAttributes::HTTP_RESPONSE_STATUS_CODE, http_response_code());
         } elseif (ArrayUtil::getValueIfKeyExists('REDIRECT_STATUS', $request->getServerParams(), /* out */ $redirectStatus)) {
             if (is_int($redirectStatus)) {
-                $span->setAttribute(TraceAttributes::HTTP_RESPONSE_STATUS_CODE, $redirectStatus);
+                $span->setAttribute(HttpAttributes::HTTP_RESPONSE_STATUS_CODE, $redirectStatus);
             }
         }
 

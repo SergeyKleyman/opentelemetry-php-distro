@@ -34,6 +34,7 @@ use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\RangeUtil;
 use OpenTelemetry\SemConv\Attributes\CodeAttributes;
+use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
@@ -212,27 +213,27 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
 
         $curlClientSpanAttributesExpectations = new AttributesExpectations(
             [
-                CodeAttributes::CODE_FUNCTION_NAME        => 'curl_exec',
-                TraceAttributes::HTTP_REQUEST_METHOD       => HttpMethods::GET,
-                TraceAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
-                ServerAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
-                ServerAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
-                TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
-                TraceAttributes::URL_SCHEME                => $appCodeRequestParamsForServer->urlParts->scheme,
-            ]
+                CodeAttributes::CODE_FUNCTION_NAME => 'curl_exec',
+                HttpAttributes::HTTP_REQUEST_METHOD => HttpMethods::GET,
+                HttpAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
+                ServerAttributes::SERVER_ADDRESS => $appCodeRequestParamsForServer->urlParts->host,
+                ServerAttributes::SERVER_PORT => $appCodeRequestParamsForServer->urlParts->port,
+                TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
+                TraceAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
+            ],
         );
         $expectationsForCurlClientSpan = (new SpanExpectationsBuilder())->name(HttpMethods::GET)->kind(SpanKind::client)->attributes($curlClientSpanAttributesExpectations)->build();
 
         $serverTxSpanAttributesExpectations = new AttributesExpectations(
             [
-                TraceAttributes::HTTP_REQUEST_METHOD       => HttpMethods::GET,
-                TraceAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
-                ServerAttributes::SERVER_ADDRESS            => $appCodeRequestParamsForServer->urlParts->host,
-                ServerAttributes::SERVER_PORT               => $appCodeRequestParamsForServer->urlParts->port,
-                TraceAttributes::URL_FULL                  => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
-                TraceAttributes::URL_PATH                  => $appCodeRequestParamsForServer->urlParts->path,
-                TraceAttributes::URL_SCHEME                => $appCodeRequestParamsForServer->urlParts->scheme,
-            ]
+                HttpAttributes::HTTP_REQUEST_METHOD => HttpMethods::GET,
+                HttpAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
+                ServerAttributes::SERVER_ADDRESS => $appCodeRequestParamsForServer->urlParts->host,
+                ServerAttributes::SERVER_PORT => $appCodeRequestParamsForServer->urlParts->port,
+                TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
+                TraceAttributes::URL_PATH => $appCodeRequestParamsForServer->urlParts->path,
+                TraceAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
+            ],
         );
         $expectedServerTxSpanName = HttpMethods::GET . ' ' . $appCodeRequestParamsForServer->urlParts->path;
         $expectationsForServerTxSpan = (new SpanExpectationsBuilder())->name($expectedServerTxSpanName)->kind(SpanKind::server)->attributes($serverTxSpanAttributesExpectations)->build();
