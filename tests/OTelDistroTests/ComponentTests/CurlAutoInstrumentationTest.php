@@ -36,7 +36,7 @@ use OTelDistroTests\Util\RangeUtil;
 use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\UrlAttributes;
 
 /**
  * @group smoke
@@ -218,8 +218,8 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
                 HttpAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
                 ServerAttributes::SERVER_ADDRESS => $appCodeRequestParamsForServer->urlParts->host,
                 ServerAttributes::SERVER_PORT => $appCodeRequestParamsForServer->urlParts->port,
-                TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
-                TraceAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
+                UrlAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
+                UrlAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
             ],
         );
         $expectationsForCurlClientSpan = (new SpanExpectationsBuilder())->name(HttpMethods::GET)->kind(SpanKind::client)->attributes($curlClientSpanAttributesExpectations)->build();
@@ -230,9 +230,9 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
                 HttpAttributes::HTTP_RESPONSE_STATUS_CODE => self::SERVER_RESPONSE_HTTP_STATUS,
                 ServerAttributes::SERVER_ADDRESS => $appCodeRequestParamsForServer->urlParts->host,
                 ServerAttributes::SERVER_PORT => $appCodeRequestParamsForServer->urlParts->port,
-                TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
-                TraceAttributes::URL_PATH => $appCodeRequestParamsForServer->urlParts->path,
-                TraceAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
+                UrlAttributes::URL_FULL => UrlUtil::buildFullUrl($appCodeRequestParamsForServer->urlParts),
+                UrlAttributes::URL_PATH => $appCodeRequestParamsForServer->urlParts->path,
+                UrlAttributes::URL_SCHEME => $appCodeRequestParamsForServer->urlParts->scheme,
             ],
         );
         $expectedServerTxSpanName = HttpMethods::GET . ' ' . $appCodeRequestParamsForServer->urlParts->path;

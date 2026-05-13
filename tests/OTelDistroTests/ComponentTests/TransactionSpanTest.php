@@ -26,6 +26,7 @@ use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\MixedMap;
 use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
+use OpenTelemetry\SemConv\Attributes\UrlAttributes;
 use OpenTelemetry\SemConv\Incubating\Attributes\HttpIncubatingAttributes;
 use OpenTelemetry\SemConv\TraceAttributes;
 
@@ -129,9 +130,9 @@ final class TransactionSpanTest extends ComponentTestCaseBase
                     HttpAttributes::HTTP_REQUEST_METHOD => HttpAppCodeRequestParams::DEFAULT_HTTP_REQUEST_METHOD,
                     ServerAttributes::SERVER_ADDRESS => $expectedRootSpanUrlParts->host,
                     ServerAttributes::SERVER_PORT => $expectedRootSpanUrlParts->port,
-                    TraceAttributes::URL_FULL => UrlUtil::buildFullUrl($expectedRootSpanUrlParts),
-                    TraceAttributes::URL_PATH => $expectedRootSpanUrlParts->path,
-                    TraceAttributes::URL_SCHEME => $expectedRootSpanUrlParts->scheme,
+                    UrlAttributes::URL_FULL => UrlUtil::buildFullUrl($expectedRootSpanUrlParts),
+                    UrlAttributes::URL_PATH => $expectedRootSpanUrlParts->path,
+                    UrlAttributes::URL_SCHEME => $expectedRootSpanUrlParts->scheme,
                 ],
             );
         } else {
@@ -142,9 +143,9 @@ final class TransactionSpanTest extends ComponentTestCaseBase
                     HttpAttributes::HTTP_REQUEST_METHOD,
                     HttpIncubatingAttributes::HTTP_REQUEST_BODY_SIZE,
                     ServerAttributes::SERVER_ADDRESS,
-                    TraceAttributes::URL_FULL,
-                    TraceAttributes::URL_PATH,
-                    TraceAttributes::URL_SCHEME,
+                    UrlAttributes::URL_FULL,
+                    UrlAttributes::URL_PATH,
+                    UrlAttributes::URL_SCHEME,
                     TraceAttributes::USER_AGENT_ORIGINAL,
                 ],
             );
