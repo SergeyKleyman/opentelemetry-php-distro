@@ -9,7 +9,6 @@ namespace OpenTelemetry\Distro;
 trait SplAutoloadFunctionsLogTrait
 {
     // This trait assumes that BootstrapStageLoggingClassTrait is used by the class
-    // use BootstrapStageLoggingClassTrait;
 
     private static function logAutoloadFunctions(int $logLevel, int $line, string $func, string $message): void
     {
