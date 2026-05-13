@@ -49,6 +49,7 @@ final class PhpPartFacade
     private static array $remoteConfigConsumers = [];
     private ?InferredSpans $inferredSpans = null;
 
+    public const DEBUG_SCOPER_ENABLED_OPT_NAME = 'debug_scoper_enabled';
     private const IS_DISTRO_ENABLED_ENV_VAR_NAME = 'OTEL_PHP_ENABLED';
     public const USER_BOOTSTRAP_PHP_FILE_OPT_NAME = 'user_bootstrap_php_file';
 
@@ -93,12 +94,19 @@ final class PhpPartFacade
             InstrumentationBridge::singletonInstance()->bootstrap();
 
             require __DIR__ . DIRECTORY_SEPARATOR . 'KeepAutoloadCallbacksUpFront.php';
-            $keepDistroAutoloadUpFront = new KeepAutoloadCallbacksUpFront(InstrumentationBridge::singletonInstance(), [$autoloadForDistroClasses]);
+            /** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
+            $shouldKeepDistroAutoloadCallbacksUpFront = !\OpenTelemetry\Distro\get_config_option_by_name(self::DEBUG_SCOPER_ENABLED_OPT_NAME);
+            if ($shouldKeepDistroAutoloadCallbacksUpFront) {
+                $keepDistroAutoloadCallbacksUpFront = new KeepAutoloadCallbacksUpFront(InstrumentationBridge::singletonInstance(), [$autoloadForDistroClasses]);
+            }
 
             self::prepareForOTelSdk();
 
-            $autoloadsForDistroVendorDir = self::registerAutoloaderForDistroVendorDir();
-            $keepDistroAutoloadUpFront->setCallbacks(array_merge($keepDistroAutoloadUpFront->getCallbacks(), $autoloadsForDistroVendorDir));
+            $autoloadsForDistroVendorDir = self::registerAutoloaderForDistroVendorDir(returnNewCallbacks: $shouldKeepDistroAutoloadCallbacksUpFront);
+            if ($shouldKeepDistroAutoloadCallbacksUpFront) {
+                /** @var list<callable> $autoloadsForDistroVendorDir */
+                $keepDistroAutoloadCallbacksUpFront->setCallbacks(array_merge($keepDistroAutoloadCallbacksUpFront->getCallbacks(), $autoloadsForDistroVendorDir));
+            }
 
             // User's bootstrap .php file might register remote config handler so it has to be called before remote config handler
             self::loadUserBootstrapPhpFile();
@@ -272,9 +280,9 @@ final class PhpPartFacade
     }
 
     /**
-     * @return list<callable>
+     * @return ?list<callable>
      */
-    private static function registerAutoloaderForDistroVendorDir(): array
+    private static function registerAutoloaderForDistroVendorDir(bool $returnNewCallbacks): ?array
     {
         $vendorAutoloadPhp = VendorDir::$fullPath . DIRECTORY_SEPARATOR . 'autoload.php';
         if (!file_exists($vendorAutoloadPhp)) {
@@ -305,9 +313,11 @@ final class PhpPartFacade
             self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'After require ' . $vendorAutoloadPhp, $logCtx);
         }
 
-        $autoloadsForDistroVendorDir = self::diffAutoloaderForDistroVendorDir($splAutoloadFunctionsBefore, $splAutoloadFunctionsAfter);
+        $autoloadsForDistroVendorDir = $returnNewCallbacks ? self::diffAutoloaderForDistroVendorDir($splAutoloadFunctionsBefore, $splAutoloadFunctionsAfter) : null;
         if (self::isLogEnabledForLevel($logLevel)) {
-            $logCtx += ['autoloadsForDistroVendorDir' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($autoloadsForDistroVendorDir)];
+            if ($autoloadsForDistroVendorDir !== null) {
+                $logCtx += ['autoloadsForDistroVendorDir' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($autoloadsForDistroVendorDir)];
+            }
             self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'Finished successfully', $logCtx);
         }
         return $autoloadsForDistroVendorDir;
