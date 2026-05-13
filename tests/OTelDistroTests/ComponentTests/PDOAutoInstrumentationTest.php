@@ -137,7 +137,8 @@ final class PDOAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            $pdoInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\\PDO\\PDOInstrumentation'); // @phpstan-ignore argument.type
+            $pdoInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\PDO\\PDOInstrumentation');
+            $dbgCtx->add(compact('pdoInstrumentationFqClassName'));
             self::assertTrue(class_exists($pdoInstrumentationFqClassName, autoload: false));
             AssertEx::sameConstValues(constant($pdoInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
