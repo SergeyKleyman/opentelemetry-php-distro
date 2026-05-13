@@ -22,7 +22,7 @@ use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\Attributes\UrlAttributes;
 use OpenTelemetry\SemConv\Incubating\Attributes\HttpIncubatingAttributes;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\UserAgentAttributes;
 use OpenTelemetry\SemConv\Version;
 use Psr\Http\Message\ServerRequestInterface;
 use OpenTelemetry\Distro\Util\WildcardListMatcher;
@@ -94,7 +94,7 @@ class RootSpan
                     UrlAttributes::URL_FULL => strval($request->getUri()),
                     HttpAttributes::HTTP_REQUEST_METHOD => $request->getMethod(),
                     HttpIncubatingAttributes::HTTP_REQUEST_BODY_SIZE => $request->getHeaderLine('Content-Length'),
-                    TraceAttributes::USER_AGENT_ORIGINAL => $request->getHeaderLine('User-Agent'),
+                    UserAgentAttributes::USER_AGENT_ORIGINAL => $request->getHeaderLine('User-Agent'),
                     ServerAttributes::SERVER_ADDRESS => $request->getUri()->getHost(),
                     ServerAttributes::SERVER_PORT => $request->getUri()->getPort(),
                     UrlAttributes::URL_SCHEME => $request->getUri()->getScheme(),

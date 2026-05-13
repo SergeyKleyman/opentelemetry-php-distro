@@ -28,7 +28,7 @@ use OpenTelemetry\SemConv\Attributes\HttpAttributes;
 use OpenTelemetry\SemConv\Attributes\ServerAttributes;
 use OpenTelemetry\SemConv\Attributes\UrlAttributes;
 use OpenTelemetry\SemConv\Incubating\Attributes\HttpIncubatingAttributes;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\UserAgentAttributes;
 
 /**
  * @group smoke
@@ -146,7 +146,7 @@ final class TransactionSpanTest extends ComponentTestCaseBase
                     UrlAttributes::URL_FULL,
                     UrlAttributes::URL_PATH,
                     UrlAttributes::URL_SCHEME,
-                    TraceAttributes::USER_AGENT_ORIGINAL,
+                    UserAgentAttributes::USER_AGENT_ORIGINAL,
                 ],
             );
         }
