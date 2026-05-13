@@ -11,6 +11,7 @@ use OpenTelemetry\Distro\Log\LogFeature;
 final class AutoloaderForDistroClasses
 {
     use BootstrapStageLoggingClassTrait;
+    use SplAutoloadFunctionsLogTrait;
 
     private readonly string $autoloadFqClassNamePrefix;
     private readonly int $autoloadFqClassNamePrefixLength;
@@ -25,10 +26,14 @@ final class AutoloaderForDistroClasses
 
     public static function register(string $rootNamespace, string $rootNamespaceDir): callable
     {
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
+
         $callback = (new self($rootNamespace, $rootNamespaceDir))->autoloadCodeForClass(...);
         if (!spl_autoload_register($callback)) {
             throw new DistroRuntimeException('spl_autoload_register() returned false', context: compact('rootNamespace', 'rootNamespaceDir'));
         }
+
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
         return $callback;
     }
 

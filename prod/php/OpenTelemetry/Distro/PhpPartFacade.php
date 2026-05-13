@@ -36,9 +36,6 @@ use Throwable;
 final class PhpPartFacade
 {
     use BootstrapStageLoggingClassTrait;
-    /**
-     * Constructor is hidden because instance() should be used instead
-     */
     use HiddenConstructorTrait;
 
     public static bool $wasBootstrapCalled = false;
@@ -88,15 +85,22 @@ final class PhpPartFacade
 
         try {
             require __DIR__ . DIRECTORY_SEPARATOR . 'AutoloaderForDistroClasses.php';
-            self::logAutoloadFunctions('Before to AutoloaderForDistroClasses::register');
             $autoloadForDistroClasses = AutoloaderForDistroClasses::register(__NAMESPACE__, __DIR__);
-            self::logAutoloadFunctions('After AutoloaderForDistroClasses::register');
 
             InstrumentationBridge::singletonInstance()->bootstrap();
+
+            ///////////////////////////////////////////////////////////////////////////
+            // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
+            ///////////////////////////////////////
+
+            ///////////////////////////////////////
+            // END: REMOVE
+            ////////////////////////////////////////////////////////////////////////////
 
             require __DIR__ . DIRECTORY_SEPARATOR . 'KeepAutoloadCallbacksUpFront.php';
             /** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
             $shouldKeepDistroAutoloadCallbacksUpFront = !\OpenTelemetry\Distro\get_config_option_by_name(self::DEBUG_SCOPER_ENABLED_OPT_NAME);
+            self::logDebug(__LINE__, __FUNCTION__, __FUNCTION__ . '', compact('shouldKeepDistroAutoloadCallbacksUpFront'));
             if ($shouldKeepDistroAutoloadCallbacksUpFront) {
                 $keepDistroAutoloadCallbacksUpFront = new KeepAutoloadCallbacksUpFront(InstrumentationBridge::singletonInstance(), [$autoloadForDistroClasses]);
             }
@@ -474,19 +478,6 @@ final class PhpPartFacade
         self::logDebug(__LINE__, __FUNCTION__, 'After require', compact('userBootstrapPhpFile'));
     }
 
-    private static function logAutoloadFunctions(string $message): void
-    {
-        /**
-         * @var int $logLevel
-         *
-         * @noinspection PhpRedundantVariableDocTypeInspection
-         */
-        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_DEBUG;
-        if (self::isLogEnabledForLevel($logLevel)) {
-            self::logWithLevel($logLevel, __LINE__, __FUNCTION__, $message, ['spl_autoload_functions()' => SplAutoloadFunctionsLogUtil::callbacksToLoggable(spl_autoload_functions())]);
-        }
-    }
-
     /**
      * Must be defined in class using BootstrapStageLoggingClassTrait
      */
@@ -510,4 +501,31 @@ final class PhpPartFacade
     {
         return LogFeature::BOOTSTRAP;
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
+    ///////////////////////////////////////
+    private static function testHookingSplAutoloadRegister(): void
+    {
+        $hookRetVal = InstrumentationBridge::singletonInstance()->hook(
+            class: null,
+            function: 'spl_autoload_register',
+            post: function (): void {
+                self::logCritical(__LINE__, __FUNCTION__, 'Test spl_autoload_register post-hook entered');
+            },
+        );
+
+        if (!$hookRetVal) {
+            throw new DistroRuntimeException('hook() return false');
+        }
+
+        spl_autoload_register(
+            function (string $class): bool {
+
+            }
+        );
+    }
+    ///////////////////////////////////////
+    // END: REMOVE
+    ////////////////////////////////////////////////////////////////////////////
 }

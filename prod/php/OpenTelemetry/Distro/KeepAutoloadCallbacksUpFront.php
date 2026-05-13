@@ -12,6 +12,7 @@ use Throwable;
 final class KeepAutoloadCallbacksUpFront
 {
     use BootstrapStageLoggingClassTrait;
+    use SplAutoloadFunctionsLogTrait;
 
     private const SPL_AUTOLOAD_REGISTER_FUNC_NAME = 'spl_autoload_register';
 
@@ -92,7 +93,7 @@ final class KeepAutoloadCallbacksUpFront
         mixed $returnValue,
         ?Throwable $throwable,
     ): void {
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Entered');
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
 
         if ($this->shouldIgnoreRegisterCalls) {
             self::logDebug(__LINE__, __FUNCTION__, 'shouldIgnoreRegisterCalls is true - not doing anything');
@@ -118,7 +119,7 @@ final class KeepAutoloadCallbacksUpFront
         self::unregisterCallbacks();
         self::registerCallbacks();
 
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Exiting...');
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting...');
     }
 
     private function unregisterCallbacks(): void
@@ -130,7 +131,7 @@ final class KeepAutoloadCallbacksUpFront
 
     private function registerCallbacks(): void
     {
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Entered');
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
 
         $this->shouldIgnoreRegisterCalls = true;
         try {
@@ -143,20 +144,7 @@ final class KeepAutoloadCallbacksUpFront
             $this->shouldIgnoreRegisterCalls = false;
         }
 
-        self::logAutoloadFunctions(__LINE__, __FUNCTION__, 'Exiting');
-    }
-
-    private static function logAutoloadFunctions(int $line, string $func, string $message): void
-    {
-        /**
-         * @var int $logLevel
-         *
-         * @noinspection PhpRedundantVariableDocTypeInspection
-         */
-        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_DEBUG;
-        if (self::isLogEnabledForLevel($logLevel)) {
-            self::logWithLevel($logLevel, $line, $func, $message, ['spl_autoload_functions()' => SplAutoloadFunctionsLogUtil::callbacksToLoggable(spl_autoload_functions())]);
-        }
+        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
     }
 
     /**
