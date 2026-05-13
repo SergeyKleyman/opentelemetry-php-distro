@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\Util;
 
 use OTelDistroTests\ComponentTests\Util\OtlpData\SpanKind;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 
 class InferredSpanExpectationsBuilder extends SpanExpectationsBuilder
 {
@@ -22,18 +22,18 @@ class InferredSpanExpectationsBuilder extends SpanExpectationsBuilder
     private static function buildFor(self $builderClone, StackTraceExpectations $stackTrace, ?int $codeLineNumber): SpanExpectations
     {
         if ($codeLineNumber !== null) {
-            $builderClone->addAttribute(TraceAttributes::CODE_LINE_NUMBER, $codeLineNumber);
+            $builderClone->addAttribute(CodeAttributes::CODE_LINE_NUMBER, $codeLineNumber);
         }
         return $builderClone->stackTrace($stackTrace)->build();
     }
 
     public function buildForStaticMethod(string $className, string $methodName, StackTraceExpectations $stackTrace, ?int $codeLineNumber = null): SpanExpectations
     {
-        return self::buildFor((clone $this)->nameAndCodeAttributesUsingClassMethod($className, $methodName, isStaticMethod: true), $stackTrace, $codeLineNumber);
+        return self::buildFor((clone $this)->nameAndCodeAttributesForClassMethod($className, $methodName), $stackTrace, $codeLineNumber);
     }
 
     public function buildForFunction(string $funcName, StackTraceExpectations $stackTrace, ?int $codeLineNumber = null): SpanExpectations
     {
-        return self::buildFor((clone $this)->nameAndCodeAttributesUsingFuncName($funcName), $stackTrace, $codeLineNumber);
+        return self::buildFor((clone $this)->nameAndCodeAttributesForFunction($funcName), $stackTrace, $codeLineNumber);
     }
 }

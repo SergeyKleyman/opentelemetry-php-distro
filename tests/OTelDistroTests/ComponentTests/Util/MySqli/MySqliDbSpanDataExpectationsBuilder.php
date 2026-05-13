@@ -36,8 +36,8 @@ final class MySqliDbSpanDataExpectationsBuilder extends DbSpanExpectationsBuilde
     {
         $builderClone = clone $this;
         $builderClone->isOOPApi
-            ? $builderClone->nameAndCodeFunctionUsingClassMethod($className, $methodName, isStaticMethod: false)
-            : $builderClone->nameAndCodeAttributesUsingFuncName($funcName ?? self::deduceFuncName($className, $methodName));
+            ? $builderClone->nameAndCodeAttributesForClassMethod($className, $methodName)
+            : $builderClone->nameAndCodeAttributesForFunction($funcName ?? self::deduceFuncName($className, $methodName));
         $builderClone->optionalDbQueryTextAndOperationName($dbQueryText);
         return $builderClone->build();
     }

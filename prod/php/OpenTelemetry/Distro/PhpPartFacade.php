@@ -13,6 +13,7 @@ use OpenTelemetry\Distro\Log\NativeLogWriter;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
 use OpenTelemetry\API\Globals;
+use OpenTelemetry\Distro\Util\OTelUtil;
 use OpenTelemetry\Distro\Util\TextUtil;
 use OpenTelemetry\SDK\Registry;
 use OpenTelemetry\SDK\SdkAutoloader;
@@ -20,7 +21,7 @@ use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Version;
 use RuntimeException;
 use Throwable;
@@ -399,14 +400,13 @@ final class PhpPartFacade
         );
 
         $parent = Context::getCurrent();
-        /** @noinspection PhpDeprecationInspection */
-        $span = $tracer->spanBuilder($class ? $class . "::" . $function : $function) // @phpstan-ignore argument.type
+        $fqFunctionName = OTelUtil::buildFqFunctionName($class, $function);
+        $span = $tracer->spanBuilder($fqFunctionName) // @phpstan-ignore argument.type
                        ->setSpanKind(SpanKind::KIND_CLIENT)
                        ->setParent($parent)
-                       ->setAttribute(TraceAttributes::CODE_NAMESPACE, $class)
-                       ->setAttribute(TraceAttributes::CODE_FUNCTION, $function)
-                       ->setAttribute(TraceAttributes::CODE_FILE_PATH, $filename)
-                       ->setAttribute(TraceAttributes::CODE_LINENO, $lineno)
+                       ->setAttribute(CodeAttributes::CODE_FUNCTION_NAME, $fqFunctionName)
+                       ->setAttribute(CodeAttributes::CODE_FILE_PATH, $filename)
+                       ->setAttribute(CodeAttributes::CODE_LINE_NUMBER, $lineno)
                        ->setAttribute('call.arguments', print_r($params, true))
                        ->startSpan();
 
@@ -437,8 +437,7 @@ final class PhpPartFacade
         $span->setAttribute('call.return_value', print_r($retval, true));
 
         if ($exception) {
-            /** @noinspection PhpDeprecationInspection */
-            $span->recordException($exception, [TraceAttributes::EXCEPTION_ESCAPED => true]);
+            $span->recordException($exception);
             $span->setStatus(StatusCode::STATUS_ERROR, $exception->getMessage());
         }
 

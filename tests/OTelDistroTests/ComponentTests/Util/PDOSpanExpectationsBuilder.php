@@ -4,22 +4,21 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
-use OTelDistroTests\Util\ClassNameUtil;
 use PDO;
 use PDOStatement;
 
 class PDOSpanExpectationsBuilder extends DbSpanExpectationsBuilder
 {
-    public function buildForPDOClassMethod(string $methodName, ?bool $isStaticMethod = null, ?string $dbQueryText = null): SpanExpectations
+    public function buildForPDOClassMethod(string $methodName, ?string $dbQueryText = null): SpanExpectations
     {
         return (clone $this)
-            ->nameAndCodeFunctionUsingClassMethod(ClassNameUtil::fqToShort(PDO::class), $methodName, $isStaticMethod)
+            ->nameAndCodeAttributesForClassMethod(PDO::class, $methodName)
             ->optionalDbQueryText($dbQueryText)
             ->build();
     }
 
-    public function buildForPDOStatementClassMethod(string $methodName, ?bool $isStaticMethod = null): SpanExpectations
+    public function buildForPDOStatementClassMethod(string $methodName): SpanExpectations
     {
-        return (clone $this)->nameAndCodeFunctionUsingClassMethod(ClassNameUtil::fqToShort(PDOStatement::class), $methodName, $isStaticMethod)->build();
+        return (clone $this)->nameAndCodeAttributesForClassMethod(PDOStatement::class, $methodName)->build();
     }
 }

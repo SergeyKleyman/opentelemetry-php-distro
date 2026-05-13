@@ -11,7 +11,7 @@ use OpenTelemetry\API\Trace\SpanKind as OTelSpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\ExceptionAttributes;
 use OpenTelemetry\SemConv\Version;
 use PHPUnit\Framework\Assert;
 use Throwable;
@@ -22,7 +22,7 @@ use Throwable;
  * @phpstan-type OTelAttributesMapIterable iterable<non-empty-string, OTelAttributeValue>
  * @phpstan-type IntLimitedToOTelSpanKind OTelSpanKind::KIND_*
  */
-final class OTelUtil
+final class OTelUtilForTests
 {
     /**
      * Use PHPDoc tags instead of PHP language native type hints to avoid runtime enforcement
@@ -94,7 +94,7 @@ final class OTelUtil
         $span->setAttributes($attributes);
 
         if ($errorStatus !== null) {
-            $span->setAttribute(TraceAttributes::EXCEPTION_MESSAGE, $errorStatus);
+            $span->setAttribute(ExceptionAttributes::EXCEPTION_MESSAGE, $errorStatus);
             $span->setStatus(StatusCode::STATUS_ERROR, $errorStatus);
         }
 

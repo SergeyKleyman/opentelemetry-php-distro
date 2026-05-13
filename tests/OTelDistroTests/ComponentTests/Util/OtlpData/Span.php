@@ -16,7 +16,8 @@ use OTelDistroTests\Util\Log\LogStreamInterface;
 use OTelDistroTests\Util\TextUtilForTests;
 use Opentelemetry\Proto\Trace\V1\Span as OTelProtoSpan;
 use Opentelemetry\Proto\Trace\V1\SpanFlags as OTelProtoSpanFlags;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\SemConv\Attributes\UrlAttributes;
+use OpenTelemetry\SemConv\Incubating\Attributes\UrlIncubatingAttributes;
 use PHPUnit\Framework\Assert;
 
 final class Span implements LoggableInterface
@@ -59,7 +60,7 @@ final class Span implements LoggableInterface
     public static function reasonToDiscard(Span $span): ?string
     {
         /** @var string[] $attributesToCheckForTestsInfraUrlSubPath */
-        static $attributesToCheckForTestsInfraUrlSubPath = [TraceAttributes::URL_PATH, TraceAttributes::URL_FULL, TraceAttributes::URL_ORIGINAL];
+        static $attributesToCheckForTestsInfraUrlSubPath = [UrlAttributes::URL_PATH, UrlAttributes::URL_FULL, UrlIncubatingAttributes::URL_ORIGINAL];
         foreach ($attributesToCheckForTestsInfraUrlSubPath as $attributeName) {
             if (($reason = self::reasonToDiscardIfOptionalAttributeContainsString($span->attributes, $attributeName, TestInfraHttpServerProcessBase::BASE_URI_PATH)) !== null) {
                 return $reason;
