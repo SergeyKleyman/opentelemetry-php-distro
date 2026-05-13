@@ -42,6 +42,7 @@
 #define OTEL_PHP_OPAMP_ENDPOINT opamp_endpoint
 
 #define OTEL_PHP_OPAMP_HEARTBEAT_INTERVAL opamp_heartbeat_interval
+#define OTEL_PHP_OPAMP_POLLING_INTERVAL opamp_polling_interval
 #define OTEL_PHP_OPAMP_SEND_TIMEOUT opamp_send_timeout
 #define OTEL_PHP_OPAMP_SEND_MAX_RETRIES opamp_send_max_retries
 #define OTEL_PHP_OPAMP_SEND_RETRY_DELAY opamp_send_retry_delay
@@ -119,6 +120,7 @@ struct ConfigurationSnapshot {
     std::string OTEL_PHP_OPAMP_HEADERS;
     std::string OTEL_PHP_OPAMP_ENDPOINT;
     std::chrono::milliseconds OTEL_PHP_OPAMP_HEARTBEAT_INTERVAL = 30s;
+    std::chrono::milliseconds OTEL_PHP_OPAMP_POLLING_INTERVAL = 30s;
     std::chrono::milliseconds OTEL_PHP_OPAMP_SEND_TIMEOUT = 10s;
     std::size_t OTEL_PHP_OPAMP_SEND_MAX_RETRIES = 3;
     std::chrono::milliseconds OTEL_PHP_OPAMP_SEND_RETRY_DELAY = 10s;

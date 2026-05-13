@@ -45,6 +45,10 @@ public:
         return resourceAttributes_.end();
     }
 
+    void addAttributes(std::map<std::string, std::string> const &attrs) {
+        resourceAttributes_.insert(attrs.begin(), attrs.end());
+    }
+
 protected:
     void getFromEnvironment();
     void getHostAndOsAttributes();

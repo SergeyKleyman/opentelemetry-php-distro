@@ -115,6 +115,7 @@ private:
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_HEADERS, OptionMetadata::type::string, false),
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_ENDPOINT, OptionMetadata::type::string, false),
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_HEARTBEAT_INTERVAL, OptionMetadata::type::duration, false),
+        BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_POLLING_INTERVAL, OptionMetadata::type::duration, false),
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_SEND_TIMEOUT, OptionMetadata::type::duration, false),
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_SEND_MAX_RETRIES, OptionMetadata::type::bytes, false),
         BUILD_OTEL_PHP_OPTION_METADATA(OTEL_PHP_OPAMP_SEND_RETRY_DELAY, OptionMetadata::type::duration, false),

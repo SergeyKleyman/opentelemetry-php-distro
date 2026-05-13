@@ -41,9 +41,10 @@ void OpAmp::startCommunication() {
     }
 
     endpointHash_ = std::hash<std::string>{}(endpointUrl);
-    heartbeatInterval_ = {std::chrono::duration_cast<std::chrono::seconds>(config_->get().opamp_heartbeat_interval)};
+    heartbeatInterval_ = config_->get().opamp_heartbeat_interval;
+    pollingInterval_ = config_->get().opamp_polling_interval;
 
-    ELOG_DEBUG(log_, OPAMP, "Agent UID: '{}', endpoint: '{}', endpoint hash: '{:X}', heartbeat interval: {}ms", boost::uuids::to_string(agentUid_), endpointUrl, endpointHash_, heartbeatInterval_.load());
+    ELOG_DEBUG(log_, OPAMP, "Agent UID: '{}', endpoint: '{}', endpoint hash: '{:X}', heartbeat interval: {}ms, polling interval: {}ms", boost::uuids::to_string(agentUid_), endpointUrl, endpointHash_, heartbeatInterval_.load().count(), pollingInterval_.load().count());
     for (auto const &[k, v] : endpointHeaders) {
         ELOG_DEBUG(log_, OPAMP, "Header: '{}: {}'", k, v);
     }

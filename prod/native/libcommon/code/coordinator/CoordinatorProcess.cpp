@@ -35,15 +35,30 @@ CoordinatorProcess::CoordinatorProcess(
             config_(std::make_shared<opentelemetry::php::ConfigurationStorage>([this](ConfigurationSnapshot &cfg) { return configManager_->updateIfChanged(cfg); })),
             workerRegistry_(std::make_shared<WorkerRegistry>(logger_)),
             httpTransport_(std::make_shared<transport::HttpTransportAsync<>>(logger_, config_)),
-            opAmp_(std::make_shared<opentelemetry::php::transport::OpAmp>(logger_, config_, httpTransport_, std::move(resourceDetector))),
+            opAmp_(std::make_shared<opentelemetry::php::transport::OpAmp>(logger_, config_, httpTransport_, [&]() {
+                if (vendorCustomizations_) {
+                    resourceDetector->addAttributes(vendorCustomizations_->getAdditionalResourceAttributes());
+                }
+                return std::move(resourceDetector);
+            }())),
             messagesDispatcher_(std::make_shared<CoordinatorMessagesDispatcher>(logger_, httpTransport_, workerRegistry_)),
             processor_{logger_, sharedDataQueue, [this](const std::span<const std::byte> data) { messagesDispatcher_->processRecievedMessage(data); }},
             configProvider_(std::move(configProvider)) {
 
+        if (vendorCustomizations_) {
+            vendorCustomizations_->setLogger(logger_);
+        }
+
         opAmp_->addConfigUpdateWatcher([this](opentelemetry::php::transport::OpAmp::configFiles_t const &configFiles) {
             configProvider_->storeConfigFiles(configFiles);
+            configManager_->update(configFiles);
+            config_->update();
         });
         config_->addConfigUpdateWatcher(loggerConfigUpdateFunc);
+        config_->addConfigUpdateWatcher([this](opentelemetry::php::ConfigurationSnapshot const &cfg) {
+            opAmp_->updateHeartbeatInterval(cfg.opamp_heartbeat_interval);
+            opAmp_->updatePollingInterval(cfg.opamp_polling_interval);
+        });
 
         configManager_->update();
         config_->update();
