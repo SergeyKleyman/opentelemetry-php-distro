@@ -271,7 +271,7 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
 
         $isAutoInstrumentationEnabled = $appCodeArgs->getBool(self::IS_AUTO_INSTRUMENTATION_ENABLED_KEY);
         if ($isAutoInstrumentationEnabled) {
-            $mySqliInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\\MySqli\\MySqliInstrumentation'); // @phpstan-ignore argument.type
+            $mySqliInstrumentationFqClassName = AppCodeContextUtil::adaptClassNameToScoping('OpenTelemetry\\Contrib\\Instrumentation\\MySqli\\MySqliInstrumentation');
             self::assertTrue(class_exists($mySqliInstrumentationFqClassName, autoload: false));
             AssertEx::sameConstValues(constant($mySqliInstrumentationFqClassName . '::NAME'), self::AUTO_INSTRUMENTATION_NAME);
         }
