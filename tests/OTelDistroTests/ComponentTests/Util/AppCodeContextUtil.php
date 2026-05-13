@@ -8,6 +8,8 @@ use OpenTelemetry\Distro\OTelDistroScoperConfig;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\Config\OptionForProdName;
 
+use function OpenTelemetry\Distro\get_config_option_by_name;
+
 final class AppCodeContextUtil
 {
     use StaticClassTrait;
@@ -21,8 +23,12 @@ final class AppCodeContextUtil
      */
     public static function adaptClassNameToScoping(string $unscopedClassName): string
     {
-        /** @noinspection PhpFullyQualifiedNameUsageInspection */
-        $isScoperEnabled = \OpenTelemetry\Distro\get_config_option_by_name(OptionForProdName::debug_scoper_enabled->name);
-        return ($isScoperEnabled ? (OTelDistroScoperConfig::PREFIX . '\\') : '') . $unscopedClassName; // @phpstan-ignore return.type
+        return self::adaptClassNameRawStringToScoping($unscopedClassName); // @phpstan-ignore return.type
+    }
+
+    public static function adaptClassNameRawStringToScoping(string $unscopedClassName): string
+    {
+        $isScoperEnabled = get_config_option_by_name(OptionForProdName::debug_scoper_enabled->name);
+        return ($isScoperEnabled ? (OTelDistroScoperConfig::PREFIX . '\\') : '') . $unscopedClassName;
     }
 }
