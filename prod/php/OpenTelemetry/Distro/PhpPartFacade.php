@@ -460,9 +460,9 @@ final class PhpPartFacade
             self::logError(__LINE__, __FUNCTION__, self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME . " configuration option value is a path $userBootstrapPhpFile that does not exist");
             return;
         }
-        self::logDebug(__LINE__, __FUNCTION__, 'Before require', compact('userBootstrapPhpFile'));
+        self::logDebug(__LINE__, __FUNCTION__, 'Before require file set by ' . self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, compact('userBootstrapPhpFile'));
         require $userBootstrapPhpFile;
-        self::logDebug(__LINE__, __FUNCTION__, 'After require', compact('userBootstrapPhpFile'));
+        self::logDebug(__LINE__, __FUNCTION__, 'After require file set by ' . self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, compact('userBootstrapPhpFile'));
     }
 
     /**
