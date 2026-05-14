@@ -90,14 +90,6 @@ final class PhpPartFacade
 
             InstrumentationBridge::singletonInstance()->bootstrap();
 
-            ///////////////////////////////////////////////////////////////////////////
-            // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
-            ///////////////////////////////////////
-            self::testHookingSplAutoloadRegister();
-            ///////////////////////////////////////
-            // END: REMOVE
-            ////////////////////////////////////////////////////////////////////////////
-
             require __DIR__ . DIRECTORY_SEPARATOR . 'KeepAutoloadCallbacksUpFront.php';
             /** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
             $shouldKeepDistroAutoloadCallbacksUpFront = !\OpenTelemetry\Distro\get_config_option_by_name(self::DEBUG_SCOPER_ENABLED_OPT_NAME);
@@ -270,25 +262,10 @@ final class PhpPartFacade
             throw new DistroRuntimeException('callbacksBeforeCount is larger than or equal to callbacksAfterCount', context: $buildBaseCtx());
         }
 
-        for ($i = 0; $i != $callbacksBeforeCount; ++$i) {
-            if ($callbacksBefore[$i] !== $callbacksAfter[$i]) {
-                $ctx = compact('i') + $buildBaseCtx();
-                ///////////////////////////////////////////////////////////////////////////
-                // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
-                ///////////////////////////////////////
-                self::logCritical(__LINE__, __FUNCTION__, 'callbacksBefore is not a prefix of callbacksAfter', $ctx);
-                return [];
-                ///////////////////////////////////////
-                // END: REMOVE
-                ////////////////////////////////////////////////////////////////////////////
-                // TODO: Sergey Kleyman: UNCOMMENT
-                // throw new DistroRuntimeException('callbacksBefore is not a prefix of callbacksAfter', context: $ctx);
-            }
-        }
-
-        $diff = [];
-        for ($i = $callbacksBeforeCount; $i != $callbacksAfterCount; ++$i) {
-            $diff[] = $callbacksBefore[$i];
+        $diff = array_diff($callbacksAfter, $callbacksBefore);
+        if (($callbacksBeforeCount + count($diff)) !== $callbacksAfterCount) {
+            $ctx = $buildBaseCtx() + ['diff' => SplAutoloadFunctionsLogUtil::callbacksToLoggable($diff)];
+            throw new DistroRuntimeException('callbacksBeforeCount + count(diff) is not equal to callbacksAfterCount', context: $ctx);
         }
 
         return $diff;
@@ -511,54 +488,4 @@ final class PhpPartFacade
     {
         return LogFeature::BOOTSTRAP;
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
-    ///////////////////////////////////////
-    private static function testHookingSplAutoloadRegister(): void
-    {
-        /**
-         * @var int $logLevel
-         *
-         * @noinspection PhpRedundantVariableDocTypeInspection
-         */
-        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_ERROR;
-
-        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Entered');
-
-        $hookRetVal = InstrumentationBridge::singletonInstance()->hook(
-            class: null,
-            function: 'spl_autoload_register',
-            post: function (
-                ?object $thisObj,
-                array $params,
-                /** @noinspection PhpUnusedParameterInspection */ mixed $returnValue,
-                /** @noinspection PhpUnusedParameterInspection */ ?Throwable $throwable,
-            ) use ($logLevel): void {
-                self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: spl_autoload_register post-hook entered');
-                if (count($params) > 0) {
-                    self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST', ['callback arg' => SplAutoloadFunctionsLogUtil::callbackToLoggable($params[0])]);
-                }
-                if (count($params) > 2) {
-                    self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST', ['prepend arg' => $params[2]]);
-                }
-            },
-        );
-
-        if (!$hookRetVal) {
-            throw new DistroRuntimeException('hook() return false');
-        }
-        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Registered post-hook');
-
-        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: Before calling spl_autoload_register');
-        spl_autoload_register(
-            function (string $class) use ($logLevel): void {
-                self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: autoload callback', compact('class'));
-            }
-        );
-        self::logWithLevel($logLevel, __LINE__, __FUNCTION__, 'TEST: After calling spl_autoload_register');
-    }
-    ///////////////////////////////////////
-    // END: REMOVE
-    ////////////////////////////////////////////////////////////////////////////
 }
