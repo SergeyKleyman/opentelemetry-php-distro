@@ -438,6 +438,7 @@ final class PhpPartFacade
         return ['debug type' => get_debug_type($callback)];
     }
 
+    /** @noinspection PhpUnusedPrivateMethodInspection */
     private static function valueToDbgDesc(mixed $value): mixed
     {
         if (is_scalar($value) || ($value === null)) {
@@ -453,9 +454,12 @@ final class PhpPartFacade
 
     private static string $testHookingState = '';
 
+    /** @noinspection PhpUnusedParameterInspection */
     private static function testHookingCallback(string $callbackDbgDesc, mixed ...$args): void
     {
-        self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . $callbackDbgDesc . ' entered', ['testHookingState' => self::$testHookingState, 'args' => array_map(self::valueToDbgDesc(...), $args)]);
+        $ctx = ['testHookingState' => self::$testHookingState, 'stack trace' => debug_backtrace(), 'args' => array_map(self::valueToDbgDesc(...), $args)];
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . $callbackDbgDesc . ' entered', $ctx);
+        BootstrapStageStdErrWriter::writeLine('[INFO] TEST: ' . $callbackDbgDesc . ' entered | ' . json_encode($ctx));
     }
 
     /**
@@ -469,6 +473,13 @@ final class PhpPartFacade
         $hookRetVal = InstrumentationBridge::singletonInstance()->hook(
             class: $fqClassToHook,
             function: $funcToHook,
+            pre: function (
+                mixed ...$args,
+            ) use (
+                $fqFuncToHookDbgDesc
+            ): void {
+                self::testHookingCallback('pre-hook for ' . $fqFuncToHookDbgDesc, ...$args);
+            },
             post: function (
                 mixed $thisObj,
                 array $params,
@@ -485,13 +496,18 @@ final class PhpPartFacade
             self::logError(__LINE__, __FUNCTION__, 'TEST: hook() return false', compact('fqFuncToHookDbgDesc'));
             return;
         }
-        self::logInfo(__LINE__, __FUNCTION__, 'TEST: Registered post-hook for ' . $fqFuncToHookDbgDesc);
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: Registered pre-hook and post-hook for ' . $fqFuncToHookDbgDesc);
 
         self::$testHookingState = 'Before calling ' . $fqFuncToHookDbgDesc;
         self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . self::$testHookingState);
-        /** @var callable(mixed ...): mixed $funcToHookCallable */
-        $funcToHookCallable = ($fqClassToHook === null) ? $funcToHook : [$fqClassToHook, $funcToHook]; // @phpstan-ignore varTag.nativeType
-        $funcToHookRetVal = ($funcToHookCallable)(...$argsForFuncToHookCall);
+        if (($fqClassToHook === null) && ($funcToHook === 'spl_autoload_register')) {
+            self::logInfo(__LINE__, __FUNCTION__, 'TEST: Calling spl_autoload_register');
+            $funcToHookRetVal = spl_autoload_register(...$argsForFuncToHookCall); // @phpstan-ignore argument.type
+        } else {
+            /** @var callable(mixed ...): mixed $funcToHookCallable */
+            $funcToHookCallable = ($fqClassToHook === null) ? $funcToHook : [$fqClassToHook, $funcToHook]; // @phpstan-ignore varTag.nativeType
+            $funcToHookRetVal = ($funcToHookCallable)(...$argsForFuncToHookCall);
+        }
         self::$testHookingState = 'After calling ' . $fqFuncToHookDbgDesc;
         self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . self::$testHookingState, compact('funcToHookRetVal'));
     }
@@ -508,11 +524,11 @@ final class PhpPartFacade
 
     private static function testHooking(): void
     {
-        self::testHookingImpl(
-            fqClassToHook: null,
-            funcToHook: 'class_uses',
-            argsForFuncToHookCall: [/* object_or_class */ self::class]
-        );
+//        self::testHookingImpl(
+//            fqClassToHook: null,
+//            funcToHook: 'class_uses',
+//            argsForFuncToHookCall: [/* object_or_class */ self::class]
+//        );
 
         $autoloadCallback = function (string $class): void {
             self::testHookingCallback('autoloadCallback', ...func_get_args());
@@ -538,11 +554,11 @@ final class PhpPartFacade
             self::logError(__LINE__, __FUNCTION__, 'After the 2nd call to spl_autoload_unregister (expected to return false)', compact('unregisterRetVal'));
         }
 
-        self::testHookingImpl(
-            fqClassToHook: null,
-            funcToHook: 'ctype_cntrl',
-            argsForFuncToHookCall: ["dummy text with control char \t = ctype_cntrl exepected to return true"]
-        );
+//        self::testHookingImpl(
+//            fqClassToHook: null,
+//            funcToHook: 'ctype_cntrl',
+//            argsForFuncToHookCall: ["dummy text with control char \t = ctype_cntrl exepected to return true"]
+//        );
     }
     ///////////////////////////////////////
     // END: REMOVE

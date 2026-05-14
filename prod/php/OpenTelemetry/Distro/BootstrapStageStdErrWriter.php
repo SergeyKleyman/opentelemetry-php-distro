@@ -28,6 +28,7 @@ final class BootstrapStageStdErrWriter
     {
         if (self::ensureStdErrIsDefined()) {
             fwrite(STDERR, $text . PHP_EOL);
+            fflush(STDERR);
         }
     }
 }
