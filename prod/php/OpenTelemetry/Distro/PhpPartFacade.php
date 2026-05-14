@@ -87,6 +87,15 @@ final class PhpPartFacade
             AutoloaderDistroOTelClasses::register(__NAMESPACE__, __DIR__);
 
             InstrumentationBridge::singletonInstance()->bootstrap();
+
+            ///////////////////////////////////////////////////////////////////////////
+            // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
+            ///////////////////////////////////////
+            self::testHooking();
+            ///////////////////////////////////////
+            // END: REMOVE
+            ////////////////////////////////////////////////////////////////////////////
+
             self::prepareForOTelSdk();
 
             self::registerAutoloaderForVendorDir();
@@ -399,4 +408,140 @@ final class PhpPartFacade
     {
         return __CLASS__;
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
+    ///////////////////////////////////////
+    private static function callableToDbgDesc(mixed $callback): string|array
+    {
+        /** @noinspection PhpFullyQualifiedNameUsageInspection */
+        if ($callback instanceof \Closure) {
+            /** @noinspection PhpFullyQualifiedNameUsageInspection */
+            $reflFunc = new \ReflectionFunction($callback);
+            return 'Closure defined at ' . $reflFunc->getFileName() . ':' . $reflFunc->getStartLine();
+        }
+        if (is_string($callback)) {
+            /** @noinspection PhpFullyQualifiedNameUsageInspection */
+            $reflFunc = new \ReflectionFunction($callback);
+            return $callback . ' function defined at ' . $reflFunc->getFileName() . ':' . $reflFunc->getStartLine();
+        }
+        if (is_array($callback) && (count($callback) === 2) && (is_object($callback[0]) || is_string($callback[0])) && is_string($callback[1])) {
+            /** @noinspection PhpFullyQualifiedNameUsageInspection */
+            $reflClass = new \ReflectionClass($callback[0]); // @phpstan-ignore argument.type
+            $reflMethod = $reflClass->getMethod($callback[1]);
+            return $reflClass->getName() . '::' . $reflMethod->getName() . ' method at ' . $reflMethod->getFileName() . ':' . $reflMethod->getStartLine();
+        }
+
+        return ['debug type' => get_debug_type($callback)];
+    }
+
+    private static function valueToDbgDesc(mixed $value): mixed
+    {
+        if (is_scalar($value) || ($value === null)) {
+            return $value;
+        }
+
+        if (is_callable($value)) {
+            return self::callableToDbgDesc($value);
+        }
+
+        return ['debug type' => get_debug_type($value)];
+    }
+
+    private static string $testHookingState = '';
+
+    private static function testHookingCallback(string $callbackDbgDesc, mixed ...$args): void
+    {
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . $callbackDbgDesc . ' entered', ['testHookingState' => self::$testHookingState, 'args' => array_map(self::valueToDbgDesc(...), $args)]);
+    }
+
+    /**
+     * @param array<mixed> $argsForFuncToHookCall
+     */
+    private static function testHookingImpl(?string $fqClassToHook, string $funcToHook, array $argsForFuncToHookCall): void
+    {
+        $fqFuncToHookDbgDesc = (($fqClassToHook === null) ? '' : ($fqClassToHook . '::')) . $funcToHook;
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: Entered', compact('fqClassToHook', 'funcToHook', 'fqFuncToHookDbgDesc'));
+
+        $hookRetVal = InstrumentationBridge::singletonInstance()->hook(
+            class: $fqClassToHook,
+            function: $funcToHook,
+            post: function (
+                mixed $thisObj,
+                array $params,
+                /** @noinspection PhpUnusedParameterInspection */ mixed $returnValue,
+                /** @noinspection PhpUnusedParameterInspection */ ?Throwable $throwable,
+            ) use (
+                $fqFuncToHookDbgDesc
+            ): void {
+                self::testHookingCallback('post-hook for ' . $fqFuncToHookDbgDesc, ...$params);
+            },
+        );
+
+        if (!$hookRetVal) {
+            self::logError(__LINE__, __FUNCTION__, 'TEST: hook() return false', compact('fqFuncToHookDbgDesc'));
+            return;
+        }
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: Registered post-hook for ' . $fqFuncToHookDbgDesc);
+
+        self::$testHookingState = 'Before calling ' . $fqFuncToHookDbgDesc;
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . self::$testHookingState);
+        /** @var callable(mixed ...): mixed $funcToHookCallable */
+        $funcToHookCallable = ($fqClassToHook === null) ? $funcToHook : [$fqClassToHook, $funcToHook]; // @phpstan-ignore varTag.nativeType
+        $funcToHookRetVal = ($funcToHookCallable)(...$argsForFuncToHookCall);
+        self::$testHookingState = 'After calling ' . $fqFuncToHookDbgDesc;
+        self::logInfo(__LINE__, __FUNCTION__, 'TEST: ' . self::$testHookingState, compact('funcToHookRetVal'));
+    }
+
+    /**
+     * @phpstan-param callable(string): void $callback
+     *
+     * @noinspection PhpUnusedPrivateMethodInspection
+     */
+    private static function altSplAutoloadRegister(?callable $callback, bool $throw = true, bool $prepend = false): void // @phpstan-ignore method.unused
+    {
+        self::testHookingCallback(__FUNCTION__, ...func_get_args());
+    }
+
+    private static function testHooking(): void
+    {
+        self::testHookingImpl(
+            fqClassToHook: null,
+            funcToHook: 'class_uses',
+            argsForFuncToHookCall: [/* object_or_class */ self::class]
+        );
+
+        $autoloadCallback = function (string $class): void {
+            self::testHookingCallback('autoloadCallback', ...func_get_args());
+        };
+        self::testHookingImpl(
+            fqClassToHook: self::class,
+            funcToHook: 'altSplAutoloadRegister',
+            argsForFuncToHookCall: [$autoloadCallback, /* throw */ true, /* prepend */ true]
+        );
+
+        self::testHookingImpl(
+            fqClassToHook: null,
+            funcToHook: 'spl_autoload_register',
+            argsForFuncToHookCall: [$autoloadCallback, /* throw */ true, /* prepend */ true]
+        );
+
+        $unregisterRetVal = spl_autoload_unregister($autoloadCallback);
+        if (!$unregisterRetVal) {
+            self::logError(__LINE__, __FUNCTION__, 'After the 1st call to spl_autoload_unregister (expected to return true)', compact('unregisterRetVal'));
+        }
+        $unregisterRetVal = spl_autoload_unregister($autoloadCallback);
+        if ($unregisterRetVal) {
+            self::logError(__LINE__, __FUNCTION__, 'After the 2nd call to spl_autoload_unregister (expected to return false)', compact('unregisterRetVal'));
+        }
+
+        self::testHookingImpl(
+            fqClassToHook: null,
+            funcToHook: 'ctype_cntrl',
+            argsForFuncToHookCall: ["dummy text with control char \t = ctype_cntrl exepected to return true"]
+        );
+    }
+    ///////////////////////////////////////
+    // END: REMOVE
+    ////////////////////////////////////////////////////////////////////////////
 }
