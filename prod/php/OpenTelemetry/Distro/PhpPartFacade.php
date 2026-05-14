@@ -412,6 +412,9 @@ final class PhpPartFacade
     ///////////////////////////////////////////////////////////////////////////
     // TODO: Sergey Kleyman: BEGIN: REMOVE: ::
     ///////////////////////////////////////
+    /**
+     * @return string|array<mixed>
+     */
     private static function callableToDbgDesc(mixed $callback): string|array
     {
         /** @noinspection PhpFullyQualifiedNameUsageInspection */
