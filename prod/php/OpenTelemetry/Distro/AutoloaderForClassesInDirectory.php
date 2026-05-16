@@ -6,24 +6,27 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
 
+<<<<<<<< HEAD:prod/php/OpenTelemetry/Distro/AutoloaderForDistroClasses.php
 use OpenTelemetry\Distro\Log\LogFeature;
 
 final class AutoloaderForDistroClasses
+========
+final class AutoloaderForClassesInDirectory
+>>>>>>>> main:prod/php/OpenTelemetry/Distro/AutoloaderForClassesInDirectory.php
 {
     use BootstrapStageLoggingClassTrait;
     use SplAutoloadFunctionsLogTrait;
 
-    private readonly string $autoloadFqClassNamePrefix;
     private readonly int $autoloadFqClassNamePrefixLength;
-    private readonly string $srcFilePathPrefix;
 
-    private function __construct(string $rootNamespace, string $rootNamespaceDir)
-    {
-        $this->autoloadFqClassNamePrefix = $rootNamespace . '\\';
+    private function __construct(
+        private readonly string $autoloadFqClassNamePrefix,
+        private readonly string $srcFilePathPrefix,
+    ) {
         $this->autoloadFqClassNamePrefixLength = strlen($this->autoloadFqClassNamePrefix);
-        $this->srcFilePathPrefix = $rootNamespaceDir . DIRECTORY_SEPARATOR;
     }
 
+<<<<<<<< HEAD:prod/php/OpenTelemetry/Distro/AutoloaderForDistroClasses.php
     public static function register(string $rootNamespace, string $rootNamespaceDir): callable
     {
         self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
@@ -35,6 +38,12 @@ final class AutoloaderForDistroClasses
 
         self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
         return $callback;
+========
+    public static function register(string $dirRootNamespace, string $dirFullPath): void
+    {
+        $autoloader = new self(autoloadFqClassNamePrefix: $dirRootNamespace . '\\', srcFilePathPrefix: $dirFullPath . DIRECTORY_SEPARATOR);
+        spl_autoload_register(($autoloader)->autoloadCodeForClass(...));
+>>>>>>>> main:prod/php/OpenTelemetry/Distro/AutoloaderForClassesInDirectory.php
     }
 
     private function shouldAutoloadCodeForClass(string $fqClassName): bool

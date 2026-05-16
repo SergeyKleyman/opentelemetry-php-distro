@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\DistroTools\Build;
 
-use OpenTelemetry\Distro\AutoloaderForDistroClasses;
+use OpenTelemetry\Distro\AutoloaderForClassesInDirectory;
 use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
@@ -21,7 +21,13 @@ $repoRootDir = realpath($repoRootDirTempVal = __DIR__ . DIRECTORY_SEPARATOR . '.
 if ($repoRootDir === false) {
     throw new RuntimeException("realpath returned false for $repoRootDirTempVal");
 }
-$prodPhpDistroPath = $repoRootDir . DIRECTORY_SEPARATOR . 'prod' . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . 'OpenTelemetry' . DIRECTORY_SEPARATOR . 'Distro';
+
+$prodPhpPath = $repoRootDir . DIRECTORY_SEPARATOR . 'prod' . DIRECTORY_SEPARATOR . 'php';
+$prodPhpDistroPath = $prodPhpPath . DIRECTORY_SEPARATOR . 'OpenTelemetry' . DIRECTORY_SEPARATOR . 'Distro';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
+/** @noinspection PhpFullyQualifiedNameUsageInspection */
+\OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
+
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
@@ -55,6 +61,6 @@ BootstrapStageLogger::configure(
     }
 );
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForDistroClasses.php';
-AutoloaderForDistroClasses::register('OpenTelemetry\\Distro', $prodPhpDistroPath);
-AutoloaderForDistroClasses::register(__NAMESPACE__, __DIR__);
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForClassesInDirectory.php';
+AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);
+AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);
