@@ -26,7 +26,6 @@ trait BootstrapStageLoggingClassTrait
      */
     private static function logWithLevel(int $statementLevel, int $line, string $func, string $message, array $context = []): void
     {
-        // getCurrentSourceCodeFile(), getCurrentSourceCodeClass() and getCurrentLogFeature() must be defined in class using BootstrapStageLoggingClassTrait
         BootstrapStageLogger::logWithFeatureAndLevel(
             self::getCurrentLogFeature() /* <- must be defined in class using BootstrapStageLoggingClassTrait */,
             $statementLevel,

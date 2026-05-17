@@ -149,12 +149,13 @@ final class BootstrapStageLogger
         return self::processClassNameForLog($class) . '::' . $func;
     }
 
+    /** @noinspection PhpSameParameterValueInspection */
     private static function logWithLevel(int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
         self::logWithFeatureAndLevel(LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
     }
 
-    public static function logWithFeatureAndLevel(int $prodLogFeature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    public static function logWithFeatureAndLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
         if (!self::isEnabledForLevel($statementLevel)) {
             return;
@@ -168,7 +169,7 @@ final class BootstrapStageLogger
             \OpenTelemetry\Distro\log_feature(
                 0 /* $isForced */,
                 $statementLevel,
-                $prodLogFeature,
+                $feature,
                 self::processSourceCodeFilePathForLog($file),
                 $line,
                 self::processClassFunctionNameForLog($class, $func),
@@ -177,7 +178,7 @@ final class BootstrapStageLogger
         } else {
             (self::$formatAndWrite)(
                 $statementLevel,
-                $prodLogFeature,
+                $feature,
                 self::processSourceCodeFilePathForLog($file),
                 $line,
                 $func,
