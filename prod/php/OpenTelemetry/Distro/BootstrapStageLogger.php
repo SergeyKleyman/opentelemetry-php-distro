@@ -58,7 +58,6 @@ final class BootstrapStageLogger
         self::$classNamePrefixToRemove = $rootNamespace . '\\';
 
         self::logWithLevel(
-            LogFeature::BOOTSTRAP,
             self::LEVEL_DEBUG,
             'Exiting...'
             . '; maxEnabledLevel: ' . self::levelToString($maxEnabledLevel)
@@ -131,9 +130,10 @@ final class BootstrapStageLogger
         return self::processClassNameForLog($class) . '::' . $func;
     }
 
-    public static function logWithLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    /** @noinspection PhpSameParameterValueInspection */
+    private static function logWithLevel(int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithFeatureAndLevel($feature, $statementLevel, $message, $file, $line, $class, $func);
+        self::logWithFeatureAndLevel(LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
     }
 
     public static function logWithFeatureAndLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
