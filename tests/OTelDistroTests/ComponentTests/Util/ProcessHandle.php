@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ExceptionUtil;
@@ -49,13 +50,13 @@ final class ProcessHandle implements LoggableInterface
 
     public function getCurrentInfo(): ProcessInfo
     {
-        if (!$this->lastInfo->hasExited()) {
+        if (!($this->lastInfo->hasExited() || $this->isClosed())) {
             $this->lastInfo = self::buildInfo(AssertEx::notNull($this->procOpenRetVal));
         }
         return $this->lastInfo;
     }
 
-    public function waitForProcessToExit(int $maxWaitTimeInMicroseconds): bool
+    public function waitForProcessToExit(int $maxWaitTimeInMicroseconds, ?LogLevel $logLevelTimedout = null): bool
     {
         $logDebug = $this->logger->inherit()->addAllContext(compact('maxWaitTimeInMicroseconds'))->ifDebugLevelEnabledNoLine(__FUNCTION__);
 
@@ -64,7 +65,7 @@ final class ProcessHandle implements LoggableInterface
         if ($this->getCurrentInfo()->hasExited()) {
             $logDebug?->log(__LINE__, 'Process exited');
         } else {
-            $this->logger->ifWarningLevelEnabled(__LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out');
+            $this->logger->ifLevelEnabled($logLevelTimedout ?? LogLevel::warning, __LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out');
         }
 
         return $this->getCurrentInfo()->hasExited();
@@ -81,6 +82,11 @@ final class ProcessHandle implements LoggableInterface
         if (PHP_VERSION_ID >= 80300 && $procCloseRetVal === -1) {
             throw new ComponentTestsInfraException(ExceptionUtil::buildMessage('proc_close returned value which means an error', $this->logger->getContext()));
         }
+    }
+
+    public function isClosed(): bool
+    {
+        return $this->procOpenRetVal === null;
     }
 
     public function toLog(LogStreamInterface $stream): void
