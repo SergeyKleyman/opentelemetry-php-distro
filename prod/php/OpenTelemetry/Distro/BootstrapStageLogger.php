@@ -61,8 +61,7 @@ final class BootstrapStageLogger
         self::$phpSrcCodePathPrefixToRemove = $phpSrcCodeRootDir . DIRECTORY_SEPARATOR;
         self::$classNamePrefixToRemove = $rootNamespace . '\\';
 
-        self::logWithLevel(
-            self::LEVEL_DEBUG,
+        self::logDebug(
             'Exiting...'
             . '; maxEnabledLevel: ' . self::levelIntToString($maxEnabledLevel)
             . '; phpSrcCodePathPrefixToRemove: ' . self::$phpSrcCodePathPrefixToRemove
@@ -149,10 +148,12 @@ final class BootstrapStageLogger
         return self::processClassNameForLog($class) . '::' . $func;
     }
 
-    /** @noinspection PhpSameParameterValueInspection */
-    private static function logWithLevel(int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    /**
+     * @see packaging/test/smokeTest.php
+    */
+    public static function logDebug(string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithFeatureAndLevel(LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
+        self::logWithFeatureAndLevel(LogFeature::BOOTSTRAP, self::LEVEL_DEBUG, $message, $file, $line, $class, $func);
     }
 
     public static function logWithFeatureAndLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
