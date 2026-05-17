@@ -75,4 +75,12 @@ final class AutoloaderForClassesInDirectory
     {
         return __CLASS__;
     }
+
+    /**
+     * Must be defined in class using BootstrapStageLoggingClassTrait
+     */
+    private static function getCurrentLogFeature(): int
+    {
+        return LogFeature::BOOTSTRAP;
+    }
 }
