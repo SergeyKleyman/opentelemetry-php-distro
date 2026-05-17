@@ -117,7 +117,6 @@ final class TestCaseHandle implements LoggableInterface
     private function autoSetProdOptions(AppCodeHostParams $params): void
     {
         if ($this->escalatedLogLevelForProdCode !== null) {
-            $escalatedLogLevelForProdCodeAsString = $this->escalatedLogLevelForProdCode->name;
             $params->setProdOption(AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName(), $this->escalatedLogLevelForProdCode->name);
         }
         /** @noinspection HttpUrlsUsage */

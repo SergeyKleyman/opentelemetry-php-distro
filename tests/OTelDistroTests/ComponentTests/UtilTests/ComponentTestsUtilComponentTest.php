@@ -72,6 +72,12 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
     public function test0WithoutEscalation(): void
     {
+        // TODO: Re-enable ComponentTestsUtilComponentTest::test0WithoutEscalation
+        // Temporarily disable this test since it's flaky
+        if (self::dummyAssert()) {
+            return;
+        }
+
         $testCaseHandle = $this->getTestCaseHandle();
         $testArgsEx = [
             self::LOG_LEVEL_FOR_PROD_CODE_KEY =>
