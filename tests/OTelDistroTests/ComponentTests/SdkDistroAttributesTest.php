@@ -113,10 +113,10 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
             subAppCode: [__CLASS__, 'appCodeForTestAttributes'],
             additionalAssertCode: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput) use ($testArgs): void {
                 $expectedResourceAttributes = [
-	            TelemetryIncubatingAttributes::TELEMETRY_DISTRO_NAME => 'opentelemetry-php-distro',
-	            TelemetryAttributes::TELEMETRY_SDK_LANGUAGE => 'php',
-	            TelemetryAttributes::TELEMETRY_SDK_NAME => 'opentelemetry',
-	            TelemetryAttributes::TELEMETRY_SDK_VERSION => self::getOTelSdkVersion(),
+                    TelemetryIncubatingAttributes::TELEMETRY_DISTRO_NAME => 'opentelemetry-php-distro',
+                    TelemetryAttributes::TELEMETRY_SDK_LANGUAGE => 'php',
+                    TelemetryAttributes::TELEMETRY_SDK_NAME => 'opentelemetry',
+                    TelemetryAttributes::TELEMETRY_SDK_VERSION => self::getOTelSdkVersion(),
                 ];
                 $notExpectedAttributes = [];
 
