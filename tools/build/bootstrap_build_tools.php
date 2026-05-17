@@ -27,7 +27,11 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 \OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireBootstrapStageLogger.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'HiddenConstructorTrait.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'StaticClassTrait.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'GetContextInterface.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'LogFeature.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
 
@@ -58,6 +62,7 @@ BootstrapStageLogger::configure(
     }
 );
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireAutoloaderForClassesInDirectory.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLoggingClassTrait.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForClassesInDirectory.php';
 AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);
 AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);
