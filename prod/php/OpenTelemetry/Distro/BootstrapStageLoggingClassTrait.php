@@ -122,6 +122,6 @@ trait BootstrapStageLoggingClassTrait
             $jsonEncodedCtx = 'Failed to JSON encode context: ' . $exception->getMessage();
         }
 
-        return $message . '; ' . $jsonEncodedCtx;
+        return $message . ' | ' . $jsonEncodedCtx;
     }
 }
