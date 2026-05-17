@@ -27,11 +27,9 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 \OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
 
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireBootstrapStageLogger.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageStdErrWriter.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLoggingClassTrait.php';
 
 $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
     $envVarVal = getenv(OTEL_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME);
@@ -49,6 +47,6 @@ $writeToSinkForBootstrapStageLogger = function (int $level, int $feature, string
 };
 BootstrapStageLogger::configure($maxEnabledLogLevel->value, $prodPhpDistroPath, __NAMESPACE__, $writeToSinkForBootstrapStageLogger);
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForClassesInDirectory.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireAutoloaderForClassesInDirectory.php';
 AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);
 AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);

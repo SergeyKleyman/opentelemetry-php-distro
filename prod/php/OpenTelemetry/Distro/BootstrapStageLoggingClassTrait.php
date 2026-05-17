@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use JsonException;
+use OpenTelemetry\Distro\Util\GetContextInterface;
 use Throwable;
 
 use function json_encode;
 
 /**
- * @phpstan-type Context array<string, mixed>
+ * @phpstan-import-type Context from GetContextInterface
  */
 trait BootstrapStageLoggingClassTrait
 {
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -26,7 +27,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -37,7 +38,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -48,7 +49,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -59,7 +60,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -70,7 +71,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -81,7 +82,7 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
@@ -92,19 +93,22 @@ trait BootstrapStageLoggingClassTrait
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      *
      * @noinspection PhpUnusedPrivateMethodInspection
      */
     private static function logCriticalThrowable(int $line, string $func, Throwable $throwable, string $message, array $context = []): void
     {
-        $updatedCtx = ['Throwable' => ['class' => get_class($throwable), 'message' => $throwable->getMessage(), 'stack trace' => $throwable->getTraceAsString()]] + $context;
-        // getCurrentSourceCodeFile() and getCurrentSourceCodeClass() must be defined in class using BootstrapStageLoggingClassTrait
-        BootstrapStageLogger::logCritical(self::addContextToMessage($message, $updatedCtx), self::getCurrentSourceCodeFile(), $line, self::getCurrentSourceCodeClass(), $func);
+        $throwableCtx = ['class' => get_class($throwable), 'message' => $throwable->getMessage(), 'stack trace' => $throwable->getTraceAsString()];
+        if ($throwable instanceof GetContextInterface) {
+            $throwableCtx += ['context' => $throwable->getContext()];
+        }
+        $updatedCtx = ['Throwable' => $throwableCtx] + $context;
+        self::logCritical($line, $func, $message, $updatedCtx);
     }
 
     /**
-     * @param Context $context
+     * @phpstan-param Context $context
      */
     private static function addContextToMessage(string $message, array $context = []): string
     {

@@ -1,10 +1,10 @@
 <?php
 
-/** @noinspection PhpIllegalPsrClassPathInspection */
-
 declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
+
+use OpenTelemetry\Distro\Util\DistroRuntimeException;
 
 final class AutoloaderForClassesInDirectory
 {
@@ -22,7 +22,9 @@ final class AutoloaderForClassesInDirectory
     public static function register(string $dirRootNamespace, string $dirFullPath): void
     {
         $autoloader = new self(autoloadFqClassNamePrefix: $dirRootNamespace . '\\', srcFilePathPrefix: $dirFullPath . DIRECTORY_SEPARATOR);
-        spl_autoload_register(($autoloader)->autoloadCodeForClass(...));
+        if (!spl_autoload_register(($autoloader)->autoloadCodeForClass(...))) {
+            throw new DistroRuntimeException('spl_autoload_register() returned false', context: compact('dirRootNamespace', 'dirFullPath'));
+        }
     }
 
     private function shouldAutoloadCodeForClass(string $fqClassName): bool
