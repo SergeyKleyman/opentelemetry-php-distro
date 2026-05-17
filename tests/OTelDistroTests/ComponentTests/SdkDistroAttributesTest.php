@@ -88,10 +88,10 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
         return $result;
     }
 
-    public static function appCodeForTestAttributes(MixedMap $appCodeArgs): void
+    public static function appCodeForTestAttributes(MixedMap $appCodeRequestArgs): void
     {
         self::appCodeSetsHowFinished(
-            $appCodeArgs,
+            $appCodeRequestArgs,
             /**
              * @retrun array<string, mixed>
              */
@@ -125,13 +125,13 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
             }
         );
 
-        $appCodeArgs = $testArgs->cloneAsArray();
-        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeArgs);
+        $appCodeRequestArgs = $testArgs->cloneAsArray();
+        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestAttributes']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeArgs): void {
-                $appCodeRequestParams->setAppCodeArgs($appCodeArgs);
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
             }
         );
 
@@ -156,7 +156,7 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
 
         // Assert
 
-        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeArgs);
+        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
         $dbgCtx->add(compact('appCodeContextData'));
         self::assertTrue($appCodeContextData->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
 
