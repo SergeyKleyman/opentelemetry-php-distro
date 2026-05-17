@@ -62,10 +62,9 @@ final class BootstrapStageLogger
         self::$classNamePrefixToRemove = $rootNamespace . '\\';
 
         self::logWithLevel(
-            LogFeature::BOOTSTRAP,
-            BootstrapStageLogger::LEVEL_DEBUG,
+            self::LEVEL_DEBUG,
             'Exiting...'
-            . '; maxEnabledLevel: ' . BootstrapStageLogger::levelIntToString($maxEnabledLevel)
+            . '; maxEnabledLevel: ' . self::levelIntToString($maxEnabledLevel)
             . '; phpSrcCodePathPrefixToRemove: ' . self::$phpSrcCodePathPrefixToRemove
             . '; classNamePrefixToRemove: ' . self::$classNamePrefixToRemove
             . '; pid: ' . self::nullableToLog(self::$pid),
@@ -150,9 +149,9 @@ final class BootstrapStageLogger
         return self::processClassNameForLog($class) . '::' . $func;
     }
 
-    public static function logWithLevel(int $logFeature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    private static function logWithLevel(int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithFeatureAndLevel($logFeature, $statementLevel, $message, $file, $line, $class, $func);
+        self::logWithFeatureAndLevel(LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
     }
 
     public static function logWithFeatureAndLevel(int $prodLogFeature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
@@ -192,6 +191,6 @@ final class BootstrapStageLogger
      */
     public static function possiblySecuritySensitive(mixed $value): mixed
     {
-        return self::isEnabledForLevel(BootstrapStageLogger::LEVEL_TRACE) ? $value : 'REDACTED (POSSIBLY SECURITY SENSITIVE) DATA';
+        return self::isEnabledForLevel(self::LEVEL_TRACE) ? $value : 'REDACTED (POSSIBLY SECURITY SENSITIVE) DATA';
     }
 }
