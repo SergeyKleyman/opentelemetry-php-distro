@@ -21,6 +21,7 @@ use OTelDistroTests\Util\MixedMap;
 use OTelDistroTests\Util\RangeUtil;
 use OTelDistroTests\Util\TextUtilForTests;
 use OpenTelemetry\SemConv\Attributes\ServiceAttributes;
+use OpenTelemetry\SemConv\Attributes\TelemetryAttributes;
 use OpenTelemetry\SemConv\Incubating\Attributes\TelemetryIncubatingAttributes;
 use PHPUnit\Framework\Assert;
 use ReflectionClass;
@@ -112,10 +113,10 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
             subAppCode: [__CLASS__, 'appCodeForTestAttributes'],
             additionalAssertCode: function (DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput) use ($testArgs): void {
                 $expectedResourceAttributes = [
-                    TelemetryIncubatingAttributes::TELEMETRY_DISTRO_NAME    => 'opentelemetry-php-distro',
-                    TelemetryIncubatingAttributes::TELEMETRY_SDK_LANGUAGE   => 'php',
-                    TelemetryIncubatingAttributes::TELEMETRY_SDK_NAME       => 'opentelemetry',
-                    TelemetryIncubatingAttributes::TELEMETRY_SDK_VERSION    => self::getOTelSdkVersion(),
+	            TelemetryIncubatingAttributes::TELEMETRY_DISTRO_NAME => 'opentelemetry-php-distro',
+	            TelemetryAttributes::TELEMETRY_SDK_LANGUAGE => 'php',
+	            TelemetryAttributes::TELEMETRY_SDK_NAME => 'opentelemetry',
+	            TelemetryAttributes::TELEMETRY_SDK_VERSION => self::getOTelSdkVersion(),
                 ];
                 $notExpectedAttributes = [];
 
