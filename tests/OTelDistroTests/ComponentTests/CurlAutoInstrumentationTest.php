@@ -46,7 +46,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
 {
     private const AUTO_INSTRUMENTATION_NAME = 'curl';
 
-    private const RESOURCES_CLIENT_KEY = 'resources_client';
+    private const RESOURCES_CLEANER_CLIENT_KEY = 'resources_cleaner_client';
     private const HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY = 'http_app_code_request_params_for_server';
     private const HTTP_REQUEST_HEADER_NAME_PREFIX = 'OTel_PHP_distro_custom_header_';
     private const SERVER_RESPONSE_BODY = 'Response from server app code body';
@@ -119,7 +119,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
         }
 
         $requestParams = $appCodeRequestArgs->getObject(self::HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY, HttpAppCodeRequestParams::class);
-        $resourcesCleanerClient = $appCodeRequestArgs->getObject(self::RESOURCES_CLIENT_KEY, ResourcesCleanerClient::class);
+        $resourcesCleanerClient = $appCodeRequestArgs->getObject(self::RESOURCES_CLEANER_CLIENT_KEY, ResourcesCleanerClient::class);
 
         $curlHandleRaw = curl_init(UrlUtil::buildFullUrl($requestParams->urlParts));
         self::assertInstanceOf(CurlHandle::class, $curlHandleRaw);
@@ -199,7 +199,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
                 $clientAppCodeReqParams->setAppCodeRequestArgs(
                     [
                         self::HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY => $appCodeRequestParamsForServer,
-                        self::RESOURCES_CLIENT_KEY => $resourcesCleanerClient,
+                        self::RESOURCES_CLEANER_CLIENT_KEY => $resourcesCleanerClient,
                     ]
                     + $testArgs->cloneAsArray()
                 );
