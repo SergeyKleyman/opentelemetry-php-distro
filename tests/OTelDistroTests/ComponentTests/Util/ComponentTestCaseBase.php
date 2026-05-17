@@ -8,6 +8,7 @@ use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\ComponentTests\Util\OtlpData\Span;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\Config\CompositeRawSnapshotSource;
 use OTelDistroTests\Util\Config\ConfigSnapshotForProd;
@@ -17,6 +18,7 @@ use OTelDistroTests\Util\Config\OptionsForProdMetadata;
 use OTelDistroTests\Util\Config\Parser as ConfigParser;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\DebugContextScopeRef;
 use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\Log\LogLevelUtil;
@@ -36,6 +38,7 @@ class ComponentTestCaseBase extends TestCaseBase
     protected const SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY = 'should_app_code_create_dummy_span';
     protected const APP_CODE_DUMMY_SPAN_NAME = 'app_code_dummy_span_name';
 
+    protected const SUB_APP_CODE_TO_CALL_KEY = 'app_sub_code_to_call';
     protected const DID_APP_CODE_FINISH_SUCCESSFULLY_KEY = 'is_app_code_finished_successfully';
     protected const THROWABLE_FROM_APP_CODE_KEY = 'throwable_from_app_code';
 
