@@ -104,7 +104,7 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
         return AssertEx::notNull(InstalledVersions::getPrettyVersion($otelSdkPackageName));
     }
 
-    public function implTestAttributes(MixedMap $testArgs): void
+    private function implTestAttributes(MixedMap $testArgs): void
     {
         $testArgsEx = $testArgs->cloneAsArray();
         ArrayUtilForTests::addAssertingKeyNew(OptionForProdName::resource_attributes->name, self::buildOTelResourceAttributesForAppProcess($testArgs), /* in,out */ $testArgsEx);

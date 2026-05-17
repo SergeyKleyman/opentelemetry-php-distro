@@ -214,11 +214,11 @@ final class PackagesPhpRequirementTest extends ComponentTestCaseBase
         $helperScript = __DIR__ . DIRECTORY_SEPARATOR . 'helperToTestPackagesPhpRequirement.php';
         $helperScriptFileInfo = new SplFileInfo($helperScript);
         $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
-            dbgProcessName:            $helperScriptFileInfo->getBasename($helperScriptFileInfo->getExtension()),
-            command:                   "php \"$helperScript\" \"$installedDistroVendorDir\"",
-            envVars:                   EnvVarUtilForTests::getAll(),
-            resourcesCleanerClient:    $resourcesCleanerHandle->getClient(),
-            isTestScoped:              true,
+            dbgProcessName: $helperScriptFileInfo->getBasename($helperScriptFileInfo->getExtension()),
+            command: "php \"$helperScript\" \"$installedDistroVendorDir\"",
+            envVars: EnvVarUtilForTests::getAll(),
+            resourcesCleanerClient: $resourcesCleanerHandle->getClient(),
+            isTestScoped: true,
             maxWaitTimeInMicroseconds: intval(TimeUtil::secondsToMicroseconds(60)), // 1 minute
         );
         $dbgCtx->add(compact('procInfo'));

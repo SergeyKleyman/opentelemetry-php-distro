@@ -81,12 +81,12 @@ final class ProcessUtilTest extends ComponentTestCaseBase
 
         $loggerProxy && $loggerProxy->log(__LINE__, 'Before ProcessUtil::startProcessAndWaitForItToExit');
         $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
-            dbgProcessName:            $dbgProcessName,
-            command:                   $command,
-            envVars:                   $envVars,
-            resourcesCleanerClient:    $testCaseHandle->getResourcesCleanerClient(),
-            isTestScoped:              true,
-            maxWaitTimeInMicroseconds: $waitForHelperToExitSecondsInMicroseconds
+            dbgProcessName: $dbgProcessName,
+            command: $command,
+            envVars: $envVars,
+            resourcesCleanerClient: $testCaseHandle->getResourcesCleanerClient(),
+            isTestScoped: true,
+            maxWaitTimeInMicroseconds: $waitForHelperToExitSecondsInMicroseconds,
         );
         $dbgCtx->add(compact('procInfo'));
         $loggerProxy && $loggerProxy->log(__LINE__, 'After ProcessUtil::startProcessAndWaitForItToExit');

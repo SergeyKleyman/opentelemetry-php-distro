@@ -73,7 +73,7 @@ final class ResourcesCleanerClient
         && $loggerProxy->log('Successfully registered process to terminate with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('pid', 'isTestScoped'));
     }
 
-    public function registerFileToDelete(string $fullPath, bool $isTestScoped): void
+    private function registerFileToDelete(string $fullPath, bool $isTestScoped): void
     {
         ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__))
         && $loggerProxy->log('Registering file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('fullPath', 'isTestScoped'));

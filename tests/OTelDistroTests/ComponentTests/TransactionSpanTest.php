@@ -84,7 +84,7 @@ final class TransactionSpanTest extends ComponentTestCaseBase
         }
     }
 
-    public function implTestTransactionSpan(MixedMap $testArgs): void
+    private function implTestTransactionSpan(MixedMap $testArgs): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
@@ -104,7 +104,7 @@ final class TransactionSpanTest extends ComponentTestCaseBase
         $appCodeRequestArgs = $testArgs->cloneAsArray();
         AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
-        ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, [__CLASS__, 'appCodeForTestTransactionSpan'], /* in,out */ $appCodeRequestArgs);
+        ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, [__CLASS__, 'appCodeCreatesDummySpan'], /* in,out */ $appCodeRequestArgs);
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeSetsHowFinished']),
             function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {

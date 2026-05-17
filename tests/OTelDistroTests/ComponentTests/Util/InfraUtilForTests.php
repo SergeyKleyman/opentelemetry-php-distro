@@ -31,11 +31,11 @@ final class InfraUtilForTests
     public static function buildTestInfraDataPerProcess(string $targetSpawnedProcessInternalId, array $targetServerPorts, ?ResourcesCleanerHandle $resourcesCleaner): TestInfraDataPerProcess
     {
         return new TestInfraDataPerProcess(
-            rootProcessId:                            ProcessUtil::getCurrentPid(),
+            rootProcessId: ProcessUtil::getCurrentPid(),
             resourcesCleanerSpawnedProcessInternalId: $resourcesCleaner?->spawnedProcessInternalId,
-            resourcesCleanerPort:                     $resourcesCleaner?->getMainPort(),
-            thisSpawnedProcessInternalId:             $targetSpawnedProcessInternalId,
-            thisServerPorts:                          $targetServerPorts
+            resourcesCleanerPort: $resourcesCleaner?->getMainPort(),
+            thisSpawnedProcessInternalId: $targetSpawnedProcessInternalId,
+            thisServerPorts: $targetServerPorts,
         );
     }
 

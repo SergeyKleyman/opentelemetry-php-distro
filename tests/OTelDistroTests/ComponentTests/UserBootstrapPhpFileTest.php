@@ -48,7 +48,7 @@ final class UserBootstrapPhpFileTest extends ComponentTestCaseBase
         return [UserBootstrapPhpFileShared::GLOBALS_KEY => ArrayUtil::getValueIfKeyExistsElse(UserBootstrapPhpFileShared::GLOBALS_KEY, $GLOBALS, null)];
     }
 
-    public function implTestVariousValues(MixedMap $testArgs): void
+    private function implTestVariousValues(MixedMap $testArgs): void
     {
         self::implTestForAppCodeSetsHowFinished(
             testArgs: $testArgs,

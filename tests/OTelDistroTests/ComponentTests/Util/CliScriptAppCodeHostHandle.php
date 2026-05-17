@@ -114,11 +114,11 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars', 'expectedExitCode'));
 
         $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
-            dbgProcessName:            $dbgProcessName,
-            command:                   $command,
-            envVars:                   $envVars,
-            resourcesCleanerClient:    $this->resourcesCleaner->getClient(),
-            isTestScoped:              true,
+            dbgProcessName: $dbgProcessName,
+            command: $command,
+            envVars: $envVars,
+            resourcesCleanerClient: $this->resourcesCleaner->getClient(),
+            isTestScoped: true,
             maxWaitTimeInMicroseconds: 30 * 1000 * 1000 /* 30 seconds */,
         );
         $logger->addAllContext(compact('procInfo'));
