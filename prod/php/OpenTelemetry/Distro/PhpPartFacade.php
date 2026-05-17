@@ -68,7 +68,6 @@ final class PhpPartFacade
 
         require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/StaticClassTrait.php';
-        require __DIR__ . DIRECTORY_SEPARATOR . 'Log/LogFeature.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/BoolUtil.php';
 
         BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__, __NAMESPACE__);
