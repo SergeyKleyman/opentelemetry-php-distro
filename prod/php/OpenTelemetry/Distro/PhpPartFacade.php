@@ -8,6 +8,7 @@ namespace OpenTelemetry\Distro;
 
 use OpenTelemetry\Distro\HttpTransport\NativeHttpTransportFactory;
 use OpenTelemetry\Distro\InferredSpans\InferredSpans;
+use OpenTelemetry\Distro\Log\LogFeature;
 use OpenTelemetry\Distro\Log\NativeLogWriter;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
@@ -67,6 +68,7 @@ final class PhpPartFacade
 
         require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/StaticClassTrait.php';
+        require __DIR__ . DIRECTORY_SEPARATOR . 'Log/LogFeature.php';
         require __DIR__ . DIRECTORY_SEPARATOR . 'Util/BoolUtil.php';
 
         BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__, __NAMESPACE__);
@@ -398,5 +400,13 @@ final class PhpPartFacade
     private static function getCurrentSourceCodeClass(): string
     {
         return __CLASS__;
+    }
+
+    /**
+     * Must be defined in class using BootstrapStageLoggingClassTrait
+     */
+    private static function getCurrentLogFeature(): int
+    {
+        return LogFeature::BOOTSTRAP;
     }
 }

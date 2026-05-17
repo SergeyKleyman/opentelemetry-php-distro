@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use Closure;
+use OpenTelemetry\Distro\Log\LogFeature;
 
 /**
  * @phpstan-type WriteToSink Closure(int $level, int $feature, string $file, int $line, string $func, string $message): void
@@ -56,7 +57,9 @@ final class BootstrapStageLogger
         self::$phpSrcCodePathPrefixToRemove = $phpSrcCodeRootDir . DIRECTORY_SEPARATOR;
         self::$classNamePrefixToRemove = $rootNamespace . '\\';
 
-        self::logDebug(
+        self::logWithLevel(
+            LogFeature::BOOTSTRAP,
+            self::LEVEL_DEBUG,
             'Exiting...'
             . '; maxEnabledLevel: ' . self::levelToString($maxEnabledLevel)
             . '; phpSrcCodePathPrefixToRemove: ' . self::$phpSrcCodePathPrefixToRemove
@@ -81,54 +84,6 @@ final class BootstrapStageLogger
     public static function nullableToLog(null|int|string $str): string
     {
         return $str === null ? 'null' : strval($str);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logCritical(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_CRITICAL, $message, $file, $line, $class, $func);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logError(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_ERROR, $message, $file, $line, $class, $func);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logWarning(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_WARNING, $message, $file, $line, $class, $func);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logInfo(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_INFO, $message, $file, $line, $class, $func);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logDebug(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_DEBUG, $message, $file, $line, $class, $func);
-    }
-
-    /**
-     * @noinspection PhpUnused
-     */
-    public static function logTrace(string $message, string $file, int $line, string $class, string $func): void
-    {
-        self::logWithLevel(self::LEVEL_TRACE, $message, $file, $line, $class, $func);
     }
 
     public static function isEnabledForLevel(int $statementLevel): bool
@@ -176,9 +131,9 @@ final class BootstrapStageLogger
         return self::processClassNameForLog($class) . '::' . $func;
     }
 
-    public static function logWithLevel(int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
+    public static function logWithLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
     {
-        self::logWithFeatureAndLevel(Log\LogFeature::BOOTSTRAP, $statementLevel, $message, $file, $line, $class, $func);
+        self::logWithFeatureAndLevel($feature, $statementLevel, $message, $file, $line, $class, $func);
     }
 
     public static function logWithFeatureAndLevel(int $feature, int $statementLevel, string $message, string $file, int $line, string $class, string $func): void
