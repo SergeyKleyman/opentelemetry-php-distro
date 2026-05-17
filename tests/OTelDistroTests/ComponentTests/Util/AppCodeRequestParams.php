@@ -24,7 +24,7 @@ class AppCodeRequestParams implements LoggableInterface
      */
     public function setAppCodeRequestArgs(MixedMap|array $appCodeRequestArgs): void
     {
-        $this->dataPerRequest->appCodeArguments = $appCodeRequestArgs instanceof MixedMap ? $appCodeRequestArgs->cloneAsArray() : $appCodeRequestArgs;
+        $this->dataPerRequest->appCodeRequestArgs = $appCodeRequestArgs instanceof MixedMap ? $appCodeRequestArgs->cloneAsArray() : $appCodeRequestArgs;
     }
 
     /** @noinspection PhpUnused */
