@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use Closure;
+use OpenTelemetry\Distro\Log\LogFeature;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 
 /**

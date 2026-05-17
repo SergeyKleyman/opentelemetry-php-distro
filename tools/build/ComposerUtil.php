@@ -45,7 +45,7 @@ final class ComposerUtil
      */
     public static function execComposerInstallShellCommand(bool $withDev, string $additionalArgs = '', array $envVars = []): void
     {
-        $logLevel = LogLevel::info;
+        $logLevel = LogLevel::debug;
         if (BuildToolsLog::isLevelEnabled($logLevel)) {
             self::logWithLevel($logLevel, __LINE__, __METHOD__, 'Current directory: ' . BuildToolsUtil::getCurrentDirectory());
             BuildToolsUtil::listDirectoryContents(BuildToolsUtil::getCurrentDirectory());

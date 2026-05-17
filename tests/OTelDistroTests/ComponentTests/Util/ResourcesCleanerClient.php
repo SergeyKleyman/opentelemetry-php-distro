@@ -76,8 +76,8 @@ final class ResourcesCleanerClient
     /** @noinspection PhpSameParameterValueInspection */
     private function registerFileToDelete(string $fullPath, bool $isTestScoped): void
     {
-        ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__))
-        && $loggerProxy->log('Registering file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('fullPath'));
+        $logDebug = $this->logger->inherit()->addAllContext(compact('fullPath', 'isTestScoped'))->ifDebugLevelEnabledNoLine(__FUNCTION__);
+        $logDebug?->log(__LINE__, 'Registering file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
 
         $response = HttpClientUtilForTests::sendRequest(
             HttpMethods::POST,
@@ -89,8 +89,7 @@ final class ResourcesCleanerClient
             throw new ComponentTestsInfraException('Failed to register with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
         }
 
-        ($loggerProxy = $this->logger->ifDebugLevelEnabled(__LINE__, __FUNCTION__))
-        && $loggerProxy->log('Successfully registered file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('fullPath'));
+        $logDebug?->log(__LINE__, 'Successfully registered file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
     }
 
     public function createTempFile(string $fileNamePrefix, bool $shouldBeDeletedOnTestExit = true): string

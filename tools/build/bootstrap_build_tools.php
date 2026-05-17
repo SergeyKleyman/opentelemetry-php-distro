@@ -42,10 +42,21 @@ $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
 $maxEnabledLogLevel = $getMaxEnabledLogLevelConfig() ?? BuildToolsLog::DEFAULT_LEVEL;
 BuildToolsLog::configure($maxEnabledLogLevel);
 
-$writeToSinkForBootstrapStageLogger = function (int $level, int $feature, string $file, int $line, string $func, string $text): void {
-    BuildToolsLog::writeAsProdSink($level, $feature, $file, $line, $func, $text);
-};
-BootstrapStageLogger::configure($maxEnabledLogLevel->value, $prodPhpDistroPath, __NAMESPACE__, $writeToSinkForBootstrapStageLogger);
+BootstrapStageLogger::configure(
+    maxEnabledLevel: $maxEnabledLogLevel->value,
+    phpSrcCodeRootDir: $prodPhpDistroPath,
+    rootNamespace: __NAMESPACE__,
+    formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
+        BuildToolsLog::defaultFormatAndWrite(
+            levelString: BootstrapStageLogger::levelIntToString($level),
+            featureOrCategoryString: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
+            file: $file,
+            line: $line,
+            func: $func,
+            messageWithContext: $message
+        );
+    }
+);
 
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireAutoloaderForClassesInDirectory.php';
 AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);

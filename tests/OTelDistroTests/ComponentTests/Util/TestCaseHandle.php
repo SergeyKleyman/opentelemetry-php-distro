@@ -7,6 +7,7 @@ namespace OTelDistroTests\ComponentTests\Util;
 use Closure;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\AmbientContextForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
@@ -117,7 +118,7 @@ final class TestCaseHandle implements LoggableInterface
     {
         if ($this->escalatedLogLevelForProdCode !== null) {
             $escalatedLogLevelForProdCodeAsString = $this->escalatedLogLevelForProdCode->name;
-            $params->setProdOption(AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName() ?? OptionForProdName::log_level_syslog, $escalatedLogLevelForProdCodeAsString);
+            $params->setProdOption(AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName(), $this->escalatedLogLevelForProdCode->name);
         }
         /** @noinspection HttpUrlsUsage */
         $params->setProdOption(OptionForProdName::exporter_otlp_endpoint, 'http://' . HttpServerHandle::CLIENT_LOCALHOST_ADDRESS . ':' . $this->mockOTelCollector->getPortForAgent());
@@ -136,15 +137,15 @@ final class TestCaseHandle implements LoggableInterface
     }
 
     /**
-     * @return list<LogLevel>
+     * @return array<string, LogLevel>
      */
-    public function getProdCodeLogLevels(): array
+    public function getProdCodeLogLevels(OptionForProdName $logLevelOptName): array
     {
         $result = [];
         /** @var ?AppCodeHostHandle $appCodeHost */
-        foreach ([$this->mainAppCodeHost, $this->additionalHttpAppCodeHost] as $appCodeHost) {
+        foreach (['mainAppCodeHost' => $this->mainAppCodeHost, 'additionalHttpAppCodeHost' => $this->additionalHttpAppCodeHost] as $dbgDesc => $appCodeHost) {
             if ($appCodeHost !== null) {
-                $result[] = $appCodeHost->appCodeHostParams->buildProdConfig()->effectiveLogLevel();
+                $result[$dbgDesc] = AssertEx::isInstanceOf(LogLevel::class, $appCodeHost->appCodeHostParams->buildProdConfig()->getOptionValueByName($logLevelOptName));
             }
         }
         return $result;
