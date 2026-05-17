@@ -167,11 +167,6 @@ final class PhpPartFacade
         return true;
     }
 
-    private static function isDistroEnabled(): bool
-    {
-        return self::getBoolEnvVar(self::IS_DISTRO_ENABLED_ENV_VAR_NAME, default: true);
-    }
-
     public static function parseBoolValue(string $envVarVal): ?bool
     {
         foreach (['true', 'yes', 'on', '1'] as $trueStringValue) {
@@ -186,6 +181,11 @@ final class PhpPartFacade
         }
 
         return null;
+    }
+
+    private static function isDistroEnabled(): bool
+    {
+        return self::getBoolEnvVar(self::IS_DISTRO_ENABLED_ENV_VAR_NAME, default: true);
     }
 
     public static function getBoolEnvVar(string $envVarName, bool $default): bool
