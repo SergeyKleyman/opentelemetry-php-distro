@@ -26,8 +26,8 @@ use OTelDistroTests\Util\MixedMap;
  */
 final class ProcessUtilTest extends ComponentTestCaseBase
 {
-    private const EXIT_CODE = 'exit_code';
-    private const SHOULD_WAIT_SUCCEED = 'should_wait_succeed';
+    private const PROCESS_EXIT_CODE_KEY = 'process_exit_code';
+    private const SHOULD_WAIT_SUCCEED_KEY = 'should_wait_succeed';
 
     /**
      * @return iterable<string, array{MixedMap}>
@@ -36,8 +36,8 @@ final class ProcessUtilTest extends ComponentTestCaseBase
     {
         return self::adaptDataProviderForTestBuilderToSmokeToDescToMixedMap(
             (new DataProviderForTestBuilder())
-                ->addKeyedDimensionOnlyFirstValueCombinable(self::EXIT_CODE, [123, 231])
-                ->addBoolKeyedDimensionOnlyFirstValueCombinable(self::SHOULD_WAIT_SUCCEED)
+                ->addKeyedDimensionOnlyFirstValueCombinable(self::PROCESS_EXIT_CODE_KEY, [123, 231])
+                ->addBoolKeyedDimensionOnlyFirstValueCombinable(self::SHOULD_WAIT_SUCCEED_KEY)
         );
     }
 
@@ -51,8 +51,8 @@ final class ProcessUtilTest extends ComponentTestCaseBase
         $loggerProxy = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
 
         $testCaseHandle = $this->getTestCaseHandle();
-        $exitCode = $testArgs->getInt(self::EXIT_CODE);
-        $shouldWaitSucceed = $testArgs->getBool(self::SHOULD_WAIT_SUCCEED);
+        $exitCode = $testArgs->getInt(self::PROCESS_EXIT_CODE_KEY);
+        $shouldWaitSucceed = $testArgs->getBool(self::SHOULD_WAIT_SUCCEED_KEY);
         if ($shouldWaitSucceed) {
             $helperToSleepSeconds = 0;
             $waitForHelperToExitSecondsInMicroseconds = 100 * 1000_000;
@@ -80,13 +80,20 @@ final class ProcessUtilTest extends ComponentTestCaseBase
         );
 
         $loggerProxy && $loggerProxy->log(__LINE__, 'Before ProcessUtil::startProcessAndWaitForItToExit');
-        $procInfo = ProcessUtil::startProcessAndWaitForItToExit($dbgProcessName, $command, $envVars, $waitForHelperToExitSecondsInMicroseconds);
+        $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
+            dbgProcessName: $dbgProcessName,
+            command: $command,
+            envVars: $envVars,
+            resourcesCleanerClient: $testCaseHandle->getResourcesCleanerClient(),
+            isTestScoped: true,
+            maxWaitTimeInMicroseconds: $waitForHelperToExitSecondsInMicroseconds,
+        );
         $dbgCtx->add(compact('procInfo'));
         $loggerProxy && $loggerProxy->log(__LINE__, 'After ProcessUtil::startProcessAndWaitForItToExit');
         if ($shouldWaitSucceed) {
-            self::assertSame($exitCode, $procInfo['exitCode']);
+            self::assertSame($exitCode, $procInfo->exitCode);
         } else {
-            self::assertNull($procInfo['exitCode']);
+            self::assertNull($procInfo->exitCode);
         }
     }
 }
