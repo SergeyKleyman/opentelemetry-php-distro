@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
@@ -85,7 +86,8 @@ final class ProcessUtil
         array $envVars,
         ResourcesCleanerClient $resourcesCleanerClient,
         bool $isTestScoped,
-        int $maxWaitTimeInMicroseconds
+        int $maxWaitTimeInMicroseconds,
+        ?LogLevel $logLevelTimedout = null,
     ): ProcessInfo {
         $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__);
         $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars'));
@@ -100,9 +102,9 @@ final class ProcessUtil
         );
         $logger->addAllContext(compact('processHandle'));
 
-        $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds);
+        $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
         if (!$processHandle->getCurrentInfo()->hasExited()) {
-            $logger->ifWarningLevelEnabled(__LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out - terminating the process');
+            $logger->ifLevelEnabled($logLevelTimedout ?? LogLevel::warning, __LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out - terminating the process');
             self::terminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
         }
 
