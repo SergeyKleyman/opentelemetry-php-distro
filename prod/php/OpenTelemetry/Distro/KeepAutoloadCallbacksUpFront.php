@@ -93,7 +93,7 @@ final class KeepAutoloadCallbacksUpFront
         mixed $returnValue,
         ?Throwable $throwable,
     ): void {
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
 
         if ($this->shouldIgnoreRegisterCalls) {
             self::logDebug(__LINE__, __FUNCTION__, 'shouldIgnoreRegisterCalls is true - not doing anything');
@@ -119,7 +119,7 @@ final class KeepAutoloadCallbacksUpFront
         self::unregisterCallbacks();
         self::registerCallbacks();
 
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting...');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting...');
     }
 
     private function unregisterCallbacks(): void
@@ -131,7 +131,7 @@ final class KeepAutoloadCallbacksUpFront
 
     private function registerCallbacks(): void
     {
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
 
         $this->shouldIgnoreRegisterCalls = true;
         try {
@@ -144,7 +144,7 @@ final class KeepAutoloadCallbacksUpFront
             $this->shouldIgnoreRegisterCalls = false;
         }
 
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
     }
 
     /**

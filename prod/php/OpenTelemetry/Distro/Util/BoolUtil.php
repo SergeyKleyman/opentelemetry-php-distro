@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro\Util;
 
+use OpenTelemetry\Distro\PhpPartFacade;
+
 final class BoolUtil
 {
     use StaticClassTrait;
@@ -13,19 +15,9 @@ final class BoolUtil
         return $val ? 'true' : 'false';
     }
 
-    public static function parseValue(string $envVarVal): ?bool
+    /** @noinspection PhpUnused */
+    public static function parseValue(string $boolStringVal): ?bool
     {
-        foreach (['true', 'yes', 'on', '1'] as $trueStringValue) {
-            if (strcasecmp($envVarVal, $trueStringValue) === 0) {
-                return true;
-            }
-        }
-        foreach (['false', 'no', 'off', '0'] as $falseStringValue) {
-            if (strcasecmp($envVarVal, $falseStringValue) === 0) {
-                return false;
-            }
-        }
-
-        return null;
+        return PhpPartFacade::parseBoolValue($boolStringVal);
     }
 }

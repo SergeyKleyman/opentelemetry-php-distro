@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
+namespace OTelDistroTests\ComponentTests\ScopedDepsTestApp;
 
 use Closure;
-use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
+use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\SplAutoloadFunctionsLogUtil;
 use ReflectionClass;
 use ReflectionFunction;
 use RuntimeException;
 use Throwable;
 
-final class App
+final class ScopedDepsTestApp
 {
     private static ?int $maxEnabledLogLevel = null;
 
@@ -42,7 +42,7 @@ final class App
         /** @var ?string $testsRepoRootDirPath */
         static $testsRepoRootDirPath = null;
         if ($testsRepoRootDirPath === null) {
-            $testsRepoRootDirPath = self::getEnvVar(Shared::buildEnvVarName(Shared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX));
+            $testsRepoRootDirPath = self::getEnvVar(ScopedDepsTestShared::buildEnvVarName(ScopedDepsTestShared::TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX));
         }
 
         require $testsRepoRootDirPath . DIRECTORY_SEPARATOR . $pathFromRepoRoot;
@@ -50,18 +50,20 @@ final class App
 
     private static function parseLogLevelConfig(): void
     {
-        if (!class_exists(BootstrapStageLogLevelUtil::class)) {
-            self::requirePhpFileOutsideApp(pathFromRepoRoot: 'prod/php/OpenTelemetry/Distro/BootstrapStageLogLevelUtil.php');
+        if (!class_exists(BootstrapStageLogger::class)) {
+            self::requirePhpFileOutsideApp(pathFromRepoRoot: 'prod/php/OpenTelemetry/Distro/requireBootstrapStageLogger.php');
         }
 
-        self::$maxEnabledLogLevel = BootstrapStageLogLevelUtil::levelStringToInt(self::getEnvVar(Shared::buildEnvVarName(Shared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX)));
+        self::$maxEnabledLogLevel = BootstrapStageLogger::levelStringToInt(
+            self::getEnvVar(ScopedDepsTestShared::buildEnvVarName(ScopedDepsTestShared::LOG_LEVEL_ENV_VAR_NAME_SUFFIX))
+        );
 
-        self::logDebug(__LINE__, __FUNCTION__, 'maxEnabledLogLevel: ' . (self::$maxEnabledLogLevel === null ? 'null' : BootstrapStageLogLevelUtil::levelIntToString(self::$maxEnabledLogLevel)));
+        self::logDebug(__LINE__, __FUNCTION__, 'maxEnabledLogLevel: ' . (self::$maxEnabledLogLevel === null ? 'null' : BootstrapStageLogger::levelIntToString(self::$maxEnabledLogLevel)));
     }
 
     private static function logIfClassesExist(): void
     {
-        foreach (Shared::ALL_CLASS_NAMES as $fqClassName) {
+        foreach (ScopedDepsTestShared::ALL_CLASS_NAMES as $fqClassName) {
             $msgSuffix = class_exists($fqClassName, autoload: false)
                 ? 'exists (source code file: ' . (new ReflectionClass($fqClassName))->getFileName() . ')'
                 : 'does NOT exist';
@@ -80,7 +82,7 @@ final class App
          *
          * @noinspection PhpRedundantVariableDocTypeInspection
          */
-        static $logLevel = BootstrapStageLogLevelUtil::LEVEL_DEBUG;
+        static $logLevel = BootstrapStageLogger::LEVEL_DEBUG;
         if (self::isLogEnabledForLevel($logLevel)) {
             self::logWithLevel($logLevel, __LINE__, __FUNCTION__, $message, ['spl_autoload_functions()' => SplAutoloadFunctionsLogUtil::callbacksToLoggable(spl_autoload_functions())]);
         }
@@ -114,8 +116,8 @@ final class App
             return;
         }
 
-        $formattedStatement = Shared::APP_LOG_LINE_PREFIX;
-        $formattedStatement .=  ' ' . '[' . BootstrapStageLogLevelUtil::levelIntToString($level) . ']';
+        $formattedStatement = ScopedDepsTestShared::APP_LOG_LINE_PREFIX;
+        $formattedStatement .=  ' ' . '[' . BootstrapStageLogger::levelIntToString($level) . ']';
         $formattedStatement .=  ' ' . '[' . basename(__FILE__) . ':' . $srcCodeLine . ']';
         $formattedStatement .=  ' ' . '[' . $srcCodeFunc . ']';
         $formattedStatement .=  ' ' . self::concatMessageAndContext($message, $context);
@@ -129,7 +131,7 @@ final class App
      */
     private static function logTrace(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
     {
-        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE, $srcCodeLine, $srcCodeFunc, $message, $context);
+        self::logWithLevel(BootstrapStageLogger::LEVEL_TRACE, $srcCodeLine, $srcCodeFunc, $message, $context);
     }
 
     /**
@@ -139,7 +141,7 @@ final class App
      */
     private static function logDebug(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
     {
-        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_DEBUG, $srcCodeLine, $srcCodeFunc, $message, $context);
+        self::logWithLevel(BootstrapStageLogger::LEVEL_DEBUG, $srcCodeLine, $srcCodeFunc, $message, $context);
     }
 
     /**
@@ -149,7 +151,7 @@ final class App
      */
     private static function logWarning(int $srcCodeLine, string $srcCodeFunc, string $message, array $context = []): void
     {
-        self::logWithLevel(BootstrapStageLogLevelUtil::LEVEL_WARNING, $srcCodeLine, $srcCodeFunc, $message, $context);
+        self::logWithLevel(BootstrapStageLogger::LEVEL_WARNING, $srcCodeLine, $srcCodeFunc, $message, $context);
     }
 
     /**
@@ -251,13 +253,13 @@ final class App
     private static function isDistroEnabled(): bool
     {
         /** @noinspection PhpFullyQualifiedNameUsageInspection */
-        return (bool)\OpenTelemetry\Distro\get_config_option_by_name(Shared::DISTRO_ENABLED_CFG_OPT_NAME);
+        return (bool)\OpenTelemetry\Distro\get_config_option_by_name(ScopedDepsTestShared::DISTRO_ENABLED_CFG_OPT_NAME);
     }
 
     private static function isScopingEnabled(): bool
     {
         /** @noinspection PhpFullyQualifiedNameUsageInspection */
-        return (bool)\OpenTelemetry\Distro\get_config_option_by_name(Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME);
+        return (bool)\OpenTelemetry\Distro\get_config_option_by_name(ScopedDepsTestShared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME);
     }
 
     /**
@@ -269,7 +271,7 @@ final class App
      */
     private static function adaptClassNameScoping(string $unscopedClassName, bool $isScoped): string
     {
-        return ($isScoped ? (Shared::SCOPING_PREFIX . '\\') : '') . $unscopedClassName; // @phpstan-ignore return.type
+        return ($isScoped ? (ScopedDepsTestShared::SCOPING_PREFIX . '\\') : '') . $unscopedClassName; // @phpstan-ignore return.type
     }
 
     private static function putFileContents(string $filePath, string $contents): void
@@ -317,10 +319,11 @@ final class App
             $isWithDistroVariants[] = true;
         }
         $result = [];
-        foreach (Shared::ALL_PACKAGE_NAMES as $packageName) {
+        foreach (ScopedDepsTestShared::ALL_PACKAGE_NAMES as $packageName) {
             $result[$packageName] = [];
             foreach ($isWithDistroVariants as $isWithDistro) {
-                $result[$packageName][Shared::buildDistroOrAppKey($isWithDistro)] = self::getInstalledVersion($packageName, $isWithDistro ? self::getDistroVendorDir() : self::getAppVendorDir());
+                $result[$packageName][ScopedDepsTestShared::buildDistroOrAppKey($isWithDistro)]
+                    = self::getInstalledVersion($packageName, $isWithDistro ? self::getDistroVendorDir() : self::getAppVendorDir());
             }
         }
         return $result;
@@ -336,11 +339,11 @@ final class App
             $isScopedVariants[] = true;
         }
         $result = [];
-        foreach (Shared::ALL_CLASS_NAMES as $fqClassName) {
+        foreach (ScopedDepsTestShared::ALL_CLASS_NAMES as $fqClassName) {
             $result[$fqClassName] = [];
             foreach ($isScopedVariants as $isScoped) {
                 $reflClass = new ReflectionClass(self::adaptClassNameScoping($fqClassName, $isScoped));
-                $result[$fqClassName][Shared::buildScopedKey($isScoped)] = self::assertIsString($reflClass->getFileName());
+                $result[$fqClassName][ScopedDepsTestShared::buildScopedKey($isScoped)] = self::assertIsString($reflClass->getFileName());
             }
         }
         return $result;
@@ -358,12 +361,12 @@ final class App
 
         $result = [];
         foreach ($isScopedVariants as $isScoped) {
-            $reflClass = new ReflectionClass(self::adaptClassNameScoping(Shared::PSR_LOG_ABSTRACTLOGGER_CLASS_NAME, $isScoped));
+            $reflClass = new ReflectionClass(self::adaptClassNameScoping(ScopedDepsTestShared::PSR_LOG_ABSTRACTLOGGER_CLASS_NAME, $isScoped));
             /**
              * @see https://github.com/php-fig/log/blob/2.0.0/src/LoggerTrait.php#L23
              * @see https://github.com/php-fig/log/blob/3.0.0/src/LoggerTrait.php#L23
              */
-            $result[Shared::buildScopedKey($isScoped)] = ($reflClass->getMethod(Shared::PSR_LOG_ABSTRACT_LOGGER_METHOD_NAME)->getReturnType() !== null);
+            $result[ScopedDepsTestShared::buildScopedKey($isScoped)] = ($reflClass->getMethod(ScopedDepsTestShared::PSR_LOG_ABSTRACT_LOGGER_METHOD_NAME)->getReturnType() !== null);
         }
         return $result;
     }
@@ -409,21 +412,21 @@ final class App
     private static function generateAuxOutput(): array
     {
         $appCodeAuxOutput = [
-            'maxEnabledLogLevel' => BootstrapStageLogLevelUtil::levelIntToString(self::assertIsNotNull(self::$maxEnabledLogLevel)),
-            Shared::DISTRO_ENABLED_CFG_OPT_NAME => self::isDistroEnabled(),
-            Shared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME => self::isScopingEnabled(),
-            Shared::APP_VENDOR_DIR_PATH_KEY => self::getAppVendorDir(),
+            'maxEnabledLogLevel' => BootstrapStageLogger::levelIntToString(self::assertIsNotNull(self::$maxEnabledLogLevel)),
+            ScopedDepsTestShared::DISTRO_ENABLED_CFG_OPT_NAME => self::isDistroEnabled(),
+            ScopedDepsTestShared::DEBUG_SCOPER_ENABLED_CFG_OPT_NAME => self::isScopingEnabled(),
+            ScopedDepsTestShared::APP_VENDOR_DIR_PATH_KEY => self::getAppVendorDir(),
             'spl_autoload_functions()' => self::toJsonEncodable(spl_autoload_functions()),
             'spl_autoload_extensions()' => spl_autoload_extensions(),
         ];
 
         if (self::isDistroEnabled()) {
-            $appCodeAuxOutput[Shared::DISTRO_VENDOR_DIR_PATH_KEY] = self::getDistroVendorDir();
+            $appCodeAuxOutput[ScopedDepsTestShared::DISTRO_VENDOR_DIR_PATH_KEY] = self::getDistroVendorDir();
         }
 
-        self::addAssertingKeyNew(Shared::PACKAGES_VERSIONS_KEY, self::generatePackagesVersions(), /* ref */ $appCodeAuxOutput);
-        self::addAssertingKeyNew(Shared::CLASSES_SOURCE_CODE_FILES_PATHS_KEY, self::generateClassesSourceCodeFilesPaths(), /* ref */ $appCodeAuxOutput);
-        self::addAssertingKeyNew(Shared::PSR_LOG_HAS_RETURN_TYPE_KEY, self::generatePsrLogHasReturnType(), /* ref */ $appCodeAuxOutput);
+        self::addAssertingKeyNew(ScopedDepsTestShared::PACKAGES_VERSIONS_KEY, self::generatePackagesVersions(), /* ref */ $appCodeAuxOutput);
+        self::addAssertingKeyNew(ScopedDepsTestShared::CLASSES_SOURCE_CODE_FILES_PATHS_KEY, self::generateClassesSourceCodeFilesPaths(), /* ref */ $appCodeAuxOutput);
+        self::addAssertingKeyNew(ScopedDepsTestShared::PSR_LOG_HAS_RETURN_TYPE_KEY, self::generatePsrLogHasReturnType(), /* ref */ $appCodeAuxOutput);
 
         return $appCodeAuxOutput;
     }
@@ -450,13 +453,13 @@ final class App
 
     public static function run(): void
     {
-        require __DIR__ . DIRECTORY_SEPARATOR . 'Shared.php';
+        require __DIR__ . DIRECTORY_SEPARATOR . 'ScopedDepsTestShared.php';
 
         self::parseLogLevelConfig();
 
         self::logInitialState();
 
-        if (self::isLogEnabledForLevel(BootstrapStageLogLevelUtil::LEVEL_TRACE)) {
+        if (self::isLogEnabledForLevel(BootstrapStageLogger::LEVEL_TRACE)) {
             spl_autoload_register(self::logClassAutoload(...), prepend: true);
             self::logAutoloadFunctions('After registering self::logClassAutoload()');
         }
@@ -468,11 +471,12 @@ final class App
 
         $appCodeAuxOutput = self::generateAuxOutput();
 
-        $appCodeAuxOutputFilePath = self::getEnvVar(Shared::buildEnvVarName(Shared::APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX));
+        $appCodeAuxOutputFilePath = self::getEnvVar(ScopedDepsTestShared::buildEnvVarName(ScopedDepsTestShared::APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX));
         self::putFileContents($appCodeAuxOutputFilePath, self::assertIsString(json_encode($appCodeAuxOutput)));
         self::logDebug(__LINE__, __FUNCTION__, 'Written app code aux output', compact('appCodeAuxOutput', 'appCodeAuxOutputFilePath'));
 
-        $isCompatibleWithNewPsrLog = self::stringToBool(self::getEnvVar(Shared::buildEnvVarName(Shared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX)));
+        $isCompatibleWithNewPsrLog =
+            self::stringToBool(self::getEnvVar(ScopedDepsTestShared::buildEnvVarName(ScopedDepsTestShared::IS_APP_COMPATIBLE_WITH_PSR_LOG_RETURN_TYPE_ENV_VAR_NAME_SUFFIX)));
         if (!$isCompatibleWithNewPsrLog) {
             self::logWarning(__LINE__, __FUNCTION__, 'About to use psr/log in a way that is expected to fail...');
         }

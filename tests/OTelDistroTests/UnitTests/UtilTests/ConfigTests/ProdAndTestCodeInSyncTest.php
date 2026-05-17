@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\UnitTests\UtilTests\ConfigTests;
 
-use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
+use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\PhpPartFacade;
 use OTelDistroTests\Util\AssertEx;
+use OTelDistroTests\Util\Config\BoolOptionParser;
 use OTelDistroTests\Util\Config\OptionForProdName;
+use OTelDistroTests\Util\Config\ParseException;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\TestCaseBase;
 use ReflectionClass;
@@ -21,11 +23,11 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
         AssertEx::sameConstValues(PhpPartFacade::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, OptionForProdName::user_bootstrap_php_file->name);
     }
 
-    public function testBootstrapStageLogLevelUtil(): void
+    public function testBootstrapStageLogger(): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
-        $bootstrapStageLoggerReflClass = new ReflectionClass(BootstrapStageLogLevelUtil::class);
+        $bootstrapStageLoggerReflClass = new ReflectionClass(BootstrapStageLogger::class);
 
         // Verify that number of LEVEL_* consts in BootstrapStageLogger is the same as the number of cases in LogLevel
         $constsNameToVal = array_filter(
@@ -49,10 +51,10 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
             $constVal = $bootstrapStageLoggerReflClass->getConstant($constName);
             self::assertSame($level->value, $constVal);
 
-            self::assertSame(strtoupper($level->name), BootstrapStageLogLevelUtil::levelIntToString($constVal));
+            self::assertSame(strtoupper($level->name), BootstrapStageLogger::levelIntToString($constVal));
 
-            self::assertSame($level->value, BootstrapStageLogLevelUtil::levelStringToInt(strtoupper($level->name)));
-            self::assertSame($level->value, BootstrapStageLogLevelUtil::levelStringToInt(strtolower($level->name)));
+            self::assertSame($level->value, BootstrapStageLogger::levelStringToInt(strtoupper($level->name)));
+            self::assertSame($level->value, BootstrapStageLogger::levelStringToInt(strtolower($level->name)));
         }
         $dbgCtx->popSubScope();
 
@@ -60,8 +62,47 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
         $maxPredefinedIntVal = max(AssertEx::notEmptyList(array_values($constsNameToVal)));
         foreach ([1, 12, 321, 4567] as $delta) {
             $notPredefinedLevelIntVal = $maxPredefinedIntVal + $delta;
-            self::assertSame('LEVEL ' . $notPredefinedLevelIntVal, BootstrapStageLogLevelUtil::levelIntToString($notPredefinedLevelIntVal));
-            self::assertNull(BootstrapStageLogLevelUtil::levelStringToInt(BootstrapStageLogLevelUtil::levelIntToString($notPredefinedLevelIntVal)));
+            self::assertSame('LEVEL ' . $notPredefinedLevelIntVal, BootstrapStageLogger::levelIntToString($notPredefinedLevelIntVal));
+            self::assertNull(BootstrapStageLogger::levelStringToInt(BootstrapStageLogger::levelIntToString($notPredefinedLevelIntVal)));
         }
+    }
+
+    public function testBoolOptionParser(): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $boolOptionParser = new BoolOptionParser();
+        $dbgCtx->pushSubScope();
+        foreach ([[BoolOptionParser::$falseRawValues, false],[BoolOptionParser::$trueRawValues, true]] as [$rawValues, $expectedParsedValue]) {
+            $dbgCtx->resetTopSubScope(compact('expectedParsedValue'));
+            $dbgCtx->pushSubScope();
+            foreach ($rawValues as $rawValue) {
+                $dbgCtx->resetTopSubScope(compact('rawValue'));
+                self::assertSame($expectedParsedValue, PhpPartFacade::parseBoolValue($rawValue));
+                self::assertSame($expectedParsedValue, $boolOptionParser->parse($rawValue));
+                self::assertSame($expectedParsedValue, PhpPartFacade::parseBoolValue(strtoupper($rawValue)));
+                self::assertSame($expectedParsedValue, $boolOptionParser->parse(strtoupper($rawValue)));
+            }
+            $dbgCtx->popSubScope();
+        }
+        $dbgCtx->popSubScope();
+
+        $assertThrowsParseException = function (callable $callable): void {
+            $thrown = false;
+            try {
+                $callable();
+            } /** @noinspection PhpUnusedLocalVariableInspection */ catch (ParseException $ex) {
+                $thrown = true;
+            }
+            self::assertTrue($thrown);
+        };
+
+        $dbgCtx->pushSubScope();
+        foreach (['invalid', 'value', '123', 'o', 't', 'f'] as $invalidRawValue) {
+            $dbgCtx->resetTopSubScope(compact('invalidRawValue'));
+            self::assertNull(PhpPartFacade::parseBoolValue($invalidRawValue));
+            $assertThrowsParseException(fn() => $boolOptionParser->parse($invalidRawValue));
+        }
+        $dbgCtx->popSubScope();
     }
 }

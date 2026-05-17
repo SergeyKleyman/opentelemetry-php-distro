@@ -6,7 +6,6 @@ namespace OpenTelemetry\DistroTools\Build;
 
 use OpenTelemetry\Distro\AutoloaderForClassesInDirectory;
 use OpenTelemetry\Distro\BootstrapStageLogger;
-use OpenTelemetry\Distro\BootstrapStageLogLevelUtil;
 use OpenTelemetry\Distro\Log\LogLevel;
 use RuntimeException;
 
@@ -28,11 +27,9 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 \OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
 
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireBootstrapStageLogger.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
 require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogLevelUtil.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'BootstrapStageLoggingClassTrait.php';
 
 $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
     $envVarVal = getenv(OTEL_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME);
@@ -51,7 +48,7 @@ BootstrapStageLogger::configure(
     rootNamespace: __NAMESPACE__,
     formatAndWrite: function (int $level, int $prodLogFeature, string $file, int $line, string $func, string $message): void {
         BuildToolsLog::defaultFormatAndWrite(
-            levelString: BootstrapStageLogLevelUtil::levelIntToString($level),
+            levelString: BootstrapStageLogger::levelIntToString($level),
             featureOrCategoryString: BuildToolsLog::prodLogFeatureIntToString($prodLogFeature),
             file: $file,
             line: $line,
@@ -61,6 +58,6 @@ BootstrapStageLogger::configure(
     }
 );
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'AutoloaderForClassesInDirectory.php';
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireAutoloaderForClassesInDirectory.php';
 AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);
 AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);

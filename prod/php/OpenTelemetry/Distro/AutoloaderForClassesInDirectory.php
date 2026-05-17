@@ -6,13 +6,9 @@ declare(strict_types=1);
 
 namespace OpenTelemetry\Distro;
 
-<<<<<<<< HEAD:prod/php/OpenTelemetry/Distro/AutoloaderForDistroClasses.php
 use OpenTelemetry\Distro\Log\LogFeature;
 
-final class AutoloaderForDistroClasses
-========
 final class AutoloaderForClassesInDirectory
->>>>>>>> main:prod/php/OpenTelemetry/Distro/AutoloaderForClassesInDirectory.php
 {
     use BootstrapStageLoggingClassTrait;
     use SplAutoloadFunctionsLogTrait;
@@ -26,24 +22,18 @@ final class AutoloaderForClassesInDirectory
         $this->autoloadFqClassNamePrefixLength = strlen($this->autoloadFqClassNamePrefix);
     }
 
-<<<<<<<< HEAD:prod/php/OpenTelemetry/Distro/AutoloaderForDistroClasses.php
-    public static function register(string $rootNamespace, string $rootNamespaceDir): callable
+    public static function register(string $dirRootNamespace, string $dirFullPath): callable
     {
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Entered');
 
-        $callback = (new self($rootNamespace, $rootNamespaceDir))->autoloadCodeForClass(...);
+        $autoloader = new self(autoloadFqClassNamePrefix: $dirRootNamespace . '\\', srcFilePathPrefix: $dirFullPath . DIRECTORY_SEPARATOR);
+        $callback = $autoloader->autoloadCodeForClass(...);
         if (!spl_autoload_register($callback)) {
-            throw new DistroRuntimeException('spl_autoload_register() returned false', context: compact('rootNamespace', 'rootNamespaceDir'));
+            throw new DistroRuntimeException('spl_autoload_register() returned false', context: compact('dirRootNamespace', 'dirFullPath'));
         }
 
-        self::logAutoloadFunctions(BootstrapStageLogLevelUtil::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
+        self::logAutoloadFunctions(BootstrapStageLogger::LEVEL_DEBUG, __LINE__, __FUNCTION__, 'Exiting');
         return $callback;
-========
-    public static function register(string $dirRootNamespace, string $dirFullPath): void
-    {
-        $autoloader = new self(autoloadFqClassNamePrefix: $dirRootNamespace . '\\', srcFilePathPrefix: $dirFullPath . DIRECTORY_SEPARATOR);
-        spl_autoload_register(($autoloader)->autoloadCodeForClass(...));
->>>>>>>> main:prod/php/OpenTelemetry/Distro/AutoloaderForClassesInDirectory.php
     }
 
     private function shouldAutoloadCodeForClass(string $fqClassName): bool

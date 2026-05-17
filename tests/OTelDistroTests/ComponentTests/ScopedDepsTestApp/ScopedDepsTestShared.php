@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
+namespace OTelDistroTests\ComponentTests\ScopedDepsTestApp;
 
-final class Shared
+final class ScopedDepsTestShared
 {
-    public const APP_LOG_LINE_PREFIX = '[OTel PHP Distro tests] [DependenciesScopingTestApp]';
+    public const APP_LOG_LINE_PREFIX = '[OTel PHP Distro tests] [ScopedDepsTest]';
 
     public const TESTS_REPO_ROOT_DIR_PATH_ENV_VAR_NAME_SUFFIX = 'tests_repo_root_dir_path';
     public const APP_CODE_AUX_OUTPUT_FILE_PATH_ENV_VAR_NAME_SUFFIX = 'app_code_aux_output_file_path';

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OTelDistroTests\ComponentTests\DependenciesScopingTestApp;
+namespace OTelDistroTests\ComponentTests\ScopedDepsTestApp;
 
 use Psr\Log\AbstractLogger;
 use Stringable;
