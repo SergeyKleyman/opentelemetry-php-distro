@@ -22,7 +22,7 @@ final class CurlHandleForTests implements LoggableInterface
 
     public function __construct(
         CurlHandle $curlHandle,
-        private readonly ResourcesCleanerClient $resourcesClient
+        private readonly ResourcesCleanerClient $resourcesCleanerClient
     ) {
         $this->curlHandle = $curlHandle;
     }
@@ -47,7 +47,7 @@ final class CurlHandleForTests implements LoggableInterface
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
         Assert::assertNotNull($this->curlHandle);
 
-        $verboseOutputFilePath = $this->resourcesClient->createTempFile(FileUtil::generateTempFileNamePrefix(ClassNameUtil::fqToShortFromRawString(__CLASS__) . '_curl_verbose_output'));
+        $verboseOutputFilePath = $this->resourcesCleanerClient->createTempFile(FileUtil::generateTempFileNamePrefix(ClassNameUtil::fqToShortFromRawString(__CLASS__) . '_curl_verbose_output'));
         $dbgCtx->add(compact('verboseOutputFilePath'));
         /** @var null|resource|false $verboseOutputFile */
         $verboseOutputFile = null;

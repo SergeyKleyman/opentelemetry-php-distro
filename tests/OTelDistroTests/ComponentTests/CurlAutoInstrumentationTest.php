@@ -119,11 +119,11 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
         }
 
         $requestParams = $appCodeRequestArgs->getObject(self::HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY, HttpAppCodeRequestParams::class);
-        $resourcesClient = $appCodeRequestArgs->getObject(self::RESOURCES_CLIENT_KEY, ResourcesCleanerClient::class);
+        $resourcesCleanerClient = $appCodeRequestArgs->getObject(self::RESOURCES_CLIENT_KEY, ResourcesCleanerClient::class);
 
         $curlHandleRaw = curl_init(UrlUtil::buildFullUrl($requestParams->urlParts));
         self::assertInstanceOf(CurlHandle::class, $curlHandleRaw);
-        $curlHandle = new CurlHandleForTests($curlHandleRaw, $resourcesClient);
+        $curlHandle = new CurlHandleForTests($curlHandleRaw, $resourcesCleanerClient);
 
         self::assertTrue($curlHandle->setOpt(CURLOPT_CONNECTTIMEOUT, HttpClientUtilForTests::CONNECT_TIMEOUT_SECONDS));
         self::assertTrue($curlHandle->setOpt(CURLOPT_TIMEOUT, HttpClientUtilForTests::TIMEOUT_SECONDS));
@@ -191,15 +191,15 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
             },
             dbgInstanceName: 'client for cUrl request',
         );
-        $resourcesClient = $testCaseHandle->getResourcesCleanerClient();
+        $resourcesCleanerClient = $testCaseHandle->getResourcesCleanerClient();
 
         $clientAppCode->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeClient']),
-            function (AppCodeRequestParams $clientAppCodeReqParams) use ($testArgs, $appCodeRequestParamsForServer, $resourcesClient): void {
+            function (AppCodeRequestParams $clientAppCodeReqParams) use ($testArgs, $appCodeRequestParamsForServer, $resourcesCleanerClient): void {
                 $clientAppCodeReqParams->setAppCodeRequestArgs(
                     [
                         self::HTTP_APP_CODE_REQUEST_PARAMS_FOR_SERVER_KEY => $appCodeRequestParamsForServer,
-                        self::RESOURCES_CLIENT_KEY                        => $resourcesClient,
+                        self::RESOURCES_CLIENT_KEY => $resourcesCleanerClient,
                     ]
                     + $testArgs->cloneAsArray()
                 );
