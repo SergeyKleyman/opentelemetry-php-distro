@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\BoolUtil;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\ConfigUtilForTests;
@@ -55,10 +56,10 @@ final class ProcessUtilTest extends ComponentTestCaseBase
         $shouldWaitSucceed = $testArgs->getBool(self::SHOULD_WAIT_SUCCEED_KEY);
         if ($shouldWaitSucceed) {
             $helperToSleepSeconds = 0;
-            $waitForHelperToExitSecondsInMicroseconds = 100 * 1000_000;
+            $waitForHelperToExitInSeconds = 100;
         } else {
             $helperToSleepSeconds = 1000;
-            $waitForHelperToExitSecondsInMicroseconds = 1;
+            $waitForHelperToExitInSeconds = 1;
         }
 
         $dbgProcessName = DbgProcessNameGenerator::generate(ClassNameUtil::fqToShort(HelperSleepsAndExitsWithArgCode::class));
@@ -79,17 +80,18 @@ final class ProcessUtilTest extends ComponentTestCaseBase
             $testCaseHandle->getResourcesCleaner(),
         );
 
-        $loggerProxy && $loggerProxy->log(__LINE__, 'Before ProcessUtil::startProcessAndWaitForItToExit');
+        $loggerProxy?->log(__LINE__, 'Before ProcessUtil::startProcessAndWaitForItToExit', compact('waitForHelperToExitInSeconds'));
         $procInfo = ProcessUtil::startProcessAndWaitForItToExit(
             dbgProcessName: $dbgProcessName,
             command: $command,
             envVars: $envVars,
             resourcesCleanerClient: $testCaseHandle->getResourcesCleanerClient(),
             isTestScoped: true,
-            maxWaitTimeInMicroseconds: $waitForHelperToExitSecondsInMicroseconds,
+            maxWaitTimeInMicroseconds: $waitForHelperToExitInSeconds * 1000_000,
+            logLevelTimedout: ($shouldWaitSucceed ? null : LogLevel::debug),
         );
         $dbgCtx->add(compact('procInfo'));
-        $loggerProxy && $loggerProxy->log(__LINE__, 'After ProcessUtil::startProcessAndWaitForItToExit');
+        $loggerProxy?->log(__LINE__, 'After ProcessUtil::startProcessAndWaitForItToExit');
         if ($shouldWaitSucceed) {
             self::assertSame($exitCode, $procInfo->exitCode);
         } else {
