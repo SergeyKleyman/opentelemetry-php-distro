@@ -403,11 +403,11 @@ final class MySqliAutoInstrumentationTest extends ComponentTestCaseBase
 
         $testCaseHandle = $this->getTestCaseHandle();
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeParams) use ($isAutoInstrumentationEnabled): void {
+            function (AppCodeHostParams $appCodeHostParams) use ($isAutoInstrumentationEnabled): void {
                 if (!$isAutoInstrumentationEnabled) {
-                    $appCodeParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
+                    $appCodeHostParams->setProdOptionIfNotNull(OptionForProdName::disabled_instrumentations, self::AUTO_INSTRUMENTATION_NAME);
                 }
-                self::disableTimingDependentFeatures($appCodeParams);
+                self::disableTimingDependentFeatures($appCodeHostParams);
             }
         );
         $appCodeHost->execAppCode(

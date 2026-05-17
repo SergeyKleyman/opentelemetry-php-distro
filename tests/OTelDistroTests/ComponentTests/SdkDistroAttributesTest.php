@@ -7,7 +7,7 @@ namespace OTelDistroTests\ComponentTests;
 use Composer\InstalledVersions;
 use OpenTelemetry\Distro\OverrideOTelSdkResourceAttributes;
 use OpenTelemetry\Distro\PhpPartVersion;
-use OTelDistroTests\ComponentTests\Util\AppCodeContextDataUtil;
+use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeContextUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
@@ -117,14 +117,14 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
         $testCaseHandle = $this->getTestCaseHandle();
 
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeParams) use ($testArgs): void {
-                self::ensureTransactionSpanEnabled($appCodeParams);
-                $appCodeParams->setProdOption(OptionForProdName::resource_attributes, self::buildOTelResourceAttributesForAppProcess($testArgs));
+            function (AppCodeHostParams $appCodeHostParams) use ($testArgs): void {
+                self::ensureTransactionSpanEnabled($appCodeHostParams);
+                $appCodeHostParams->setProdOption(OptionForProdName::resource_attributes, self::buildOTelResourceAttributesForAppProcess($testArgs));
             }
         );
 
         $appCodeRequestArgs = $testArgs->cloneAsArray();
-        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestAttributes']),
@@ -154,9 +154,9 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
 
         // Assert
 
-        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
-        $dbgCtx->add(compact('appCodeContextData'));
-        self::assertTrue($appCodeContextData->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
 
         $rootSpan = $agentBackendComms->singleRootSpan();
         $dbgCtx->add(compact('rootSpan'));
@@ -178,7 +178,7 @@ final class SdkDistroAttributesTest extends ComponentTestCaseBase
             return substr($inputVer, 0, $suffixStartPos);
         };
 
-        $distroVersionInAppContext = $appCodeContextData->getString(self::DISTRO_VERSION_IN_APP_CONTEXT);
+        $distroVersionInAppContext = $appCodeAuxOutput->getString(self::DISTRO_VERSION_IN_APP_CONTEXT);
         $dbgCtx->add(compact('distroVersionInAppContext'));
         $dbgCtx->add(['PhpPartVersion::VALUE' => PhpPartVersion::VALUE]);
         $phpPartVerWithoutSuffix = $removeVersionSuffix(PhpPartVersion::VALUE);

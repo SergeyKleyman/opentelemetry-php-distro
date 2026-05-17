@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests;
 
 use OpenTelemetry\Distro\Util\ArrayUtil;
-use OTelDistroTests\ComponentTests\Util\AppCodeContextDataUtil;
+use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
 use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
@@ -64,14 +64,14 @@ final class UserBootstrapPhpFileTest extends ComponentTestCaseBase
         $testCaseHandle = $this->getTestCaseHandle();
 
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
-            function (AppCodeHostParams $appCodeParams) use ($testArgs): void {
-                self::ensureTransactionSpanEnabled($appCodeParams);
-                self::copyProdOptionsToAppCodeHostParams($testArgs, $appCodeParams);
+            function (AppCodeHostParams $appCodeHostParams) use ($testArgs): void {
+                self::ensureTransactionSpanEnabled($appCodeHostParams);
+                self::copyProdOptionsToAppCodeHostParams($testArgs, $appCodeHostParams);
             }
         );
 
         $appCodeRequestArgs = $testArgs->cloneAsArray();
-        AppCodeContextDataUtil::createTempFile($testCaseHandle, /* in,out */ $appCodeRequestArgs);
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
 
         $appCodeHost->execAppCode(
             AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestVariousValues']),
@@ -85,12 +85,12 @@ final class UserBootstrapPhpFileTest extends ComponentTestCaseBase
 
         // Assert
 
-        $appCodeContextData = AppCodeContextDataUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
-        $dbgCtx->add(compact('appCodeContextData'));
-        self::assertTrue($appCodeContextData->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
 
         $userBootstrapPhpFileOptVal = $testArgs->get(OptionForProdName::user_bootstrap_php_file->name);
-        $globalsVal = $appCodeContextData->getNullableString(UserBootstrapPhpFileShared::GLOBALS_KEY);
+        $globalsVal = $appCodeAuxOutput->getNullableString(UserBootstrapPhpFileShared::GLOBALS_KEY);
         self::assertSame($userBootstrapPhpFileOptVal === self::USER_BOOTSTRAP_FILE_FULL_PATH ? UserBootstrapPhpFileShared::GLOBALS_VALUE : null, $globalsVal);
     }
 
