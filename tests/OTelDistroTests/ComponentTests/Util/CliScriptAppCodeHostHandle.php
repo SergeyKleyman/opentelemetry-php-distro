@@ -82,7 +82,7 @@ final class CliScriptAppCodeHostHandle extends AppCodeHostHandle
         ksort(/* ref */ $envVars);
         $localLogger->addAllContext(compact('envVars'));
 
-        $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Executing app code ...');
+        $loggerProxyDebug?->log(__LINE__, 'Executing app code ...');
 
         $appCodeInvocation = $this->beforeAppCodeInvocation($requestParams);
         $exitCode = $this->startProcessAndWaitForItToExit($dbgProcessName, $cmdLine, $envVars, $appCodeInvocation->appCodeRequestParams->dataPerRequest->expectedAppCodeProcessExitCode);

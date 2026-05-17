@@ -9,7 +9,6 @@ use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\EnvVarUtil;
-use OTelDistroTests\Util\ExceptionUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\LoggableInterface;
 use OTelDistroTests\Util\Log\LoggableToString;

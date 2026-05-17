@@ -163,7 +163,7 @@ final class CurlAutoInstrumentationTest extends ComponentTestCaseBase
         );
     }
 
-    public function implTestLocalClientServer(MixedMap $testArgs): void
+    private function implTestLocalClientServer(MixedMap $testArgs): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
