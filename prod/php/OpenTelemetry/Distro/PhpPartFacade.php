@@ -9,7 +9,6 @@ namespace OpenTelemetry\Distro;
 use OpenTelemetry\Distro\HttpTransport\NativeHttpTransportFactory;
 use OpenTelemetry\Distro\InferredSpans\InferredSpans;
 use OpenTelemetry\Distro\Log\NativeLogWriter;
-use OpenTelemetry\Distro\Util\BoolUtil;
 use OpenTelemetry\Distro\Util\DistroRuntimeException;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
 use OpenTelemetry\API\Globals;
@@ -154,6 +153,22 @@ final class PhpPartFacade
         return true;
     }
 
+    public static function parseBoolValue(string $envVarVal): ?bool
+    {
+        foreach (['true', 'yes', 'on', '1'] as $trueStringValue) {
+            if (strcasecmp($envVarVal, $trueStringValue) === 0) {
+                return true;
+            }
+        }
+        foreach (['false', 'no', 'off', '0'] as $falseStringValue) {
+            if (strcasecmp($envVarVal, $falseStringValue) === 0) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
     private static function isDistroEnabled(): bool
     {
         return self::getBoolEnvVar(self::IS_DISTRO_ENABLED_ENV_VAR_NAME, default: true);
@@ -162,7 +177,7 @@ final class PhpPartFacade
     public static function getBoolEnvVar(string $envVarName, bool $default): bool
     {
         $envVarVal = getenv($envVarName);
-        if (is_string($envVarVal) && (($parsedVal = BoolUtil::parseValue($envVarVal)) !== null)) {
+        if (is_string($envVarVal) && (($parsedVal = self::parseBoolValue($envVarVal)) !== null)) {
             return $parsedVal;
         }
         return $default;
