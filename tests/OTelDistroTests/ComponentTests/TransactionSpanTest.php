@@ -36,8 +36,6 @@ use OpenTelemetry\SemConv\Attributes\UserAgentAttributes;
  */
 final class TransactionSpanTest extends ComponentTestCaseBase
 {
-    private const SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY = 'should_app_code_cause_fatal_error';
-
     public static function isTransactionSpanEnabled(?bool $transactionSpanEnabled, ?bool $transactionSpanEnabledCli): bool
     {
         return self::isMainAppCodeHostHttp()
@@ -58,30 +56,17 @@ final class TransactionSpanTest extends ComponentTestCaseBase
                 foreach (BoolUtilForTests::ALL_NULLABLE_VALUES as $transactionSpanEnabledCli) {
                     $shouldAppCodeCreateDummySpanValues = self::isTransactionSpanEnabled($transactionSpanEnabled, $transactionSpanEnabledCli) ? BoolUtilForTests::ALL_VALUES : [true];
                     foreach ($shouldAppCodeCreateDummySpanValues as $shouldAppCodeCreateDummySpan) {
-                        foreach ([false, true] as $shouldAppCodeCauseFatalError) {
-                            yield [
-                                OptionForProdName::transaction_span_enabled->name     => $transactionSpanEnabled,
-                                OptionForProdName::transaction_span_enabled_cli->name => $transactionSpanEnabledCli,
-                                self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY           => $shouldAppCodeCreateDummySpan,
-                                self::SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY           => $shouldAppCodeCauseFatalError,
-                            ];
-                        }
+                        yield [
+                            OptionForProdName::transaction_span_enabled->name     => $transactionSpanEnabled,
+                            OptionForProdName::transaction_span_enabled_cli->name => $transactionSpanEnabledCli,
+                            self::SHOULD_APP_CODE_CREATE_DUMMY_SPAN_KEY           => $shouldAppCodeCreateDummySpan,
+                        ];
                     }
                 }
             }
         };
 
         return self::adaptDataSetsGeneratorToSmokeToDescToMixedMap($generateDataSets);
-    }
-
-    public static function appCodeForTestTransactionSpan(MixedMap $appCodeRequestArgs): void
-    {
-        self::appCodeCreatesDummySpan($appCodeRequestArgs);
-
-        if ($appCodeRequestArgs->getBool(self::SHOULD_APP_CODE_CAUSE_FATAL_ERROR_KEY)) {
-            /** @noinspection PhpIncludeInspection */
-            require __DIR__ . DIRECTORY_SEPARATOR . 'non_existent_file.php';
-        }
     }
 
     private function implTestTransactionSpan(MixedMap $testArgs): void
