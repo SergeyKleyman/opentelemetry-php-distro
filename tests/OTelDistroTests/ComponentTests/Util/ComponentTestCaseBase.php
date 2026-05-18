@@ -114,9 +114,10 @@ class ComponentTestCaseBase extends TestCaseBase
 
     /**
      * @phpstan-param ?callable(MixedMap): (void|array<string, mixed>) $subAppCode
+     * @phpstan-param ?positive-int $expectedMinSpanCount
      * @phpstan-param ?callable(DebugContextScopeRef $dbgCtx, AgentBackendComms $agentBackendComms, MixedMap $appCodeAuxOutput): void $additionalAssertCode
      */
-    protected function implTestForAppCodeSetsHowFinished(MixedMap $testArgs, ?callable $subAppCode = null, ?callable $additionalAssertCode = null): void
+    protected function implTestForAppCodeSetsHowFinished(MixedMap $testArgs, ?callable $subAppCode = null, ?int $expectedMinSpanCount = null, ?callable $additionalAssertCode = null): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
@@ -125,6 +126,7 @@ class ComponentTestCaseBase extends TestCaseBase
         $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
             function (AppCodeHostParams $appCodeHostParams) use ($testArgs): void {
                 self::ensureTransactionSpanEnabled($appCodeHostParams);
+                self::disableTimingDependentFeatures($appCodeHostParams);
                 self::copyProdOptionsToAppCodeHostParams($testArgs, $appCodeHostParams);
             }
         );
@@ -141,7 +143,7 @@ class ComponentTestCaseBase extends TestCaseBase
             }
         );
 
-        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
+        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(min: $expectedMinSpanCount ?? 1)); // 1 span (the root span) is the default
         $dbgCtx->add(compact('agentBackendComms'));
 
         // Assert
