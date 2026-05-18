@@ -420,7 +420,7 @@ final class IterableUtil
      *
      * @return ?TValue
      */
-    public static function max(iterable $iterable): mixed
+    public static function max(iterable $iterable): int|null|float
     {
         /** @var ?TValue $result */
         $result = null;

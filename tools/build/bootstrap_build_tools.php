@@ -27,9 +27,9 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 \OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireBootstrapStageLogger.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'EnumUtilTrait.php';
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogLevel.php';
+require $prodPhpDistroPath . '/requireAutoloaderForClassesInDirectory.php';
+require $prodPhpDistroPath . '/Util/EnumUtilTrait.php';
+require $prodPhpDistroPath . '/Log/LogLevel.php';
 
 $getMaxEnabledLogLevelConfig = function (): ?LogLevel {
     $envVarVal = getenv(OTEL_PHP_TOOLS_LOG_LEVEL_ENV_VAR_NAME);
@@ -58,6 +58,5 @@ BootstrapStageLogger::configure(
     }
 );
 
-require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'requireAutoloaderForClassesInDirectory.php';
 AutoloaderForClassesInDirectory::register(dirRootNamespace: 'OpenTelemetry\\Distro', dirFullPath: $prodPhpDistroPath);
 AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);

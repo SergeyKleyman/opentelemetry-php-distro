@@ -38,7 +38,7 @@ final class BootstrapTests
 
     public static function bootstrapTool(string $dbgProcessName): void
     {
-        ExceptionUtil::runCatchLogRethrow(
+        ExceptionUtil::runCatchWriteToStdErrRethrow(
             function () use ($dbgProcessName): void {
                 self::bootstrapShared($dbgProcessName);
             }
@@ -47,7 +47,7 @@ final class BootstrapTests
 
     public static function bootstrapUnitTests(): void
     {
-        ExceptionUtil::runCatchLogRethrow(
+        ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): void {
                 self::bootstrapShared(self::TESTS_DBG_PROCESS_NAME);
             }
@@ -56,7 +56,7 @@ final class BootstrapTests
 
     public static function bootstrapComponentTests(): void
     {
-        ExceptionUtil::runCatchLogRethrow(
+        ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): void {
                 self::bootstrapShared(self::TESTS_DBG_PROCESS_NAME);
                 AmbientContextForTests::testConfig()->validateForComponentTests();

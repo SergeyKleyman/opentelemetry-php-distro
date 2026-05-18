@@ -10,6 +10,7 @@ use OpenTelemetry\Distro\HttpTransport\NativeHttpTransportFactory;
 use OpenTelemetry\Distro\InferredSpans\InferredSpans;
 use OpenTelemetry\Distro\Log\LogFeature;
 use OpenTelemetry\Distro\Log\NativeLogWriter;
+use OpenTelemetry\Distro\Util\DistroRuntimeException;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\Distro\Util\OTelUtil;
@@ -22,7 +23,6 @@ use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Version;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -77,9 +77,6 @@ final class PhpPartFacade
         }
 
         try {
-            require __DIR__ . DIRECTORY_SEPARATOR . 'SplAutoloadFunctionsLogUtil.php';
-            require __DIR__ . DIRECTORY_SEPARATOR . 'SplAutoloadFunctionsLogTrait.php';
-            require __DIR__ . DIRECTORY_SEPARATOR . 'AutoloaderForClassesInDirectory.php';
             $autoloadForDistroClasses = AutoloaderForClassesInDirectory::register(dirRootNamespace: __NAMESPACE__, dirFullPath: __DIR__);
 
             InstrumentationBridge::singletonInstance()->bootstrap();
@@ -294,7 +291,7 @@ final class PhpPartFacade
     {
         $vendorAutoloadPhp = VendorDir::$fullPath . DIRECTORY_SEPARATOR . 'autoload.php';
         if (!file_exists($vendorAutoloadPhp)) {
-            throw new RuntimeException("File $vendorAutoloadPhp does not exist");
+            throw new DistroRuntimeException("File $vendorAutoloadPhp does not exist");
         }
 
         /**

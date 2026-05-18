@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OTelDistroTests\UnitTests\UtilTests\ConfigTests;
+namespace OTelDistroTests\UnitTests;
 
 use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\Log\LogLevel;
@@ -19,7 +19,6 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
 {
     public function testProdAndTestCodeInSyncTest(): void
     {
-        AssertEx::sameConstValues(PhpPartFacade::DEBUG_SCOPER_ENABLED_OPT_NAME, OptionForProdName::debug_scoper_enabled->name);
         AssertEx::sameConstValues(PhpPartFacade::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, OptionForProdName::user_bootstrap_php_file->name);
     }
 

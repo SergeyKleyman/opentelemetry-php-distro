@@ -50,8 +50,6 @@ final class BootstrapStageLogger
      */
     public static function configure(int $maxEnabledLevel, string $phpSrcCodeRootDir, string $rootNamespace, ?Closure $formatAndWrite = null): void
     {
-        require __DIR__ . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR . 'LogFeature.php';
-
         self::$maxEnabledLevel = $maxEnabledLevel;
         self::$formatAndWrite = $formatAndWrite;
         if (is_int($pid = getmypid())) {

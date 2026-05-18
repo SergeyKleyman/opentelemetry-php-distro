@@ -38,7 +38,7 @@ abstract class HttpServerStarter
 
     protected function __construct(
         protected readonly string $dbgProcessNamePrefix,
-        protected readonly ?ResourcesCleanerHandle $resourcesCleaner
+        protected readonly ?ResourcesCleanerHandle $resourcesCleaner,
     ) {
         $this->logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('this'));
     }

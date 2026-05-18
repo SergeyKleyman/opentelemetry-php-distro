@@ -164,7 +164,7 @@ class ComponentTestCaseBase extends TestCaseBase
         }
     }
 
-    protected static function buildResourcesClientForAppCode(): ResourcesCleanerClient
+    protected static function buildResourcesCleanerClientForAppCode(): ResourcesCleanerClient
     {
         $resCleanerId = AmbientContextForTests::testConfig()->dataPerProcess()->resourcesCleanerSpawnedProcessInternalId;
         Assert::assertNotNull($resCleanerId);
@@ -546,7 +546,7 @@ class ComponentTestCaseBase extends TestCaseBase
                 $dbgCtx->resetTopSubScope(compact('testArgKey', 'testArgVal'));
                 $appCodeHostParams->setProdOptionIfNotDefault(
                     AssertEx::notNull(OptionForProdName::tryToFindByName($testArgKey)),
-                    AppCodeHostParams::assertValidProdOptionValueType($testArgVal, $testArgKey)
+                    $testArgVal === null ? null : AppCodeHostParams::assertValidProdOptionValueType($testArgVal, $testArgKey),
                 );
             }
         }
