@@ -7,6 +7,7 @@ namespace OTelDistroTests\UnitTests;
 use OpenTelemetry\Distro\BootstrapStageLogger;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\PhpPartFacade;
+use OpenTelemetry\Distro\Util\BoolUtil;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\Config\BoolOptionParser;
 use OTelDistroTests\Util\Config\OptionForProdName;
@@ -20,6 +21,7 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
     public function testProdAndTestCodeInSyncTest(): void
     {
         AssertEx::sameConstValues(PhpPartFacade::DEBUG_SCOPER_ENABLED_OPT_NAME, OptionForProdName::debug_scoper_enabled->name);
+        AssertEx::sameConstValues(PhpPartFacade::ENABLED_OPT_NAME, OptionForProdName::enabled->name);
         AssertEx::sameConstValues(PhpPartFacade::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, OptionForProdName::user_bootstrap_php_file->name);
     }
 
@@ -78,9 +80,9 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
             $dbgCtx->pushSubScope();
             foreach ($rawValues as $rawValue) {
                 $dbgCtx->resetTopSubScope(compact('rawValue'));
-                self::assertSame($expectedParsedValue, PhpPartFacade::parseBoolValue($rawValue));
+                self::assertSame($expectedParsedValue, BoolUtil::parse($rawValue));
                 self::assertSame($expectedParsedValue, $boolOptionParser->parse($rawValue));
-                self::assertSame($expectedParsedValue, PhpPartFacade::parseBoolValue(strtoupper($rawValue)));
+                self::assertSame($expectedParsedValue, BoolUtil::parse(strtoupper($rawValue)));
                 self::assertSame($expectedParsedValue, $boolOptionParser->parse(strtoupper($rawValue)));
             }
             $dbgCtx->popSubScope();
@@ -100,7 +102,7 @@ class ProdAndTestCodeInSyncTest extends TestCaseBase
         $dbgCtx->pushSubScope();
         foreach (['invalid', 'value', '123', 'o', 't', 'f'] as $invalidRawValue) {
             $dbgCtx->resetTopSubScope(compact('invalidRawValue'));
-            self::assertNull(PhpPartFacade::parseBoolValue($invalidRawValue));
+            self::assertNull(BoolUtil::parse($invalidRawValue));
             $assertThrowsParseException(fn() => $boolOptionParser->parse($invalidRawValue));
         }
         $dbgCtx->popSubScope();

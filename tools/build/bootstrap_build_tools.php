@@ -27,6 +27,7 @@ require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'ProdPhpDir.php';
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 \OpenTelemetry\Distro\ProdPhpDir::$fullPath = $prodPhpPath;
 
+require $prodPhpDistroPath . DIRECTORY_SEPARATOR . 'Util' . DIRECTORY_SEPARATOR . 'BoolUtil.php';
 require $prodPhpDistroPath . '/requireAutoloaderForClassesInDirectory.php';
 require $prodPhpDistroPath . '/Util/EnumUtilTrait.php';
 require $prodPhpDistroPath . '/Log/LogLevel.php';

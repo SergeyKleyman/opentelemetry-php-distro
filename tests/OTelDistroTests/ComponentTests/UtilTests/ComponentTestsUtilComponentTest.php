@@ -137,6 +137,61 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
         return $logLevelRelatedEnvVarsToRestore;
     }
 
+    private function implTestRunAndEscalateLogLevelOnFailure(MixedMap $testArgs): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $currentRunCount = $testArgs->getInt('currentRunCount');
+        self::assertGreaterThanOrEqual(1, $currentRunCount);
+        $currentReRunCount = $currentRunCount === 1 ? 0 : ($currentRunCount - 1);
+        $shouldFail = $testArgs->getBool(self::SHOULD_FAIL_KEY);
+        $failOnRerunCountArg = $testArgs->getInt(self::FAIL_ON_RERUN_COUNT_KEY);
+        /** @var array<string, LogLevel> $initialLevels */
+        $initialLevels = $testArgs->getArray(self::INITIAL_LOG_LEVELS_KEY);
+        $shouldCurrentRunFail = $shouldFail && ($currentRunCount === 1 || $currentReRunCount === $failOnRerunCountArg);
+        if ($currentRunCount === 1) {
+            $expectedLevels = $initialLevels;
+        } else {
+            $rerunsMaxCount = $testArgs->getInt(OptionForTestsName::escalated_reruns_max_count->name);
+            self::assertTrue(
+                IterableUtil::getNthValue(
+                    self::generateLevelsForRunAndEscalateLogLevelOnFailure($initialLevels, $rerunsMaxCount),
+                    $currentReRunCount - 1,
+                    $expectedLevels /* <- out */
+                )
+            );
+        }
+        /** @var array<string, LogLevel> $expectedLevels */
+
+        $testCaseHandle = $this->getTestCaseHandle();
+        $appCodeHost = $testCaseHandle->ensureMainAppCodeHost();
+
+        $appCodeRequestArgs = [];
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
+
+        $appCodeHost->execAppCode(
+            AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure']),
+            function (AppCodeRequestParams $appCodeRequestParams) use ($expectedLevels, $appCodeRequestArgs): void {
+                foreach (self::LOG_LEVEL_FOR_CODE_KEYS as $levelTypeKey) {
+                    $appCodeRequestArgs[$levelTypeKey] = $expectedLevels[$levelTypeKey];
+                }
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
+            }
+        );
+
+        $this->waitForOneSpan($testCaseHandle);
+
+        // Assert
+
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
+
+        if ($shouldCurrentRunFail) {
+            self::fail(self::buildFailMessage($currentRunCount));
+        }
+    }
+
     /**
      * @dataProvider dataProviderForTestRunAndEscalateLogLevelOnFailure
      */
@@ -200,61 +255,6 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
         self::assertSame($initialLogLevelForProdCode->name, EnvVarUtilForTests::get($prodCodeSyslogLevelEnvVarName));
         foreach ($logLevelRelatedEnvVarsToRestore as $envVarName => $envVarValue) {
             EnvVarUtilForTests::setOrUnset($envVarName, $envVarValue);
-        }
-    }
-
-    private function implTestRunAndEscalateLogLevelOnFailure(MixedMap $testArgs): void
-    {
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
-
-        $currentRunCount = $testArgs->getInt('currentRunCount');
-        self::assertGreaterThanOrEqual(1, $currentRunCount);
-        $currentReRunCount = $currentRunCount === 1 ? 0 : ($currentRunCount - 1);
-        $shouldFail = $testArgs->getBool(self::SHOULD_FAIL_KEY);
-        $failOnRerunCountArg = $testArgs->getInt(self::FAIL_ON_RERUN_COUNT_KEY);
-        /** @var array<string, LogLevel> $initialLevels */
-        $initialLevels = $testArgs->getArray(self::INITIAL_LOG_LEVELS_KEY);
-        $shouldCurrentRunFail = $shouldFail && ($currentRunCount === 1 || $currentReRunCount === $failOnRerunCountArg);
-        if ($currentRunCount === 1) {
-            $expectedLevels = $initialLevels;
-        } else {
-            $rerunsMaxCount = $testArgs->getInt(OptionForTestsName::escalated_reruns_max_count->name);
-            self::assertTrue(
-                IterableUtil::getNthValue(
-                    self::generateLevelsForRunAndEscalateLogLevelOnFailure($initialLevels, $rerunsMaxCount),
-                    $currentReRunCount - 1,
-                    $expectedLevels /* <- out */
-                )
-            );
-        }
-        /** @var array<string, LogLevel> $expectedLevels */
-
-        $testCaseHandle = $this->getTestCaseHandle();
-        $appCodeHost = $testCaseHandle->ensureMainAppCodeHost();
-
-        $appCodeRequestArgs = [];
-        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
-
-        $appCodeHost->execAppCode(
-            AppCodeTarget::asRouted([__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure']),
-            function (AppCodeRequestParams $appCodeRequestParams) use ($expectedLevels, $appCodeRequestArgs): void {
-                foreach (self::LOG_LEVEL_FOR_CODE_KEYS as $levelTypeKey) {
-                    $appCodeRequestArgs[$levelTypeKey] = $expectedLevels[$levelTypeKey];
-                }
-                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
-            }
-        );
-
-        $this->waitForOneSpan($testCaseHandle);
-
-        // Assert
-
-        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
-        $dbgCtx->add(compact('appCodeAuxOutput'));
-        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
-
-        if ($shouldCurrentRunFail) {
-            self::fail(self::buildFailMessage($currentRunCount));
         }
     }
 }
