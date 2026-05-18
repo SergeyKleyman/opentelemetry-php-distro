@@ -17,8 +17,6 @@ trait BootstrapStageLoggingClassTrait
 {
     /**
      * @phpstan-param Context $context
-     *
-     * @noinspection PhpUnusedPrivateMethodInspection
      */
     public static function logWithLevel(int $statementLevel, int $line, string $func, string $message, array $context = []): void
     {
