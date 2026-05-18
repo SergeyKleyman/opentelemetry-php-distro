@@ -6,7 +6,7 @@ namespace OTelDistroTests\ComponentTests\ScopedDepsTestApp;
 
 use Closure;
 use OpenTelemetry\Distro\BootstrapStageLogger;
-use OpenTelemetry\Distro\SplAutoloadFunctionsLogUtil;
+use OpenTelemetry\Distro\Log\SplAutoloadFunctionsLogUtil;
 use ReflectionClass;
 use ReflectionFunction;
 use RuntimeException;

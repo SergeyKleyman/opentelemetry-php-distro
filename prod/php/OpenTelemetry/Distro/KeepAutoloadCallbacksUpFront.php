@@ -7,6 +7,9 @@ declare(strict_types=1);
 namespace OpenTelemetry\Distro;
 
 use OpenTelemetry\Distro\Log\LogFeature;
+use OpenTelemetry\Distro\Log\SplAutoloadFunctionsLogTrait;
+use OpenTelemetry\Distro\Log\SplAutoloadFunctionsLogUtil;
+use OpenTelemetry\Distro\Util\DistroRuntimeException;
 use Throwable;
 
 final class KeepAutoloadCallbacksUpFront

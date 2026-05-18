@@ -4,10 +4,10 @@
 
 declare(strict_types=1);
 
-namespace OpenTelemetry\Distro;
+namespace OpenTelemetry\Distro\Log;
 
 use Closure;
-use OpenTelemetry\Distro\Log\LogFeature;
+use OpenTelemetry\Distro\BootstrapStageLoggingClassTrait;
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionMethod;
