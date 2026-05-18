@@ -21,7 +21,7 @@ final class ProcessUtil
 
     public static function doesProcessExist(int $pid): bool
     {
-        exec("ps -p $pid", $cmdOutput, $cmdExitCode);
+        exec("ps -p $pid", /* out */ $cmdOutput, /* out */ $cmdExitCode);
         return $cmdExitCode === 0;
     }
 
@@ -39,7 +39,13 @@ final class ProcessUtil
 
     public static function execCommandToTerminateProcess(int $pid, bool $force = false): bool
     {
-        exec('kill ' . ($force ? '-9 ' : '') . $pid . ' > /dev/null', /* ref */ $cmdOutput, /* ref */ $cmdExitCode);
+        $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('pid', 'force'));
+        $logDebug = $logger->ifDebugLevelEnabledNoLine(__FUNCTION__);
+        $shellCmd = 'kill ' . ($force ? '-9 ' : '') . $pid;
+        $logger->addAllContext(compact('shellCmd'));
+        $logDebug?->log(__LINE__, 'About to execute shell command');
+        exec($shellCmd, /* ref */ $cmdOutput, /* ref */ $cmdExitCode);
+        $logDebug?->log(__LINE__, 'Executed shell command', compact('cmdExitCode', 'cmdOutput'));
         return $cmdExitCode === 0;
     }
 
@@ -65,9 +71,9 @@ final class ProcessUtil
     /**
      * @phpstan-param EnvVars $envVars
      */
-    public static function startBackgroundProcess(string $dbgProcessName, string $command, array $envVars, ?ResourcesCleanerClient $resourcesCleanerClient, bool $isTestScoped): ProcessHandle
+    public static function startBackgroundProcess(string $dbgProcessName, string $command, array $envVars, ?ResourcesCleanerClient $resourcesCleanerClient, bool $isTestScoped): void
     {
-        return self::procOpenEx(
+        $processHandle = self::procOpenEx(
             dbgProcessName: $dbgProcessName,
             command: self::addStdErrOutRedirect($dbgProcessName, $command) . '&',
             envVars: $envVars,
@@ -75,6 +81,9 @@ final class ProcessUtil
             resourcesCleanerClient: $resourcesCleanerClient,
             isTestScoped: $isTestScoped
         );
+
+        // Close handle to allow process to exit
+        $processHandle->close();
     }
 
     /**
@@ -102,13 +111,15 @@ final class ProcessUtil
         );
         $logger->addAllContext(compact('processHandle'));
 
-        $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
-        if (!$processHandle->getCurrentInfo()->hasExited()) {
-            $logger->ifLevelEnabled($logLevelTimedout ?? LogLevel::warning, __LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out - terminating the process');
-            self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
+        try {
+            $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
+            if (!$processHandle->getCurrentInfo()->hasExited()) {
+                $logger->ifLevelEnabled($logLevelTimedout ?? LogLevel::warning, __LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out - terminating the process');
+                self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
+            }
+        } finally {
+            $processHandle->close();
         }
-
-        $processHandle->close();
 
         return $processHandle->getCurrentInfo();
     }
