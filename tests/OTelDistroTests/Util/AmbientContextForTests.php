@@ -41,7 +41,7 @@ final class AmbientContextForTests
 
     public static function init(string $dbgProcessName): void
     {
-        ExceptionUtil::runCatchLogRethrow(
+        ExceptionUtil::runCatchWriteToStdErrRethrow(
             function () use ($dbgProcessName): void {
                 if (self::$singletonInstance !== null) {
                     Assert::assertSame(self::$dbgProcessName, $dbgProcessName);
@@ -60,7 +60,7 @@ final class AmbientContextForTests
 
     public static function assertIsInited(): void
     {
-        ExceptionUtil::runCatchLogRethrow(
+        ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): void {
                 Assert::assertTrue(self::isInited(), 'Assertion that, ' . __CLASS__ . ' is initialized, failed');
             }
@@ -69,7 +69,7 @@ final class AmbientContextForTests
 
     private static function getSingletonInstance(): self
     {
-        return ExceptionUtil::runCatchLogRethrow(
+        return ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): self {
                 Assert::assertNotNull(self::$singletonInstance);
                 return self::$singletonInstance;
@@ -117,7 +117,7 @@ final class AmbientContextForTests
     /** @noinspection PhpUnused */
     public static function dbgProcessName(): string
     {
-        return ExceptionUtil::runCatchLogRethrow(
+        return ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): string {
                 Assert::assertNotNull(self::$dbgProcessName);
                 return self::$dbgProcessName;
@@ -127,7 +127,7 @@ final class AmbientContextForTests
 
     public static function loggerFactory(): LoggerFactory
     {
-        return ExceptionUtil::runCatchLogRethrow(
+        return ExceptionUtil::runCatchWriteToStdErrRethrow(
             function (): LoggerFactory {
                 Assert::assertNotNull(self::$loggerFactory);
                 return self::$loggerFactory;
