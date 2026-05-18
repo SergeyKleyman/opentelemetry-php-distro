@@ -115,20 +115,28 @@ final class ResourcesCleaner extends TestInfraHttpServerProcessBase
         $processesToTerminateIdsCount = $processesToTerminateIds->count();
         $localLogger = $this->logger->inherit();
         $localLogger->addAllContext(compact('dbgProcessesSetDesc', 'processesToTerminateIdsCount'));
-        $loggerProxyDebug = $localLogger->ifDebugLevelEnabledNoLine(__FUNCTION__);
-        $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Terminating spawned processes...');
+        $logDebug = $localLogger->ifDebugLevelEnabledNoLine(__FUNCTION__);
+        $logDebug?->log(__LINE__, 'Terminating spawned processes...');
+        $logWarning = $localLogger->ifWarningLevelEnabledNoLine(__FUNCTION__);
 
         /** @var string $dbgProcessName */
         /** @var int $pid */
         foreach ($processesToTerminateIds as [$dbgProcessName, $pid]) {
             $localLogger->addAllContext(compact('dbgProcessName', 'pid'));
             if (!ProcessUtil::doesProcessExist($pid)) {
-                $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Spawned process does not exist anymore - no need to terminate');
+                $logDebug?->log(__LINE__, 'Spawned process does not exist anymore - no need to terminate');
                 continue;
             }
-            $hasExitedNormally = ProcessUtil::terminateProcess($pid);
-            $hasExited = ProcessUtil::waitForProcessToExitUsingPid($dbgProcessName, $pid, /* maxWaitTimeInMicroseconds = 10 seconds */ 10 * 1000 * 1000);
-            $loggerProxyDebug && $loggerProxyDebug->log(__LINE__, 'Issued command to terminate spawned process', compact('hasExited', 'hasExitedNormally'));
+            foreach ([false, true] as $force) {
+                $terminateCommandExitedNormally = ProcessUtil::execCommandToTerminateProcess($pid, $force);
+                $hasExited = ProcessUtil::waitForProcessToExitUsingPid($dbgProcessName, $pid, /* maxWaitTimeInMicroseconds = 1 seconds */ 1000 * 1000);
+                if ($hasExited) {
+                    $logDebug?->log(__LINE__, 'Terminated spawned process', compact('force', 'terminateCommandExitedNormally'));
+                    break;
+                } else {
+                    $logWarning?->log(__LINE__, 'Failed to terminate spawned process', compact('force', 'terminateCommandExitedNormally'));
+                }
+            }
         }
 
         $processesToTerminateIds->clear();

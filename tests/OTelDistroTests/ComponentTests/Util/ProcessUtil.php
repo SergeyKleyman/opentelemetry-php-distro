@@ -29,7 +29,7 @@ final class ProcessUtil
     {
         return (new PollingCheck(
             $dbgProcessDesc . ' process (PID: ' . $pid . ') exited' /* <- dbgDesc */,
-            $maxWaitTimeInMicroseconds
+            $maxWaitTimeInMicroseconds,
         ))->run(
             function () use ($pid): bool {
                 return !self::doesProcessExist($pid);
@@ -37,9 +37,9 @@ final class ProcessUtil
         );
     }
 
-    public static function terminateProcess(int $pid): bool
+    public static function execCommandToTerminateProcess(int $pid, bool $force = false): bool
     {
-        exec("kill $pid > /dev/null", /* ref */ $cmdOutput, /* ref */ $cmdExitCode);
+        exec('kill ' . ($force ? '-9 ' : '') . $pid . ' > /dev/null', /* ref */ $cmdOutput, /* ref */ $cmdExitCode);
         return $cmdExitCode === 0;
     }
 
@@ -105,7 +105,7 @@ final class ProcessUtil
         $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
         if (!$processHandle->getCurrentInfo()->hasExited()) {
             $logger->ifLevelEnabled($logLevelTimedout ?? LogLevel::warning, __LINE__, __FUNCTION__)?->log('Wait for the started process to exit timed out - terminating the process');
-            self::terminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
+            self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
         }
 
         $processHandle->close();
