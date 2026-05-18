@@ -8,7 +8,6 @@ use Closure;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
-use OTelDistroTests\Util\EnvVarUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
 use OTelDistroTests\Util\Log\LoggableInterface;
 use OTelDistroTests\Util\Log\LoggableToString;
@@ -18,9 +17,6 @@ use OTelDistroTests\Util\Log\LoggingSubsystem;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
-/**
- * @phpstan-import-type EnvVars from EnvVarUtil
- */
 abstract class SpawnedProcessBase implements LoggableInterface
 {
     use LoggableTrait;

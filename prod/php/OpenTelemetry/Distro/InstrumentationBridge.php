@@ -43,8 +43,9 @@ final class InstrumentationBridge
             throw new RuntimeException("File $instrumentationHookPhp does not exist");
         }
 
-        self::logTrace(__LINE__, __FUNCTION__, 'Before require', compact('instrumentationHookPhp'));
+        self::logDebug(__LINE__, __FUNCTION__, 'Before require ' . $instrumentationHookPhp);
         require $instrumentationHookPhp;
+        self::logDebug(__LINE__, __FUNCTION__, 'After require ' . $instrumentationHookPhp);
 
         /**
          * Use fully qualified names for functions implemented by the extension to make sure scoper correctly detects them

@@ -10,6 +10,7 @@ use OpenTelemetry\Distro\HttpTransport\NativeHttpTransportFactory;
 use OpenTelemetry\Distro\InferredSpans\InferredSpans;
 use OpenTelemetry\Distro\Log\LogFeature;
 use OpenTelemetry\Distro\Log\NativeLogWriter;
+use OpenTelemetry\Distro\Util\DistroRuntimeException;
 use OpenTelemetry\Distro\Util\HiddenConstructorTrait;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\Distro\Util\OTelUtil;
@@ -22,7 +23,6 @@ use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\Attributes\CodeAttributes;
 use OpenTelemetry\SemConv\Version;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -64,9 +64,6 @@ final class PhpPartFacade
     public static function bootstrap(string $nativePartVersion, int $maxEnabledLogLevel, float $requestInitStartTime): bool
     {
         self::$wasBootstrapCalled = true;
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'BootstrapStageLogger.php';
-        require __DIR__ . DIRECTORY_SEPARATOR . 'Util/StaticClassTrait.php';
 
         BootstrapStageLogger::configure($maxEnabledLogLevel, __DIR__, __NAMESPACE__);
         self::logDebug(__LINE__, __FUNCTION__, 'Starting bootstrap sequence...', compact('nativePartVersion', 'maxEnabledLogLevel', 'requestInitStartTime'));
@@ -193,7 +190,7 @@ final class PhpPartFacade
     public static function setEnvVar(string $envVarName, string $envVarValue): void
     {
         if (!putenv($envVarName . '=' . $envVarValue)) {
-            throw new RuntimeException('putenv returned false; $envVarName: ' . $envVarName . '; envVarValue: ' . $envVarValue);
+            throw new DistroRuntimeException('putenv returned false', compact('envVarName', 'envVarValue'));
         }
     }
 
@@ -241,7 +238,7 @@ final class PhpPartFacade
     {
         $vendorAutoloadPhp = VendorDir::$fullPath . DIRECTORY_SEPARATOR . 'autoload.php';
         if (!file_exists($vendorAutoloadPhp)) {
-            throw new RuntimeException("File $vendorAutoloadPhp does not exist");
+            throw new DistroRuntimeException("File $vendorAutoloadPhp does not exist");
         }
         self::logDebug(__LINE__, __FUNCTION__, 'Before require', compact('vendorAutoloadPhp'));
         require $vendorAutoloadPhp;
@@ -394,9 +391,9 @@ final class PhpPartFacade
             self::logError(__LINE__, __FUNCTION__, self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME . " configuration option value is a path $userBootstrapPhpFile that does not exist");
             return;
         }
-        self::logDebug(__LINE__, __FUNCTION__, 'Before require', compact('userBootstrapPhpFile'));
+        self::logDebug(__LINE__, __FUNCTION__, 'Before require file set by ' . self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, compact('userBootstrapPhpFile'));
         require $userBootstrapPhpFile;
-        self::logDebug(__LINE__, __FUNCTION__, 'After require', compact('userBootstrapPhpFile'));
+        self::logDebug(__LINE__, __FUNCTION__, 'After require file set by ' . self::USER_BOOTSTRAP_PHP_FILE_OPT_NAME, compact('userBootstrapPhpFile'));
     }
 
     /**

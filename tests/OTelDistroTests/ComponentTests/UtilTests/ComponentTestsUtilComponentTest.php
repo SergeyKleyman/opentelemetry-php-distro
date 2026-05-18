@@ -6,10 +6,12 @@ namespace OTelDistroTests\ComponentTests\UtilTests;
 
 use OpenTelemetry\Distro\Log\LogLevel;
 use OTelDistroTests\ComponentTests\Util\AppCodeAuxOutputUtil;
+use OTelDistroTests\ComponentTests\Util\AppCodeHostParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeRequestParams;
 use OTelDistroTests\ComponentTests\Util\AppCodeTarget;
 use OTelDistroTests\ComponentTests\Util\ComponentTestCaseBase;
 use OTelDistroTests\ComponentTests\Util\EnvVarUtilForTests;
+use OTelDistroTests\ComponentTests\Util\WaitForOTelSignalCounts;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\Config\OptionForProdName;
@@ -58,9 +60,9 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
         $dbgCtx->add(['testConfig' => AmbientContextForTests::testConfig()]);
         $expectedLogLevelForProdCode = $appCodeRequestArgs->getLogLevel(self::LOG_LEVEL_FOR_PROD_CODE_KEY);
         $dbgCtx->add(compact('expectedLogLevelForProdCode'));
-        $prodConfig = self::buildProdConfigFromAppCode();
+        $prodConfig = self::buildProdConfig();
         $dbgCtx->add(compact('prodConfig'));
-        $actualLogLevelForProdCode = $prodConfig->effectiveLogLevel();
+        $actualLogLevelForProdCode = $prodConfig->getOptionValueByName(AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName());
         $dbgCtx->add(compact('actualLogLevelForProdCode'));
         self::assertSame($expectedLogLevelForProdCode, $actualLogLevelForProdCode);
         $expectedLogLevelForTestCode = $appCodeRequestArgs->getLogLevel(self::LOG_LEVEL_FOR_TEST_CODE_KEY);
@@ -72,15 +74,46 @@ final class ComponentTestsUtilComponentTest extends ComponentTestCaseBase
 
     public function test0WithoutEscalation(): void
     {
+        /**
+         * This test case cannot be refactored to use ComponentTestCaseBase::implTestForAppCodeSetsHowFinished
+         * because it needs for the main app code host to be created for $testCaseHandle->getProdCodeLogLevels
+         * to work correctly
+         */
+
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
         $testCaseHandle = $this->getTestCaseHandle();
-        $testArgsEx = [
-            self::LOG_LEVEL_FOR_PROD_CODE_KEY => ArrayUtilForTests::getSingleValue($testCaseHandle->getProdCodeLogLevels()),
+
+        $appCodeHost = $testCaseHandle->ensureMainAppCodeHost(
+            function (AppCodeHostParams $appCodeHostParams): void {
+                self::ensureTransactionSpanEnabled($appCodeHostParams);
+            }
+        );
+
+        /** @var array<string, mixed> $appCodeRequestArgs */
+        $appCodeRequestArgs = [
+            self::LOG_LEVEL_FOR_PROD_CODE_KEY =>
+                ArrayUtilForTests::getSingleValue($testCaseHandle->getProdCodeLogLevels(AmbientContextForTests::testConfig()->escalatedRerunsProdCodeLogLevelOptionName())),
             self::LOG_LEVEL_FOR_TEST_CODE_KEY => AmbientContextForTests::testConfig()->logLevel,
         ];
-        self::implTestForAppCodeSetsHowFinished(
-            testArgs: new MixedMap($testArgsEx),
-            subAppCode: [__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure'],
+        AppCodeAuxOutputUtil::createTempFile(__CLASS__, $testCaseHandle, /* in,out */ $appCodeRequestArgs);
+
+        ArrayUtilForTests::addAssertingKeyNew(self::SUB_APP_CODE_TO_CALL_KEY, [__CLASS__, 'appCodeForTestRunAndEscalateLogLevelOnFailure'], /* in,out */ $appCodeRequestArgs);
+        $appCodeHost->execAppCode(
+            AppCodeTarget::asRouted([__CLASS__, 'appCodeSetsHowFinished']),
+            function (AppCodeRequestParams $appCodeRequestParams) use ($appCodeRequestArgs): void {
+                $appCodeRequestParams->setAppCodeRequestArgs($appCodeRequestArgs);
+            }
         );
+
+        $agentBackendComms = $testCaseHandle->waitForEnoughAgentBackendComms(WaitForOTelSignalCounts::spans(1)); // exactly 1 span (the root span) is expected
+        $dbgCtx->add(compact('agentBackendComms'));
+
+        // Assert
+
+        $appCodeAuxOutput = AppCodeAuxOutputUtil::readDataAsMixedMapFromTempFile($appCodeRequestArgs);
+        $dbgCtx->add(compact('appCodeAuxOutput'));
+        self::assertTrue($appCodeAuxOutput->getBool(self::DID_APP_CODE_FINISH_SUCCESSFULLY_KEY));
     }
 
     /**
