@@ -16,7 +16,7 @@ final class ConfigSnapshotForProd implements LoggableInterface
 
     private readonly ?bool $autoloadEnabled; // @phpstan-ignore property.uninitializedReadonly
     private readonly ?string $bootstrapPhpPartFile; // @phpstan-ignore property.uninitializedReadonly
-    private readonly bool $configFile; // @phpstan-ignore property.uninitializedReadonly
+    private readonly ?string $configFile; // @phpstan-ignore property.uninitializedReadonly
     private readonly bool $debugScoperEnabled; // @phpstan-ignore property.uninitializedReadonly
     private readonly ?WildcardListMatcher $disabledInstrumentations; // @phpstan-ignore property.uninitializedReadonly
     private readonly bool $enabled; // @phpstan-ignore property.uninitializedReadonly
