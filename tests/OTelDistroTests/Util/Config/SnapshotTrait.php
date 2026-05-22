@@ -41,7 +41,7 @@ trait SnapshotTrait
     }
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     protected static function snapshotTraitPropNamesNotForOptions(): array
     {
@@ -49,7 +49,7 @@ trait SnapshotTrait
     }
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     protected static function additionalPropNamesNotForOptions(): array
     {
@@ -57,16 +57,18 @@ trait SnapshotTrait
     }
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     public static function propertyNamesForOptions(): array
     {
-        /** @var ?array<string> $result */
+        /** @var ?list<string> $result */
         static $result = null;
+
         if ($result === null) {
-            $result = array_keys(get_class_vars(get_called_class()));
+            $tempResult = array_keys(get_class_vars(get_called_class()));
             $propNamesNotForOptions = array_merge(self::snapshotTraitPropNamesNotForOptions(), self::additionalPropNamesNotForOptions());
-            Assert::assertSame(count($propNamesNotForOptions), ArrayUtilForTests::removeAllValues(/* in,out */ $result, $propNamesNotForOptions));
+            Assert::assertSame(count($propNamesNotForOptions), ArrayUtilForTests::removeAllValues(/* in,out */ $tempResult, $propNamesNotForOptions));
+            $result = array_values($tempResult);
         }
         return $result;
     }
