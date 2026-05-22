@@ -83,11 +83,9 @@ final class DeclarativeConfigTest extends ComponentTestCaseBase
 
     public function testDeclarativeConfigResourceAttributes(): void
     {
-        self::runAndEscalateLogLevelOnFailure(
+        $this->runAndEscalateLogLevelOnFailure(
             self::buildDbgDescForTest(__CLASS__, __FUNCTION__),
-            function (): void {
-                $this->implTestDeclarativeConfigResourceAttributes();
-            }
+            $this->implTestDeclarativeConfigResourceAttributes(...),
         );
     }
 }
