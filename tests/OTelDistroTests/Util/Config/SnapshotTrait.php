@@ -6,9 +6,12 @@ namespace OTelDistroTests\Util\Config;
 
 use OpenTelemetry\Distro\Util\ArrayUtil;
 use OTelDistroTests\Util\ArrayUtilForTests;
+use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\Log\LoggableTrait;
 use OTelDistroTests\Util\TextUtilForTests;
 use PHPUnit\Framework\Assert;
+use ReflectionClass;
+use ReflectionType;
 use UnitEnum;
 
 /**
@@ -80,5 +83,14 @@ trait SnapshotTrait
     {
         Assert::assertNotNull($this->optNameToParsedValue);
         return ArrayUtil::getValueIfKeyExistsElse($optName->name, $this->optNameToParsedValue, null);
+    }
+
+    /**
+     * @param TOptionName $optName
+     */
+    public static function getPropertyReflectionType(UnitEnum $optName): ReflectionType
+    {
+        $propertyName = TextUtilForTests::snakeToCamelCase($optName->name);
+        return AssertEx::notNull((new ReflectionClass(static::class))->getProperty($propertyName)->getType());
     }
 }

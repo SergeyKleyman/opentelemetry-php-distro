@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\Util\Config;
 
+use OTelDistroTests\Util\ReflectionUtil;
 use Override;
+use ReflectionType;
 
 /**
  * Code in this file is part of implementation internals, and thus it is not covered by the backward compatibility.
@@ -44,5 +46,10 @@ abstract class NullableOptionMetadata extends OptionMetadata
     public function defaultValue(): mixed
     {
         return null;
+    }
+
+    public function getParsedValueReflectionType(): ReflectionType
+    {
+        return ReflectionUtil::getNullableReflectionTypeFor($this->parser()->getParsedValueReflectionType());
     }
 }
