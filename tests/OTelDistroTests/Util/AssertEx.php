@@ -128,7 +128,7 @@ final class AssertEx
      *
      * @phpstan-assert non-empty-string $actual
      */
-    public static function notEmptyString(string $actual, string $message = ''): string
+    public static function notEmptyString(mixed $actual, string $message = ''): string
     {
         if ($actual === '') {
             Assert::fail($message);
@@ -259,21 +259,6 @@ final class AssertEx
         foreach ($actual as $value) {
             Assert::assertInstanceOf($expectedValueType, $value);
         }
-    }
-
-    /**
-     * @template T of numeric|string|object|resource
-     *
-     * @param ?T $actual
-     *
-     * @return T
-     *
-     * @phpstan-assert !null $actual
-     */
-    public static function isNotNull(mixed $actual, string $message = ''): mixed
-    {
-        Assert::assertNotNull($actual, $message);
-        return $actual;
     }
 
     /**
@@ -667,5 +652,10 @@ final class AssertEx
         $dbgCtx->add(['actual type' => get_debug_type($actual)]);
         $dbgCtx->add(compact('actual'));
         Assert::assertTrue(ArrayUtilForTests::isOfArrayKeyType($actual));
+    }
+
+    public static function opaqueAlwaysZero(): int
+    {
+        return 0;
     }
 }

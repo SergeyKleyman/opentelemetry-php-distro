@@ -4,30 +4,90 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\UnitTests\UtilTests\ConfigTests;
 
+use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\TextUtil;
+use OpenTelemetry\Distro\Util\WildcardListMatcher;
+use OTelDistroTests\ComponentTests\Util\AppCodeHostKind;
+use OTelDistroTests\ComponentTests\Util\TestGroupName;
+use OTelDistroTests\ComponentTests\Util\TestMatrixRow;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
+use OTelDistroTests\Util\Config\BoolOptionMetadata;
+use OTelDistroTests\Util\Config\BoolOptionParser;
 use OTelDistroTests\Util\Config\ConfigSnapshotForProd;
 use OTelDistroTests\Util\Config\ConfigSnapshotForTests;
+use OTelDistroTests\Util\Config\DurationOptionParser;
+use OTelDistroTests\Util\Config\FloatOptionMetadata;
+use OTelDistroTests\Util\Config\IntOptionMetadata;
+use OTelDistroTests\Util\Config\LogLevelOptionMetadata;
+use OTelDistroTests\Util\Config\NullableAppCodeHostKindOptionMetadata;
+use OTelDistroTests\Util\Config\NullableBoolOptionMetadata;
+use OTelDistroTests\Util\Config\NullableLogLevelOptionMetadata;
+use OTelDistroTests\Util\Config\NullableStringOptionMetadata;
+use OTelDistroTests\Util\Config\NullableTestGroupNameOptionMetadata;
+use OTelDistroTests\Util\Config\NullableWildcardListOptionMetadata;
 use OTelDistroTests\Util\Config\OptionForProdName;
 use OTelDistroTests\Util\Config\OptionForTestsName;
 use OTelDistroTests\Util\Config\OptionMetadata;
+use OTelDistroTests\Util\Config\OptionParser;
 use OTelDistroTests\Util\Config\OptionsForProdMetadata;
 use OTelDistroTests\Util\Config\OptionsForTestsMetadata;
+use OTelDistroTests\Util\Config\WildcardListOptionParser;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\Duration;
+use OTelDistroTests\Util\DurationUnit;
 use OTelDistroTests\Util\Log\LoggableToString;
+use OTelDistroTests\Util\ReflectionUtil;
 use OTelDistroTests\Util\TestCaseBase;
 use OTelDistroTests\Util\TextUtilForTests;
+use ReflectionType;
 
 /**
  * @phpstan-type ConfigKind 'prod'|'tests'
  * @phpstan-type ConfigSnapshot ConfigSnapshotForProd|ConfigSnapshotForTests
  */
-class OptionNamesAndSnapshotPropertiesTest extends TestCaseBase
+class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
 {
     private const PROD_CONFIG_KIND = 'prod';
     private const TESTS_CONFIG_KIND = 'tests';
     private const ALL_CONFIG_KINDS = [self::PROD_CONFIG_KIND, self::TESTS_CONFIG_KIND];
+
+    public function test0OptionParserGetParseReturnType(): void
+    {
+        $impl = function (OptionParser $optParser, ReflectionType $expected): void {
+            $actual = $optParser->getParsedValueReflectionType();
+            self::assertSame($expected->__toString(), $actual->__toString());
+        };
+
+        $impl(new BoolOptionParser(), ReflectionUtil::boolReflectionType());
+        $impl(new DurationOptionParser(null, null, DurationUnit::s), ReflectionUtil::extractReflectionTypeAssertName(fn(Duration $_) => null, Duration::class));
+        $impl(new WildcardListOptionParser(), ReflectionUtil::extractReflectionTypeAssertName(fn(WildcardListMatcher $_) => null, WildcardListMatcher::class));
+    }
+
+    public function test1OptionMetadataGetParseReturnType(): void
+    {
+        $impl = function (OptionMetadata $optMeta, ReflectionType $expected): void {
+            $actual = $optMeta->getParsedValueReflectionType();
+            self::assertSame($expected->__toString(), $actual->__toString());
+        };
+
+        $impl(new BoolOptionMetadata(true), ReflectionUtil::boolReflectionType());
+        $impl(new IntOptionMetadata(null, null, 123), ReflectionUtil::intReflectionType());
+        $impl(new FloatOptionMetadata(null, null, 9876.5), ReflectionUtil::floatReflectionType());
+        $impl(new LogLevelOptionMetadata(LogLevel::warning), ReflectionUtil::extractReflectionTypeAssertName(fn(LogLevel $_) => null, LogLevel::class));
+
+        $impl(new NullableAppCodeHostKindOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?AppCodeHostKind $_) => null, '?' . AppCodeHostKind::class));
+        $impl(new NullableBoolOptionMetadata(), ReflectionUtil::nullableBoolReflectionType());
+        $impl(new NullableLogLevelOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?LogLevel $_) => null, '?' . LogLevel::class));
+        $impl(new NullableStringOptionMetadata(), ReflectionUtil::nullableStringReflectionType());
+        $impl(new NullableTestGroupNameOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?TestGroupName $_) => null, '?' . TestGroupName::class));
+        $impl(new NullableWildcardListOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?WildcardListMatcher $_) => null, '?' . WildcardListMatcher::class));
+
+        $impl(
+            OptionsForTestsMetadata::get()[OptionForTestsName::matrix_row->name],
+            ReflectionUtil::extractReflectionTypeAssertName(fn(?TestMatrixRow $_) => null, '?' . TestMatrixRow::class)
+        );
+    }
 
     /**
      * @param ConfigKind $configKind
@@ -113,6 +173,21 @@ class OptionNamesAndSnapshotPropertiesTest extends TestCaseBase
     }
 
     /**
+     * @param ConfigKind $configKind
+     *
+     * @return class-string<ConfigSnapshotForProd>|class-string<ConfigSnapshotForTests>
+     */
+    private static function getSnapshotClass(string $configKind): string
+    {
+        self::assertValidConfigKind($configKind);
+
+        return match ($configKind) {
+            self::PROD_CONFIG_KIND => ConfigSnapshotForProd::class,
+            self::TESTS_CONFIG_KIND => ConfigSnapshotForTests::class,
+        };
+    }
+
+    /**
      * @dataProvider dataProviderGeneratingConfigKind
      *
      * @param ConfigKind $configKind
@@ -178,6 +253,30 @@ class OptionNamesAndSnapshotPropertiesTest extends TestCaseBase
         foreach ($optNameCases as $optNameCase) {
             $dbgCtx->resetTopSubScope(compact('optNameCase'));
             self::assertSame($optNameToDefaultValue[$optNameCase->name], $configSnapshot->getOptionValueByName($optNameCase));
+        }
+        $dbgCtx->popSubScope();
+    }
+
+    /**
+     * @dataProvider dataProviderGeneratingConfigKind
+     *
+     * @param ConfigKind $configKind
+     */
+    public function testMetadataAndSnapshotPropertiesTypesMatch(string $configKind): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        $optNameToMetadata = self::getOptionsMetadata($configKind);
+        $snapshotClass = self::getSnapshotClass($configKind);
+
+        $dbgCtx->pushSubScope();
+        foreach ($optNameToMetadata as $optName => $optMeta) {
+            $dbgCtx->resetTopSubScope(compact('optName', 'optMeta'));
+            $optMetaParsedValReflType = $optMeta->getParsedValueReflectionType();
+            $dbgCtx->add(compact('optMetaParsedValReflType'));
+            $snapshotPropReflType = $snapshotClass::getPropertyReflectionType(self::getNameEnumClass($configKind)::findByName($optName));
+            $dbgCtx->add(compact('snapshotPropReflType'));
+            self::assertTrue(ReflectionUtil::canBeAssignedTo(source: $optMetaParsedValReflType, target: $snapshotPropReflType));
         }
         $dbgCtx->popSubScope();
     }
