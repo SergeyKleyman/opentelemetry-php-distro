@@ -48,6 +48,7 @@ abstract class NullableOptionMetadata extends OptionMetadata
         return null;
     }
 
+    #[Override]
     public function getParsedValueReflectionType(): ReflectionType
     {
         return ReflectionUtil::getNullableReflectionTypeFor(parent::getParsedValueReflectionType());
