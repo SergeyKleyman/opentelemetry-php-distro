@@ -37,7 +37,8 @@ class EnumOptionsParsingTest extends TestCaseBase
             [
                 EnumOptionParser::useEnumCasesValues(
                     enumClass: EnumOptionsParsingTestDummyBackedEnum::class,
-                    parsedValueReflType: ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(EnumOptionsParsingTestDummyEnum $_) => null, EnumOptionsParsingTestDummyEnum::class),
+                    parsedValueReflType:
+                    ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(EnumOptionsParsingTestDummyBackedEnum $_) => null, EnumOptionsParsingTestDummyBackedEnum::class),
                     isCaseSensitive: true,
                     isUnambiguousPrefixAllowed: true,
                 ),
