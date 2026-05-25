@@ -21,7 +21,7 @@ final class NullableAppCodeHostKindOptionMetadata extends NullableOptionMetadata
         parent::__construct(
             EnumOptionParser::useEnumCasesNames(
                 AppCodeHostKind::class,
-                parsedValueReflType: ReflectionUtil::extractReflectionTypeAssertName(fn(AppCodeHostKind $_) => null, AppCodeHostKind::class),
+                parsedValueReflType: ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(AppCodeHostKind $_) => null, AppCodeHostKind::class),
                 isCaseSensitive: true,
                 isUnambiguousPrefixAllowed: false,
             ),

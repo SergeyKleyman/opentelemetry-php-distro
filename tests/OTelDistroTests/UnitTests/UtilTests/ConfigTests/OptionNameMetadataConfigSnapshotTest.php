@@ -60,8 +60,8 @@ class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
         };
 
         $impl(new BoolOptionParser(), ReflectionUtil::boolReflectionType());
-        $impl(new DurationOptionParser(null, null, DurationUnit::s), ReflectionUtil::extractReflectionTypeAssertName(fn(Duration $_) => null, Duration::class));
-        $impl(new WildcardListOptionParser(), ReflectionUtil::extractReflectionTypeAssertName(fn(WildcardListMatcher $_) => null, WildcardListMatcher::class));
+        $impl(new DurationOptionParser(null, null, DurationUnit::s), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(Duration $_) => null, Duration::class));
+        $impl(new WildcardListOptionParser(), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(WildcardListMatcher $_) => null, WildcardListMatcher::class));
     }
 
     public function test1OptionMetadataGetParseReturnType(): void
@@ -74,18 +74,18 @@ class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
         $impl(new BoolOptionMetadata(true), ReflectionUtil::boolReflectionType());
         $impl(new IntOptionMetadata(null, null, 123), ReflectionUtil::intReflectionType());
         $impl(new FloatOptionMetadata(null, null, 9876.5), ReflectionUtil::floatReflectionType());
-        $impl(new LogLevelOptionMetadata(LogLevel::warning), ReflectionUtil::extractReflectionTypeAssertName(fn(LogLevel $_) => null, LogLevel::class));
+        $impl(new LogLevelOptionMetadata(LogLevel::warning), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(LogLevel $_) => null, LogLevel::class));
 
-        $impl(new NullableAppCodeHostKindOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?AppCodeHostKind $_) => null, '?' . AppCodeHostKind::class));
+        $impl(new NullableAppCodeHostKindOptionMetadata(), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?AppCodeHostKind $_) => null, '?' . AppCodeHostKind::class));
         $impl(new NullableBoolOptionMetadata(), ReflectionUtil::nullableBoolReflectionType());
-        $impl(new NullableLogLevelOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?LogLevel $_) => null, '?' . LogLevel::class));
+        $impl(new NullableLogLevelOptionMetadata(), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?LogLevel $_) => null, '?' . LogLevel::class));
         $impl(new NullableStringOptionMetadata(), ReflectionUtil::nullableStringReflectionType());
-        $impl(new NullableTestGroupNameOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?TestGroupName $_) => null, '?' . TestGroupName::class));
-        $impl(new NullableWildcardListOptionMetadata(), ReflectionUtil::extractReflectionTypeAssertName(fn(?WildcardListMatcher $_) => null, '?' . WildcardListMatcher::class));
+        $impl(new NullableTestGroupNameOptionMetadata(), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?TestGroupName $_) => null, '?' . TestGroupName::class));
+        $impl(new NullableWildcardListOptionMetadata(), ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?WildcardListMatcher $_) => null, '?' . WildcardListMatcher::class));
 
         $impl(
             OptionsForTestsMetadata::get()[OptionForTestsName::matrix_row->name],
-            ReflectionUtil::extractReflectionTypeAssertName(fn(?TestMatrixRow $_) => null, '?' . TestMatrixRow::class)
+            ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?TestMatrixRow $_) => null, '?' . TestMatrixRow::class)
         );
     }
 
@@ -262,7 +262,7 @@ class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
      *
      * @param ConfigKind $configKind
      */
-    public function testMetadataAndSnapshotPropertiesTypesMatch(string $configKind): void
+    public function testParsedValueCanBeAssgnedToSnapshotProperty(string $configKind): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
@@ -272,11 +272,11 @@ class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
         $dbgCtx->pushSubScope();
         foreach ($optNameToMetadata as $optName => $optMeta) {
             $dbgCtx->resetTopSubScope(compact('optName', 'optMeta'));
-            $optMetaParsedValReflType = $optMeta->getParsedValueReflectionType();
-            $dbgCtx->add(compact('optMetaParsedValReflType'));
-            $snapshotPropReflType = $snapshotClass::getPropertyReflectionType(self::getNameEnumClass($configKind)::findByName($optName));
-            $dbgCtx->add(compact('snapshotPropReflType'));
-            self::assertTrue(ReflectionUtil::canBeAssignedTo(source: $optMetaParsedValReflType, target: $snapshotPropReflType));
+            $optMetadataParsedValueReflType = $optMeta->getParsedValueReflectionType();
+            $dbgCtx->add(compact('optMetadataParsedValueReflType'));
+            $snapshotPropertyReflType = $snapshotClass::getPropertyReflectionType(self::getNameEnumClass($configKind)::findByName($optName));
+            $dbgCtx->add(compact('snapshotPropertyReflType'));
+            self::assertTrue(ReflectionUtil::canBeAssignedTo(source: $optMetadataParsedValueReflType, target: $snapshotPropertyReflType));
         }
         $dbgCtx->popSubScope();
     }

@@ -21,7 +21,7 @@ final class NullableTestGroupNameOptionMetadata extends NullableOptionMetadata
         parent::__construct(
             EnumOptionParser::useEnumCasesNames(
                 TestGroupName::class,
-                parsedValueReflType: ReflectionUtil::extractReflectionTypeAssertName(fn(TestGroupName $_) => null, TestGroupName::class),
+                parsedValueReflType: ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(TestGroupName $_) => null, TestGroupName::class),
                 isCaseSensitive: true,
                 isUnambiguousPrefixAllowed: false,
             )

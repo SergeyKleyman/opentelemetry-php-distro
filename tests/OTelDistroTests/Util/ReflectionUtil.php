@@ -31,6 +31,35 @@ final class ReflectionUtil
     public const NULL_TYPE_NAME = 'null';
     public const OBJECT_TYPE_NAME = 'object';
 
+    private const UNION_TYPE_MEMBERS_SEPARATOR = '|';
+
+    public static function canonicalizeReflectionTypeName(string $name): string
+    {
+        if (!str_contains($name, self::UNION_TYPE_MEMBERS_SEPARATOR)) {
+            return $name;
+        }
+
+        /** @var list<string> $members */
+        $members = AssertEx::isArray(explode(self::UNION_TYPE_MEMBERS_SEPARATOR, $name));
+        sort(/* ref */ $members, SORT_STRING);
+        return implode(self::UNION_TYPE_MEMBERS_SEPARATOR, $members);
+    }
+
+    public static function getReflectionTypeCanonicalName(ReflectionType $type): string
+    {
+        return self::canonicalizeReflectionTypeName($type->__toString());
+    }
+
+    public static function areEquivalentReflectionTypeNames(string $name1, string $name2): bool
+    {
+        return self::canonicalizeReflectionTypeName($name1) === self::canonicalizeReflectionTypeName($name2);
+    }
+
+    public static function areEqualReflectionTypes(ReflectionType $type1, ReflectionType $type2): bool
+    {
+        return self::areEquivalentReflectionTypeNames($type1->__toString(), $type2->__toString());
+    }
+
     private static function canBeAssignedToNamedTypes(ReflectionNamedType $source, ReflectionNamedType $target): bool
     {
         if (($sourceName = $source->getName()) === ($targetName = $target->getName())) {
@@ -98,7 +127,7 @@ final class ReflectionUtil
      *
      * @param Closure(T): void $closureWithTypeParam
      */
-    public static function extractReflectionType(Closure $closureWithTypeParam): ReflectionType
+    public static function extractReflectionTypeFromClosureParam(Closure $closureWithTypeParam): ReflectionType
     {
         if (AmbientContextForTests::isInited()) {
             DebugContext::getCurrentScope(/* out */ $dbgCtx);
@@ -119,10 +148,18 @@ final class ReflectionUtil
      *
      * @param Closure(T): void $closureWithTypeParam
      */
-    public static function extractReflectionTypeAssertName(Closure $closureWithTypeParam, string $expectedTypeName): ReflectionType
+    public static function extractReflectionTypeFromClosureParamAssertName(Closure $closureWithTypeParam, string $expectedTypeName): ReflectionType
     {
-        $type = self::extractReflectionType($closureWithTypeParam);
-        Assert::assertSame($expectedTypeName, $type->__toString());
+        if (AmbientContextForTests::isInited()) {
+            DebugContext::getCurrentScope(/* out */ $dbgCtx);
+        } else {
+            $dbgCtx = null;
+        }
+
+        $type = self::extractReflectionTypeFromClosureParam($closureWithTypeParam);
+        $actualTypeName = $type->__toString();
+        $dbgCtx?->add(compact('actualTypeName'));
+        Assert::assertTrue(self::areEquivalentReflectionTypeNames($expectedTypeName, $actualTypeName));
         return $type;
     }
 
@@ -143,7 +180,7 @@ final class ReflectionUtil
         }
         $dbgCtx?->add(['dummyClosure type' => get_debug_type($dummyClosure)]);
         Assert::assertNotNull($dummyClosure);
-        return self::extractReflectionTypeAssertName($dummyClosure, $typeAsString);
+        return self::extractReflectionTypeFromClosureParamAssertName($dummyClosure, $typeAsString);
     }
 
     public static function getNullableReflectionTypeFor(ReflectionType $baseReflType): ReflectionType
@@ -156,41 +193,41 @@ final class ReflectionUtil
 
     public static function boolReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(bool $_) => null, 'bool');
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(bool $_) => null, 'bool');
     }
 
     public static function nullableBoolReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(?bool $_) => null, '?bool');
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(?bool $_) => null, '?bool');
     }
 
     public static function floatReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(float $_) => null, self::FLOAT_TYPE_NAME);
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(float $_) => null, self::FLOAT_TYPE_NAME);
     }
 
     public static function nullableFloatReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(?float $_) => null, '?' . self::FLOAT_TYPE_NAME);
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(?float $_) => null, '?' . self::FLOAT_TYPE_NAME);
     }
 
     public static function intReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(int $_) => null, self::INT_TYPE_NAME);
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(int $_) => null, self::INT_TYPE_NAME);
     }
 
     public static function nullableIntReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(?int $_) => null, '?' . self::INT_TYPE_NAME);
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(?int $_) => null, '?' . self::INT_TYPE_NAME);
     }
 
     public static function stringReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(string $_) => null, 'string');
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(string $_) => null, 'string');
     }
 
     public static function nullableStringReflectionType(): ReflectionType
     {
-        return self::extractReflectionTypeAssertName(fn(?string $_) => null, '?string');
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(?string $_) => null, '?string');
     }
 }

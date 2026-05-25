@@ -31,7 +31,7 @@ final class LogLevelOptionMetadata extends OptionWithDefaultValueMetadata
         if ($result === null) {
             $result = EnumOptionParser::useEnumCasesNames(
                 LogLevel::class,
-                parsedValueReflType: ReflectionUtil::extractReflectionTypeAssertName(fn(LogLevel $_) => null, LogLevel::class),
+                parsedValueReflType: ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(LogLevel $_) => null, LogLevel::class),
                 isCaseSensitive: false,
                 isUnambiguousPrefixAllowed: true,
             );
