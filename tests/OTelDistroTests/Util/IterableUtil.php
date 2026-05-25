@@ -103,9 +103,12 @@ final class IterableUtil
     }
 
     /**
-     * @param iterable<mixed, mixed> $iterable
+     * @template TKey
+     * @template TValue
      *
-     * @return iterable<mixed, mixed>
+     * @param iterable<TKey, TValue> $iterable
+     *
+     * @return iterable<TKey, TValue>
      */
     public static function skipFirst(iterable $iterable): iterable
     {

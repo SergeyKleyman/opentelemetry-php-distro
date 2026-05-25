@@ -97,7 +97,7 @@ final class AssertEx
      *
      * @phpstan-return TValue
      *
-     * @phpstan-assert array{key: mixed, ...} $actualArray
+     * @phpstan-assert non-empty-array<TKey, TValue> $actualArray
      */
     public static function arrayHasKey(string|int $expectedKey, array $actualArray): mixed
     {
@@ -182,6 +182,21 @@ final class AssertEx
     public static function notEmptyList(array $actual, string $message = ''): array
     {
         Assert::assertNotEmpty($actual, $message);
+        return $actual;
+    }
+
+    /**
+     * @template T
+     *
+     * @param false|T $actual
+     *
+     * @return T
+     *
+     * @phpstan-assert T $actual
+     */
+    public static function notFalse(mixed $actual, string $message = ''): mixed
+    {
+        Assert::assertNotFalse($actual, $message);
         return $actual;
     }
 
@@ -475,11 +490,13 @@ final class AssertEx
     public static function equalLists(array $expected, array $actual): void
     {
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
-        Assert::assertSame(count($expected), count($actual));
+        AssertEx::sameCount($expected, $actual);
+        $dbgCtx->pushSubScope();
         foreach (RangeUtil::generateUpTo(count($expected)) as $i) {
-            $dbgCtx->add(compact('i'));
+            $dbgCtx->resetTopSubScope(compact('i'));
             Assert::assertSame($expected[$i], $actual[$i]);
         }
+        $dbgCtx->popSubScope();
     }
 
     /**
