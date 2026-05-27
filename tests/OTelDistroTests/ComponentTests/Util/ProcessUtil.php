@@ -7,33 +7,18 @@ namespace OTelDistroTests\ComponentTests\Util;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\AmbientContextForTests;
-use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
-use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\EnvVarUtil;
 use OTelDistroTests\Util\ExceptionUtil;
-use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
-use OTelDistroTests\Util\NumericUtilForTests;
-use OTelDistroTests\Util\OsUtil;
-use PHPUnit\Framework\Assert;
 
 /**
  * @phpstan-import-type EnvVars from EnvVarUtil
- *
- * @phpstan-type ProcessListingInfo array{'parent_pid': int, 'command_line': string}
- * @phpstan-type PidToListingInfo array<int, ProcessListingInfo>
+ * @phpstan-type Pid non-negative-int
  */
 final class ProcessUtil
 {
     use StaticClassTrait;
-
-    public const COMMAND_LINE_KEY = 'command_line';
-    public const PARENT_PID_KEY = 'parent_pid';
-
-    public const PID_PS_COLUMN_NAME = 'PID';
-    public const PPID_PS_COLUMN_NAME = 'PPID';
-    public const COMMAND_PS_COLUMN_NAME = 'COMMAND';
 
     public static function doesProcessExist(int $pid): bool
     {
@@ -41,18 +26,9 @@ final class ProcessUtil
         return $cmdExitCode === 0;
     }
 
-    public static function waitForProcessToExitUsingPid(string $dbgProcessDesc, int $pid, int $maxWaitTimeInMicroseconds): bool
-    {
-        return (new PollingCheck(
-            $dbgProcessDesc . ' process (PID: ' . $pid . ') exited' /* <- dbgDesc */,
-            $maxWaitTimeInMicroseconds,
-        ))->run(
-            function () use ($pid): bool {
-                return !self::doesProcessExist($pid);
-            }
-        );
-    }
-
+    /**
+     * @param Pid $pid
+     */
     public static function execCommandToTerminateProcess(int $pid, bool $force = false): bool
     {
         $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)->addAllContext(compact('pid', 'force'));
@@ -87,7 +63,7 @@ final class ProcessUtil
     /**
      * @phpstan-param EnvVars $envVars
      */
-    public static function startBackgroundProcess(string $dbgProcessName, string $command, array $envVars, ?ResourcesCleanerClient $resourcesCleanerClient, bool $isTestScoped): void
+    public static function startBackgroundProcess(string $dbgProcessName, string $command, array $envVars, ?ResourcesCleanerClient $resourcesCleanerClient, bool $isTestScoped): StartedProcessStatus
     {
         $processHandle = self::procOpenEx(
             dbgProcessName: $dbgProcessName,
@@ -100,6 +76,8 @@ final class ProcessUtil
 
         // Close handle to allow process to exit
         $processHandle->close();
+
+        return $processHandle->getStatus();
     }
 
     /**
@@ -113,7 +91,7 @@ final class ProcessUtil
         bool $isTestScoped,
         int $maxWaitTimeInMicroseconds,
         ?LogLevel $logLevelTimedout = null,
-    ): ProcessInfo {
+    ): StartedProcessStatus {
         $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__);
         $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars'));
 
@@ -129,15 +107,15 @@ final class ProcessUtil
 
         try {
             $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
-            if (!$processHandle->getCurrentInfo()->hasExited()) {
+            if (!$processHandle->getStatus()->hasExited()) {
                 $logger->logWithLevel(__FUNCTION__, $logLevelTimedout ?? LogLevel::warning)?->with(__LINE__, 'Wait for the started process to exit timed out - terminating the process');
-                self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getCurrentInfo()->pid));
+                self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getStatus()->pid));
             }
         } finally {
             $processHandle->close();
         }
 
-        return $processHandle->getCurrentInfo();
+        return $processHandle->getStatus();
     }
 
     /**
@@ -160,83 +138,28 @@ final class ProcessUtil
         }
 
         $processHandle = new ProcessHandle($dbgProcessName, $procOpenRetVal);
-        $resourcesCleanerClient?->registerProcessToTerminate($dbgProcessName, $processHandle->getCurrentInfo()->pid, $isTestScoped);
+        $resourcesCleanerClient?->registerProcessToTerminate($dbgProcessName, $processHandle->getStatus()->pid, $isTestScoped);
 
         $logInfo = $logger->logInfo(__FUNCTION__);
         $logInfo?->with(__LINE__, "Started process $dbgProcessName ($command)", compact('processHandle'));
         return $processHandle;
     }
 
+    /**
+     * @return Pid
+     *
+     * @phpstan-assert Pid $actual
+     */
+    public static function assertValidPid(int $actual): int
+    {
+        return AssertEx::isNonNegativeInt($actual);
+    }
+
+    /**
+     * @return Pid
+     */
     public static function getCurrentPid(): int
     {
-        return AssertEx::isInt(getmypid());
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function splitStringOnWhitespace(string $outputLine, int $partsCountLimit): array
-    {
-        // Use \s+ to match one or more whitespace characters
-        return AssertEx::notFalse(preg_split('/\s+/', $outputLine, /* limit: */ $partsCountLimit, /* flags: */ PREG_SPLIT_NO_EMPTY));
-    }
-
-    /**
-     * @param iterable<string> $outputLines
-     *
-     * @return PidToListingInfo
-     */
-    public static function parsePsCommandListingOutput(iterable $outputLines): array
-    {
-        /**
-         * @see ProcessUtilTest::testParsePsCommandListingOutput
-         */
-
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
-
-        /** @var list<string> $expectedFirstLineParts */
-        static $expectedFirstLineParts = [self::PID_PS_COLUMN_NAME, self::PPID_PS_COLUMN_NAME, self::COMMAND_PS_COLUMN_NAME];
-        /** @var ?int $expectedLinePartsCount */
-        static $expectedLinePartsCount = null;
-        if ($expectedLinePartsCount === null) {
-            $expectedLinePartsCount = count($expectedFirstLineParts);
-        }
-
-        Assert::assertTrue(IterableUtil::getFirstValue($outputLines, /* out */ $firstLine));
-        /** @var string $firstLine */
-        $firstLineParts = self::splitStringOnWhitespace($firstLine, $expectedLinePartsCount);
-        $dbgCtx->add(compact('firstLineParts'));
-
-        AssertEx::equalLists($expectedFirstLineParts, $firstLineParts);
-
-        /** @var PidToListingInfo $result */
-        $result = [];
-        foreach (IterableUtil::skipFirst($outputLines) as $outputLine) {
-            $currentLineParts = self::splitStringOnWhitespace($outputLine, $expectedLinePartsCount);
-            Assert::assertCount($expectedLinePartsCount, $currentLineParts);
-            $pid = NumericUtilForTests::parseStringAsInt($currentLineParts[0]);
-            $parentPid = NumericUtilForTests::parseStringAsInt($currentLineParts[1]);
-            $command = $currentLineParts[2];
-            ArrayUtilForTests::addAssertingKeyNew($pid, [self::PARENT_PID_KEY => $parentPid, self::COMMAND_LINE_KEY => $command], /* ref */ $result);
-        }
-        return $result;
-    }
-
-    /**
-     * @return PidToListingInfo
-     */
-    public static function getAllProcessesListingInfos(): array
-    {
-        Assert::assertFalse(OsUtil::isWindows());
-
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
-        $cmd = 'ps -o pid,ppid,args';
-        $dbgCtx->add(compact('cmd'));
-        $outputLastLine = exec('ps -o pid,ppid,args', /* out */ $outputLinesAsArray, /* out */ $exitCode);
-        $dbgCtx->add(compact('exitCode', 'outputLinesAsArray', 'outputLastLine'));
-        Assert::assertSame(0, $exitCode);
-        Assert::assertIsString($outputLastLine);
-
-        return self::parsePsCommandListingOutput($outputLinesAsArray);
+        return self::assertValidPid(getmypid());
     }
 }

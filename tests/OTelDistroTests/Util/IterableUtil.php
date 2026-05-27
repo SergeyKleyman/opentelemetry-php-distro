@@ -485,6 +485,22 @@ final class IterableUtil
     }
 
     /**
+     * @template TValue
+     *
+     * @param iterable<TValue> $iterable
+     * @param TValue $value
+     */
+    public static function contains(iterable $iterable, mixed $value): bool
+    {
+        foreach ($iterable as $currentValue) {
+            if ($currentValue === $value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @param iterable<string> $iterable
      */
     public static function convertToString(iterable $iterable, string $separator): string
