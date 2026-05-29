@@ -25,19 +25,6 @@ final class AssertEx
     /** @noinspection PhpUnused */
     public const DURATION_COMPARISON_PRECISION_MILLISECONDS = self::TIMESTAMP_COMPARISON_PRECISION_MICROSECONDS / 1000;
 
-    /**
-     * @template TKey of array-key
-     * @template TValue
-     *
-     * @param array<TKey, TValue> $expected
-     * @param array<TKey, TValue> $actual
-     */
-    public static function equalMaps(array $expected, array $actual): void
-    {
-        self::sameCount($expected, $actual);
-        self::mapIsSubsetOf($expected, $actual);
-    }
-
     /** @noinspection PhpUnused */
     public static function isBool(mixed $actual, string $message = ''): bool
     {
@@ -93,16 +80,14 @@ final class AssertEx
      * @template TValue
      *
      * @phpstan-param TKey $expectedKey
-     * @phpstan-param array<TKey, TValue> $actualArray
+     * @phpstan-param array<TKey, TValue>|ArrayAccess<TKey, TValue> $actualArray
      *
      * @phpstan-return TValue
-     *
-     * @phpstan-assert non-empty-array<TKey, TValue> $actualArray
      */
-    public static function arrayHasKey(string|int $expectedKey, array $actualArray): mixed
+    public static function arrayHasKey(string|int $expectedKey, array|ArrayAccess $actualArray): mixed
     {
         Assert::assertArrayHasKey($expectedKey, $actualArray);
-        return $actualArray[$expectedKey];
+        return $actualArray[$expectedKey]; // @phpstan-ignore return.type
     }
 
     /**
@@ -321,6 +306,17 @@ final class AssertEx
     }
 
     /**
+     * @phpstan-return object
+     *
+     * @phpstan-assert object $actualValue
+     */
+    public static function isObject(mixed $actualValue, string $message = ''): object
+    {
+        Assert::assertIsObject($actualValue, $message);
+        return $actualValue;
+    }
+
+    /**
      * @template TKey of array-key
      * @template TValue
      *
@@ -335,15 +331,6 @@ final class AssertEx
             $dbgCtx->add(compact('subsetMapKey', 'subsetMapVal'));
             Assert::assertArrayHasKey($subsetMapKey, $containingMap);
             Assert::assertEquals($subsetMapVal, $containingMap[$subsetMapKey]);
-        }
-    }
-
-    public static function equalsEx(mixed $expected, mixed $actual, string $message = ''): void
-    {
-        if (is_object($expected) && method_exists($expected, 'equals')) {
-            Assert::assertTrue($expected->equals($actual));
-        } else {
-            Assert::assertEquals($expected, $actual, $message);
         }
     }
 
@@ -492,44 +479,29 @@ final class AssertEx
         self::countAtLeast(1, $haystack);
     }
 
-    /** @noinspection PhpUnused */
-    public static function equalRecursively(mixed $expected, mixed $actual): void
-    {
-        if (is_array($actual)) {
-            Assert::assertIsArray($expected);
-            self::equalMaps($expected, $actual);
-        } else {
-            Assert::assertEquals($expected, $actual);
-        }
-    }
-
     /**
-     * @param list<mixed> $expected
-     * @param list<mixed> $actual
+     * @phpstan-assert true $condition
      */
-    public static function equalLists(array $expected, array $actual): void
+    public static function assertTrue(mixed $condition, string $message = ''): bool
     {
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
-        AssertEx::sameCount($expected, $actual);
-        $dbgCtx->pushSubScope();
-        foreach (RangeUtil::generateUpTo(count($expected)) as $i) {
-            $dbgCtx->resetTopSubScope(compact('i'));
-            Assert::assertSame($expected[$i], $actual[$i]);
-        }
-        $dbgCtx->popSubScope();
+        Assert::assertTrue($condition, $message);
+        return $condition;
+    }
+
+    public static function equal(mixed $expected, mixed $actual): void
+    {
+        DeepEqual::areEqualEx($expected, $actual, assertTrue: fn($condition) => self::assertTrue($condition));
     }
 
     /**
-     * @param list<mixed> $expected
-     * @param list<mixed> $actual
+     * @template T
      *
-     * @noinspection PhpUnused
+     * @param list<T> $expected
+     * @param list<T> $actual
      */
-    public static function equalScalarLists(array $expected, array $actual): void
+    public static function equalAsSets(array $expected, array $actual): void
     {
-        sort(/* ref */ $expected);
-        sort(/* ref */ $actual);
-        self::equalLists($expected, $actual);
+        DeepEqual::areEqualAsSetsEx($expected, $actual, assertTrue: fn($condition) => self::assertTrue($condition));
     }
 
     /**
@@ -609,17 +581,6 @@ final class AssertEx
     public static function isNumber(mixed $actual): void
     {
         Assert::assertThat($actual, Assert::logicalOr(new IsType(IsType::TYPE_INT), new IsType(IsType::TYPE_FLOAT)));
-    }
-
-    /**
-     * @param mixed[] $expected
-     * @param mixed[] $actual
-     */
-    public static function equalAsSets(array $expected, array $actual, string $message = ''): void
-    {
-        sort(/* ref */ $expected);
-        sort(/* ref */ $actual);
-        Assert::assertEqualsCanonicalizing($expected, $actual, $message);
     }
 
     /**

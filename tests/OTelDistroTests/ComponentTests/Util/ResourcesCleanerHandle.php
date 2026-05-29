@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\Util;
 
 use OTelDistroTests\Util\ClassNameUtil;
-use OTelDistroTests\Util\HttpMethods;
-use OTelDistroTests\Util\HttpStatusCodes;
 use PHPUnit\Framework\Assert;
 
 final class ResourcesCleanerHandle extends HttpServerHandle
 {
     private ResourcesCleanerClient $resourcesCleanerClient;
 
-    public function __construct(HttpServerHandle $httpSpawnedProcessHandle)
+    public function __construct(HttpServerHandle $httpHandle)
     {
         parent::__construct(
             ClassNameUtil::fqToShort(ResourcesCleaner::class) /* <- dbgServerDesc */,
-            $httpSpawnedProcessHandle->spawnedProcessOsId,
-            $httpSpawnedProcessHandle->serverId,
-            $httpSpawnedProcessHandle->ports
+            $httpHandle->serverPids,
+            $httpHandle->serverId,
+            $httpHandle->ports
         );
 
         $this->resourcesCleanerClient = new ResourcesCleanerClient($this->serverId, $this->getMainPort());
@@ -30,9 +28,13 @@ final class ResourcesCleanerHandle extends HttpServerHandle
         return $this->resourcesCleanerClient;
     }
 
-    public function cleanTestScoped(): void
+    public function signalAndWaitForItToExit(): void
     {
-        $response = $this->sendRequest(HttpMethods::POST, TestInfraHttpServerProcessBase::CLEAN_TEST_SCOPED_URI_PATH);
-        Assert::assertSame(HttpStatusCodes::OK, $response->getStatusCode());
+        $relatedRunningProcesses = RunningProcessesInfo::getForAllInCurrentSession()->getSubTrees($this->serverPids);
+
+        $this->sendPostRequestAssertSuccessResponse(TestInfraHttpServerProcessBase::EXIT_URI_PATH);
+
+        $hasExited = $relatedRunningProcesses->waitToExit(dbgProcessesSetDesc: $this->dbgProcessName, maxWaitTimeInMicroseconds: 10 * 1000 * 1000 /* 10 seconds */);
+        Assert::assertTrue($hasExited);
     }
 }

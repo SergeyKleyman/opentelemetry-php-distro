@@ -49,7 +49,7 @@ final class MockOTelCollector extends TestInfraHttpServerProcessBase
     public function __construct()
     {
         $this->clock = new Clock(AmbientContextForTests::loggerFactory());
-        $this->cleanTestScopedData();
+        $this->resetTestScopedData();
 
         /** @noinspection PhpUnhandledExceptionInspection */
         parent::__construct();
@@ -294,7 +294,7 @@ final class MockOTelCollector extends TestInfraHttpServerProcessBase
     /**
      * Extracted to a separate method because it is called from __construct() before $logger is initialized
      */
-    private function cleanTestScopedData(): void
+    private function resetTestScopedData(): void
     {
         $this->agentBackendCommEvents = [];
         $this->pendingDataRequestNextId = 1;
@@ -305,7 +305,7 @@ final class MockOTelCollector extends TestInfraHttpServerProcessBase
     {
         $beforeClean = MemoryUtil::logMemoryUsage('Before cleaning test scoped');
 
-        $this->cleanTestScopedData();
+        $this->resetTestScopedData();
         MemoryUtil::logMemoryUsage('After cleaning test scoped', $beforeClean);
 
         $collectedCyclesCount = gc_collect_cycles();

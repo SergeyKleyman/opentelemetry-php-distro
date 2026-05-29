@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OTelDistroTests\Util;
 
 use Countable;
+use IteratorAggregate;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use Generator;
 use Iterator;
@@ -170,30 +171,35 @@ final class IterableUtil
     }
 
     /**
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @param iterable<T> $inputIterable
+     * @param iterable<TKey, TValue> $inputIterable
      *
-     * @return Generator<T>
+     * @return Generator<TKey, TValue>
      */
     public static function iterableToGenerator(iterable $inputIterable): Generator
     {
-        foreach ($inputIterable as $val) {
-            yield $val;
+        foreach ($inputIterable as $key => $val) {
+            yield $key => $val;
         }
     }
 
     /**
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @param iterable<T> $inputIterable
+     * @param iterable<TKey, TValue> $inputIterable
      *
-     * @return Iterator<T>
+     * @return Iterator<TKey, TValue>
      */
     public static function iterableToIterator(iterable $inputIterable): Iterator
     {
         if ($inputIterable instanceof Iterator) {
             return $inputIterable;
+        }
+        if ($inputIterable instanceof IteratorAggregate) {
+            return self::iterableToIterator($inputIterable->getIterator()); // @phpstan-ignore return.type
         }
 
         return self::iterableToGenerator($inputIterable);

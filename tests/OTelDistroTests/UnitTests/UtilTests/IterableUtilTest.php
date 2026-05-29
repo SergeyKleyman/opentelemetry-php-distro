@@ -19,19 +19,19 @@ final class IterableUtilTest extends TestCaseBase
 {
     public static function testPrepend(): void
     {
-        AssertEx::equalLists([1, 2], IterableUtil::toList(IterableUtil::prepend(1, [2])));
-        AssertEx::equalLists([1, 2, 3], IterableUtil::toList(IterableUtil::prepend(1, [2, 3])));
-        AssertEx::equalLists([1], IterableUtil::toList(IterableUtil::prepend(1, [])));
+        AssertEx::equal([1, 2], IterableUtil::toList(IterableUtil::prepend(1, [2])));
+        AssertEx::equal([1, 2, 3], IterableUtil::toList(IterableUtil::prepend(1, [2, 3])));
+        AssertEx::equal([1], IterableUtil::toList(IterableUtil::prepend(1, [])));
     }
 
     public static function testArraySuffix(): void
     {
-        AssertEx::equalLists([1, 2], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 0)));
-        AssertEx::equalLists([2], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 1)));
-        AssertEx::equalLists([], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 2)));
-        AssertEx::equalLists([], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 3)));
-        AssertEx::equalLists([], IterableUtil::toList(IterableUtil::arraySuffix([], 0)));
-        AssertEx::equalLists([], IterableUtil::toList(IterableUtil::arraySuffix([], 1)));
+        AssertEx::equal([1, 2], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 0)));
+        AssertEx::equal([2], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 1)));
+        AssertEx::equal([], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 2)));
+        AssertEx::equal([], IterableUtil::toList(IterableUtil::arraySuffix([1, 2], 3)));
+        AssertEx::equal([], IterableUtil::toList(IterableUtil::arraySuffix([], 0)));
+        AssertEx::equal([], IterableUtil::toList(IterableUtil::arraySuffix([], 1)));
     }
 
     /**
@@ -61,7 +61,7 @@ final class IterableUtilTest extends TestCaseBase
             $dbgCtx->add(compact('i', 'actualTuple'));
             self::assertLessThan(count($expectedOutput), $i);
             $expectedTuple = $expectedOutput[$i];
-            AssertEx::equalLists(AssertEx::arrayIsList($expectedTuple), AssertEx::arrayIsList($actualTuple));
+            AssertEx::equal(AssertEx::arrayIsList($expectedTuple), AssertEx::arrayIsList($actualTuple));
             ++$i;
         }
         self::assertSame(count($expectedOutput), $i);

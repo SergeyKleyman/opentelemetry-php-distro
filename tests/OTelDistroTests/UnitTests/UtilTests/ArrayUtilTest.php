@@ -295,7 +295,7 @@ final class ArrayUtilTest extends TestCaseBase
             $actualResult = $removeFromArray;
             /** @var iterable<array-key> $keys */
             ArrayUtilForTests::removeByKeys($actualResult, $keys);
-            AssertEx::equalMaps($expectedResult, $actualResult);
+            AssertEx::equal($expectedResult, $actualResult);
         };
 
         $testImpl([], [], []);

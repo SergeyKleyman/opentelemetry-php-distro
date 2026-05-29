@@ -276,7 +276,7 @@ class OptionNameMetadataConfigSnapshotTest extends TestCaseBase
             $dbgCtx->add(compact('optMetadataParsedValueReflType'));
             $snapshotPropertyReflType = $snapshotClass::getPropertyReflectionType(self::getNameEnumClass($configKind)::findByName($optName));
             $dbgCtx->add(compact('snapshotPropertyReflType'));
-            self::assertTrue(ReflectionUtil::canBeAssignedTo(source: $optMetadataParsedValueReflType, target: $snapshotPropertyReflType));
+            self::assertTrue(ReflectionUtil::canReflectionTypeBeAssignedToReflectionType(source: $optMetadataParsedValueReflType, target: $snapshotPropertyReflType));
         }
         $dbgCtx->popSubScope();
     }

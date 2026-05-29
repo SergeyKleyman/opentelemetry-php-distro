@@ -64,16 +64,6 @@ class LoggingClassTraitTest extends TestCaseBase
     }
 
     /**
-     * @phpstan-param Context $expected
-     * @phpstan-param Context $actual
-     */
-    private static function assertContextsEqual(array $expected, array $actual): void
-    {
-        AssertEx::equalRecursively($expected, $actual);
-    }
-
-
-    /**
      * @phpstan-param Context $expectedContext
      *
      * @return FormatAndWrite
@@ -131,7 +121,7 @@ class LoggingClassTraitTest extends TestCaseBase
             self::assertSame($expectedLine, $actualLine);
             self::assertSame($expectedFunc, $actualFunc);
             self::assertSame($expectedMessage, $actualMessage);
-            self::assertContextsEqual($expectedContext, $actualContext);
+            AssertEx::equal($expectedContext, $actualContext);
         };
     }
 

@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace OTelDistroTests\Util;
 
 use Closure;
+use Generator;
+use Iterator;
+use IteratorAggregate;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\Log\LoggableToString;
 use ParseError;
 use PHPUnit\Framework\Assert;
+use ReflectionClass;
 use ReflectionFunction;
 use ReflectionNamedType;
 use ReflectionType;
@@ -39,10 +43,18 @@ final class ReflectionUtil
             return $name;
         }
 
-        /** @var list<string> $members */
-        $members = AssertEx::isArray(explode(self::UNION_TYPE_MEMBERS_SEPARATOR, $name));
-        sort(/* ref */ $members, SORT_STRING);
-        return implode(self::UNION_TYPE_MEMBERS_SEPARATOR, $members);
+        /** @var list<string> $memberNames */
+        $memberNames = AssertEx::arrayIsList(AssertEx::isArray(explode(self::UNION_TYPE_MEMBERS_SEPARATOR, $name)));
+        return self::unionTypeMembersToCanonicalName($memberNames);
+    }
+
+    /**
+     * @param list<string> $memberNames
+     */
+    public static function unionTypeMembersToCanonicalName(array $memberNames): string
+    {
+        sort(/* ref */ $memberNames, SORT_STRING);
+        return implode(self::UNION_TYPE_MEMBERS_SEPARATOR, $memberNames);
     }
 
     public static function getReflectionTypeCanonicalName(ReflectionType $type): string
@@ -60,7 +72,7 @@ final class ReflectionUtil
         return self::areEquivalentReflectionTypeNames($type1->__toString(), $type2->__toString());
     }
 
-    private static function canBeAssignedToNamedTypes(ReflectionNamedType $source, ReflectionNamedType $target): bool
+    private static function canReflectionNamedTypeBeAssignedToReflectionNamedType(ReflectionNamedType $source, ReflectionNamedType $target): bool
     {
         if (($sourceName = $source->getName()) === ($targetName = $target->getName())) {
             return true;
@@ -90,7 +102,7 @@ final class ReflectionUtil
         return (class_exists($targetName) || interface_exists($targetName)) && is_subclass_of($sourceName, $targetName);
     }
 
-    public static function canBeAssignedTo(ReflectionType $source, ReflectionType $target): bool
+    public static function canReflectionTypeBeAssignedToReflectionType(ReflectionType $source, ReflectionType $target): bool
     {
         if (($target instanceof ReflectionNamedType) && ($target->getName() === self::MIXED_TYPE_NAME)) {
             return true;
@@ -109,7 +121,12 @@ final class ReflectionUtil
         foreach ($sourceTypes as $sourceType) {
             $foundMatch = false;
             foreach ($targetTypes as $targetType) {
-                if (self::canBeAssignedToNamedTypes(AssertEx::isInstanceOf(ReflectionNamedType::class, $sourceType), AssertEx::isInstanceOf(ReflectionNamedType::class, $targetType))) {
+                if (
+                    self::canReflectionNamedTypeBeAssignedToReflectionNamedType(
+                        AssertEx::isInstanceOf(ReflectionNamedType::class, $sourceType),
+                        AssertEx::isInstanceOf(ReflectionNamedType::class, $targetType),
+                    )
+                ) {
                     $foundMatch = true;
                     break;
                 }
@@ -120,6 +137,68 @@ final class ReflectionUtil
         }
 
         return true;
+    }
+
+    public static function canValueBeAssignedToReflectionType(mixed $source, ReflectionType $target): bool
+    {
+        if ($source === null) {
+            return $target->allowsNull();
+        }
+        return self::canReflectionTypeBeAssignedToReflectionType(self::getReflectionTypeForValue($source) ?? self::mixedReflectionType(), $target);
+    }
+
+    /**
+     * @param ReflectionClass<object> $valueClass
+     */
+    private static function getReflectionTypeForAnonymousClassValue(ReflectionClass $valueClass): ReflectionType
+    {
+        $result = [];
+        if (($parentClass = $valueClass->getParentClass()) !== false) {
+            $result[] = $parentClass->getName();
+        }
+        foreach ($valueClass->getInterfaceNames() as $interfaceName) {
+            $result[] = $interfaceName;
+        }
+        return $result === [] ? self::objectReflectionType() : self::buildReflectionType(self::unionTypeMembersToCanonicalName($result));
+    }
+
+    public static function getReflectionTypeForValue(mixed $value): ?ReflectionType
+    {
+        Assert::assertNotNull($value);
+
+        if (is_array($value)) {
+            return self::arrayReflectionType();
+        }
+        if (is_bool($value)) {
+            return self::boolReflectionType();
+        }
+        if (is_callable($value)) {
+            return self::callableReflectionType();
+        }
+        if (is_float($value)) {
+            return self::floatReflectionType();
+        }
+        if (is_iterable($value)) {
+            return self::iterableReflectionType();
+        }
+        if (is_int($value)) {
+            return self::intReflectionType();
+        }
+        if (is_object($value)) {
+            $valueClass = new ReflectionClass($value);
+            if ($valueClass->isAnonymous()) {
+                return self::getReflectionTypeForAnonymousClassValue($valueClass);
+            }
+            return self::buildReflectionType(get_class($value));
+        }
+        if (is_resource($value)) {
+            return null;
+        }
+        if (is_string($value)) {
+            return self::stringReflectionType();
+        }
+
+        return null;
     }
 
     /**
@@ -137,7 +216,6 @@ final class ReflectionUtil
 
         $reflParams = (new ReflectionFunction($closureWithTypeParam))->getParameters();
         $dbgCtx?->add(compact('reflParams'));
-        Assert::assertCount(1, $reflParams);
         $reflParam = ArrayUtilForTests::getSingleValue($reflParams);
         $dbgCtx?->add(compact('reflParam'));
         return AssertEx::notNull($reflParam->getType());
@@ -170,6 +248,7 @@ final class ReflectionUtil
         } else {
             $dbgCtx = null;
         }
+
         $dummyClosure = AssertEx::opaqueAlwaysZero() === 0 ? null : (fn(int $_) => null);
         $codeToEvalToDefineDummyClosure = '$dummyClosure = (fn(' . $typeAsString . ' $_) => null);';
         $dbgCtx?->add(compact('codeToEvalToDefineDummyClosure'));
@@ -191,6 +270,24 @@ final class ReflectionUtil
                 : self::buildReflectionType($baseReflType instanceof ReflectionUnionType ? ($baseReflType . '|null') : ('?' . $baseReflType));
     }
 
+    public static function arrayReflectionType(): ReflectionType
+    {
+        /**
+         * @param array<mixed> $_
+         */
+        $closureWithTypeParam = fn(array $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, self::ARRAY_TYPE_NAME);
+    }
+
+    public static function nullableArrayReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?array<mixed> $_
+         */
+        $closureWithTypeParam = fn(?array $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . self::ARRAY_TYPE_NAME);
+    }
+
     public static function boolReflectionType(): ReflectionType
     {
         return self::extractReflectionTypeFromClosureParamAssertName(fn(bool $_) => null, 'bool');
@@ -199,6 +296,42 @@ final class ReflectionUtil
     public static function nullableBoolReflectionType(): ReflectionType
     {
         return self::extractReflectionTypeFromClosureParamAssertName(fn(?bool $_) => null, '?bool');
+    }
+
+    public static function callableReflectionType(): ReflectionType
+    {
+        /**
+         * @param callable(): void $_
+         */
+        $closureWithTypeParam = fn(callable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, self::CALLABLE_TYPE_NAME);
+    }
+
+    public static function nullableCallableReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?callable(): void $_
+         */
+        $closureWithTypeParam = fn(?callable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . self::CALLABLE_TYPE_NAME);
+    }
+
+    public static function closureReflectionType(): ReflectionType
+    {
+        /**
+         * @param Closure(): void $_
+         */
+        $closureWithTypeParam = fn(Closure $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Closure::class);
+    }
+
+    public static function nullableClosureReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?Closure(): void $_
+         */
+        $closureWithTypeParam = fn(?Closure $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Closure::class);
     }
 
     public static function floatReflectionType(): ReflectionType
@@ -211,6 +344,24 @@ final class ReflectionUtil
         return self::extractReflectionTypeFromClosureParamAssertName(fn(?float $_) => null, '?' . self::FLOAT_TYPE_NAME);
     }
 
+    public static function generatorReflectionType(): ReflectionType
+    {
+        /**
+         * @param Generator<mixed> $_
+         */
+        $closureWithTypeParam = fn(Generator $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Generator::class);
+    }
+
+    public static function nullableGeneratorReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?Generator<mixed> $_
+         */
+        $closureWithTypeParam = fn(?Generator $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Generator::class);
+    }
+
     public static function intReflectionType(): ReflectionType
     {
         return self::extractReflectionTypeFromClosureParamAssertName(fn(int $_) => null, self::INT_TYPE_NAME);
@@ -221,6 +372,76 @@ final class ReflectionUtil
         return self::extractReflectionTypeFromClosureParamAssertName(fn(?int $_) => null, '?' . self::INT_TYPE_NAME);
     }
 
+    public static function iteratorReflectionType(): ReflectionType
+    {
+        /**
+         * @param Iterator<mixed> $_
+         */
+        $closureWithTypeParam = fn(Iterator $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Iterator::class);
+    }
+
+    public static function nullableIteratorReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?Iterator<mixed> $_
+         */
+        $closureWithTypeParam = fn(?Iterator $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Iterator::class);
+    }
+
+
+    public static function iteratorAggregateReflectionType(): ReflectionType
+    {
+        /**
+         * @param IteratorAggregate<mixed> $_
+         */
+        $closureWithTypeParam = fn(IteratorAggregate $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, IteratorAggregate::class);
+    }
+
+    public static function nullableIteratorAggregateReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?IteratorAggregate<mixed> $_
+         */
+        $closureWithTypeParam = fn(?IteratorAggregate $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . IteratorAggregate::class);
+    }
+
+    public static function iterableReflectionType(): ReflectionType
+    {
+        /**
+         * @param iterable<mixed> $_
+         */
+        $closureWithTypeParam = fn(iterable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, self::ITERABLE_TYPE_NAME);
+    }
+
+    public static function nullableIterableReflectionType(): ReflectionType
+    {
+        /**
+         * @phpstan-param ?iterable<mixed> $_
+         */
+        $closureWithTypeParam = fn(?iterable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . self::ITERABLE_TYPE_NAME);
+    }
+
+    public static function mixedReflectionType(): ReflectionType
+    {
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(mixed $_) => null, self::MIXED_TYPE_NAME);
+    }
+
+    public static function objectReflectionType(): ReflectionType
+    {
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(object $_) => null, self::OBJECT_TYPE_NAME);
+    }
+
+    public static function nullableObjectReflectionType(): ReflectionType
+    {
+        return self::extractReflectionTypeFromClosureParamAssertName(fn(?object $_) => null, '?' . self::OBJECT_TYPE_NAME);
+    }
+
     public static function stringReflectionType(): ReflectionType
     {
         return self::extractReflectionTypeFromClosureParamAssertName(fn(string $_) => null, 'string');
@@ -229,5 +450,23 @@ final class ReflectionUtil
     public static function nullableStringReflectionType(): ReflectionType
     {
         return self::extractReflectionTypeFromClosureParamAssertName(fn(?string $_) => null, '?string');
+    }
+
+    public static function traversableReflectionType(): ReflectionType
+    {
+        /**
+         * @param Traversable<mixed> $_
+         */
+        $closureWithTypeParam = fn(Traversable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Traversable::class);
+    }
+
+    public static function nullableTraversableReflectionType(): ReflectionType
+    {
+        /**
+         * @param ?Traversable<mixed> $_
+         */
+        $closureWithTypeParam = fn(?Traversable $_) => null;
+        return self::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Traversable::class);
     }
 }

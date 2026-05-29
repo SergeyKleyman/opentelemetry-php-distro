@@ -29,6 +29,9 @@ use Traversable;
  * @phpstan-import-type Pid from ProcessUtil
  * @phpstan-type PidToAdditionalDetails array<Pid, RunningProcessAdditionalDetails>
  * @phpstan-type PidToDbgDesc array<Pid, string>
+ *
+ * @implements ArrayAccess<Pid, RunningProcessAdditionalDetails>
+ * @implements IteratorAggregate<Pid, RunningProcessAdditionalDetails>
  */
 final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, LoggableInterface
 {
@@ -54,9 +57,9 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
          * Example:
          *
          *          PID    PPID STAT COMMAND
-         *       209277  209253 I    sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'
-         *       209278  209277 R+   php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services
-         *       209280       1 R+   php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log
+         *       209277  209253 S+   sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'
+         *       209278  209277 S+   php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services
+         *       209280       1 S+   php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log
          */
 
         DebugContext::getCurrentScope(/* out */ $dbgCtx);
@@ -73,7 +76,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
         /** @var string $firstLine */
         $firstLineParts = self::splitStringOnWhitespace($firstLine, $expectedLinePartsCount);
         Assert::assertCount($expectedLinePartsCount, $firstLineParts);
-        AssertEx::equalLists($expectedFirstLineParts, $firstLineParts);
+        AssertEx::equal($expectedFirstLineParts, $firstLineParts);
 
         /** @var PidToAdditionalDetails $result */
         $result = [];
@@ -82,8 +85,9 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
             Assert::assertCount($expectedLinePartsCount, $currentLineParts);
             $pid = AssertEx::isNonNegativeInt(NumericUtilForTests::parseStringAsInt($currentLineParts[0]));
             $parentPid = AssertEx::isNonNegativeInt(NumericUtilForTests::parseStringAsInt($currentLineParts[1]));
-            $command = $currentLineParts[2];
-            ArrayUtilForTests::addAssertingKeyNew($pid, new RunningProcessAdditionalDetails($parentPid, $command), /* ref */ $result);
+            $state = $currentLineParts[2];
+            $command = $currentLineParts[3];
+            ArrayUtilForTests::addAssertingKeyNew($pid, new RunningProcessAdditionalDetails($parentPid, $state, $command), /* ref */ $result);
         }
         return new self($result);
     }
@@ -103,15 +107,22 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
         return self::parsePsCommandOutput($outputLinesAsArray);
     }
 
-    public function doAnyOfProcessesStillExist(): bool
+    /**
+     * @return iterable<Pid, RunningProcessAdditionalDetails>
+     */
+    public function iterateStillExisting(): iterable
     {
         $latestProcesses = self::getForAllInCurrentSession();
-        foreach ($this->getPids() as $pid) {
+        foreach ($this as $pid => $additionalDetails) {
             if ($latestProcesses->hasPid($pid)) {
-                return true;
+                yield $pid => $additionalDetails;
             }
         }
-        return false;
+    }
+
+    public function doAnyStillExist(): bool
+    {
+        return !IterableUtil::isEmpty($this->iterateStillExisting());
     }
 
     /**
@@ -121,14 +132,6 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     {
         // Use \s+ to match one or more whitespace characters
         return AssertEx::notFalse(preg_split('/\s+/', $outputLine, /* limit: */ $partsCountLimit, /* flags: */ PREG_SPLIT_NO_EMPTY));
-    }
-
-    /**
-     * @return iterable<Pid>
-     */
-    public function getPids(): iterable
-    {
-        return IterableUtil::keys($this->pidToAdditionalDetails);
     }
 
     /**
@@ -168,8 +171,13 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
      */
     public function getSubTrees(Set $rootPids): self
     {
+        /**
+         * @param Pid $maybeDescendantPid
+         */
         $isisDescendantOfAnyRoot = function (int $maybeDescendantPid) use ($rootPids): bool {
             foreach ($rootPids as $rootPid) {
+                /** @var Pid $maybeDescendantPid */
+                /** @var Pid $rootPid */
                 if ($this->isDescendantOf($maybeDescendantPid, $rootPid)) {
                     return true;
                 }
@@ -203,7 +211,8 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
 
     /**
      * @param PidToAdditionalDetails $pidToAdditionalDetails
-     * @return ?int
+     *
+     * @return ?Pid
      */
     private static function findLeaf(array $pidToAdditionalDetails): ?int
     {
@@ -217,6 +226,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
 
     /**
      * @param PidToAdditionalDetails $pidToAdditionalDetails
+     *
      * @return iterable<Pid, RunningProcessAdditionalDetails>
      */
     private static function iterateInTopologicalOrderImpl(array $pidToAdditionalDetails): iterable
@@ -266,7 +276,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
 
     public function waitToExit(string $dbgProcessesSetDesc, int $maxWaitTimeInMicroseconds): bool
     {
-        return (new PollingCheck(dbgDesc: $dbgProcessesSetDesc . ' processes to exit', maxWaitTimeInMicroseconds: $maxWaitTimeInMicroseconds))->run(fn() => !$this->doAnyOfProcessesStillExist());
+        return (new PollingCheck(dbgDesc: $dbgProcessesSetDesc . ' processes to exit', maxWaitTimeInMicroseconds: $maxWaitTimeInMicroseconds))->run(fn() => !$this->doAnyStillExist());
     }
 
     #[Override]
@@ -281,7 +291,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     #[Override]
     public function getIterator(): Traversable
     {
-        return new ArrayIterator($this->pidToAdditionalDetails);
+        return new ArrayIterator($this->pidToAdditionalDetails); // @phpstan-ignore return.type
     }
 
     /**
@@ -294,7 +304,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     #[Override]
     public function offsetExists(mixed $offset): bool
     {
-        ProcessUtil::assertValidPid($offset); // @phpstan-ignore staticMethod.alreadyNarrowedType
+        ProcessUtil::assertValidPid($offset);
         return self::hasPid($offset);
     }
 
@@ -307,7 +317,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     #[ReturnTypeWillChange]
     public function offsetGet(mixed $offset): RunningProcessAdditionalDetails
     {
-        ProcessUtil::assertValidPid($offset); // @phpstan-ignore staticMethod.alreadyNarrowedType
+        ProcessUtil::assertValidPid($offset);
         return $this->pidToAdditionalDetails[$offset];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use Ds\Set;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\ArrayUtilForTests;
 use OTelDistroTests\Util\AssertEx;
@@ -71,7 +72,7 @@ abstract class HttpServerStarter
         foreach (RangeUtil::generateUpTo(self::MAX_TRIES_TO_START_SERVER) as $tryCount) {
             $dbgCtx->resetTopSubScope(compact('tryCount'));
             $dbgProcessName = DbgProcessNameGenerator::generate($this->dbgProcessNamePrefix);
-            /** @var int[] $currentTryPorts */
+            /** @var list<int> $currentTryPorts */
             $currentTryPorts = [];
             self::findFreePortsToListen($portsInUse, $portsToAllocateCount, $lastTriedPort, /* out */ $currentTryPorts);
             Assert::assertSame($portsToAllocateCount, count($currentTryPorts));
@@ -79,7 +80,7 @@ abstract class HttpServerStarter
              * We repeat $currentTryPorts type to fix PHPStan's
              * "Unable to resolve the template type T in call to method static method" error
              *
-             * @phpstan-var int[] $currentTryPorts
+             * @phpstan-var list<int> $currentTryPorts
              */
             $lastTriedPort = ArrayUtilForTests::getLastValue($currentTryPorts);
             $currentTryServerId = InfraUtilForTests::generateServerId();
@@ -96,12 +97,12 @@ abstract class HttpServerStarter
 
             /** @var ?Pid $receivedPid */
             $receivedPid = null;
-            if (!$this->isHttpServerRunning($dbgProcessName, $currentTryServerId, $currentTryPorts[0], $logger, /* ref */ $receivedPid)) {
+            if ($this->isHttpServerRunning($dbgProcessName, $currentTryServerId, $currentTryPorts[0], $logger, /* ref */ $receivedPid)) {
                 $runningProcessesInfo = RunningProcessesInfo::getForAllInCurrentSession();
                 $dbgCtx->add(compact('runningProcessesInfo'));
                 $logDebug?->with(__LINE__, 'Started HTTP server', compact('startedProcessStatus', 'receivedPid', 'runningProcessesInfo'));
                 Assert::assertTrue($runningProcessesInfo->isDescendantOf($receivedPid, $startedProcessStatus->pid));
-                return new HttpServerHandle($dbgProcessName, [$startedProcessStatus->pid, $receivedPid], $currentTryServerId, $currentTryPorts);
+                return new HttpServerHandle($dbgProcessName, new Set([$startedProcessStatus->pid, $receivedPid]), $currentTryServerId, $currentTryPorts);
             }
             $logDebug?->with(__LINE__, 'Failed to start HTTP server');
         }
@@ -113,7 +114,7 @@ abstract class HttpServerStarter
      * @param int[]  $portsInUse
      * @param ?int   $lastTriedPort
      * @param int    $portsToFindCount
-     * @param int[] &$result
+     * @param list<int> &$result
      *
      * @return void
      */
@@ -166,9 +167,11 @@ abstract class HttpServerStarter
      * @param-out ?Pid $receivedPid
      *
      * @phpstan-assert-if-true Pid $receivedPid
+     * @phpstan-assert-if-false null $receivedPid
      */
     private function isHttpServerRunning(string $dbgProcessName, string $serverId, int $port, Logger $logger, ?int &$receivedPid): bool
     {
+        $receivedPid = null;
         /** @var ?Throwable $lastThrown */
         $lastThrown = null;
         $dataPerRequest = new TestInfraDataPerRequest(serverId: $serverId);
@@ -201,7 +204,7 @@ abstract class HttpServerStarter
                 /** @var array<string, mixed> $responseBodyDecoded */
                 $responseBodyDecoded = JsonUtil::decode($response->getBody()->getContents());
                 $dbgCtx->add(compact('responseBodyDecoded'));
-                $receivedPid = ProcessUtil::assertValidPid(AssertEx::arrayHasKey(HttpServerHandle::PID_KEY, $responseBodyDecoded));
+                $receivedPid = ProcessUtil::assertValidPid(AssertEx::isInt(AssertEx::arrayHasKey(HttpServerHandle::PID_KEY, $responseBodyDecoded)));
                 $logger->logDebug(__FUNCTION__)?->with(__LINE__, 'HTTP server status is OK', compact('receivedPid'));
                 return true;
             }

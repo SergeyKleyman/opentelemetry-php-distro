@@ -18,14 +18,4 @@ final class RunningProcessAdditionalDetails
         public readonly string $commandLine,
     ) {
     }
-
-    public function equals(RunningProcessAdditionalDetails $obj): bool
-    {
-        foreach (get_object_vars($this) as $propName => $thisPropValue) {
-            if ($thisPropValue !== $obj->$propName) {
-                return false;
-            }
-        }
-        return true;
-    }
 }

@@ -96,6 +96,6 @@ final class ComponentTestsEnvVarsForAppCodeTest extends TestCaseBase
 
         $actualEnvVarsInAppCodeContext = AppCodeHostParams::filterEnvVarsFromPhpUnitToAppCodeContext($envVarsInPHPUnitContext);
 
-        AssertEx::equalMaps($expectedEnvVarsInAppCodeContext, $actualEnvVarsInAppCodeContext);
+        AssertEx::equal($expectedEnvVarsInAppCodeContext, $actualEnvVarsInAppCodeContext);
     }
 }

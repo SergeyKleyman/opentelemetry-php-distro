@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\Util\Log;
 
-/**
- * Code in this file is part of implementation internals, and thus it is not covered by the backward compatibility.
- *
- * @internal
- */
 abstract class StdWriteStreamBase implements LoggableInterface
 {
     use LoggableTrait;
@@ -55,6 +50,11 @@ abstract class StdWriteStreamBase implements LoggableInterface
         }
 
         return $this->isDefined;
+    }
+
+    public function getStream(): mixed
+    {
+        return self::ensureIsDefined() ? $this->stream : null;
     }
 
     public function writeLine(string $text): void

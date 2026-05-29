@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\UnitTests\UtilTests;
 
+use Ds\Set;
 use OTelDistroTests\ComponentTests\Util\RunningProcessAdditionalDetails;
 use OTelDistroTests\ComponentTests\Util\RunningProcessesInfo;
 use OTelDistroTests\ComponentTests\Util\ProcessUtil;
@@ -15,7 +16,6 @@ use OTelDistroTests\Util\OsUtil;
 use OTelDistroTests\Util\TestCaseBase;
 use OTelDistroTests\Util\TextUtilForTests;
 use PHPUnit\Exception as PHPUnitExceptionInterface;
-use PHPUnit\Framework\Assert;
 
 /**
  * @phpstan-import-type Pid from RunningProcessesInfo
@@ -26,9 +26,9 @@ class RunningProcessesInfoTest extends TestCaseBase
     /**
      * @phpstan-param Pid $parentPid
      */
-    private static function newAdditionalDetails(int $parentPid, string $commandLine): RunningProcessAdditionalDetails
+    private static function newAdditionalDetails(int $parentPid, string $state, string $commandLine): RunningProcessAdditionalDetails
     {
-        return new RunningProcessAdditionalDetails(parentPid: $parentPid, commandLine: $commandLine);
+        return new RunningProcessAdditionalDetails(parentPid: $parentPid, state: $state, commandLine: $commandLine);
     }
 
     public function testParsePsCommandListingOutput(): void
@@ -44,55 +44,49 @@ class RunningProcessesInfoTest extends TestCaseBase
             DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
             $actualResult = RunningProcessesInfo::parsePsCommandOutput($outputLines);
-            AssertEx::equalScalarLists(array_keys($expectedResult), $actualResult->getPids());
-            $dbgCtx->pushSubScope();
-            foreach ($expectedResult as $pid => $expectedAdditionalDetails) {
-                $dbgCtx->resetTopSubScope(compact('pid', 'expectedAdditionalDetails'));
-                Assert::assertTrue($actualResult[$pid]->equals($expectedAdditionalDetails));
-            }
-            $dbgCtx->popSubScope();
+            AssertEx::equal(new RunningProcessesInfo($expectedResult), $actualResult);
         };
 
         // No output lines should cause an exception to be thrown
         AssertEx::throws(PHPUnitExceptionInterface::class, fn() => $impl([], []));
 
         // Output lines has only just the header
-        $impl([" \t PID    PPID COMMAND"], []);
+        $impl([" \t PID    PPID STAT COMMAND"], []);
 
         $impl(
             [
-                'PID    PPID COMMAND',
-                '209280       1 php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log',
+                'PID    PPID STAT COMMAND',
+                '209280    1 S+   php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log',
             ],
             [
-                209280 => self::newAdditionalDetails(parentPid: 1, commandLine: 'php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log'),
+                209280 => self::newAdditionalDetails(parentPid: 1, state: 'S+', commandLine: 'php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log'),
             ],
         );
 
         $impl(
             [
-                'PID    PPID COMMAND',
-                "209277  209253 sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'",
-                '209280       1 php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log',
+                'PID    PPID    STAT COMMAND',
+                "209277  209253 S+   sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'",
+                '209280       1 SI+  php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log',
             ],
             [
-                209277 => self::newAdditionalDetails(parentPid: 209253, commandLine: "sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'"),
-                209280 => self::newAdditionalDetails(parentPid: 1, commandLine: 'php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log'),
+                209277 => self::newAdditionalDetails(parentPid: 209253, state: 'S+', commandLine: "sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'"),
+                209280 => self::newAdditionalDetails(parentPid: 1, state: 'SI+', commandLine: 'php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log'),
             ],
         );
 
         /** @phpstan-var string $exampleOutputAsOneString */
         static $exampleOutputAsOneString = <<<'END_OF_STRING_MARKER_4d416bb9_c85c_4df2_9d83_a2d144e79cdc'
-                    PID    PPID COMMAND
-                 209277  209253 sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'
-                 209278  209277 php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services
-                 209280       1 php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log
+                    PID    PPID STAT COMMAND
+                 209277  209253 RI   sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'
+                 209278  209277 SI+  php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services
+                 209280       1 R+   php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log
             END_OF_STRING_MARKER_4d416bb9_c85c_4df2_9d83_a2d144e79cdc;
 
         $exampleOutputResult = [
-            209277 => self::newAdditionalDetails(parentPid: 209253, commandLine: "sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'"),
-            209278 => self::newAdditionalDetails(parentPid: 209277, commandLine: "php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services"),
-            209280 => self::newAdditionalDetails(parentPid: 1, commandLine: "php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log"),
+            209277 => self::newAdditionalDetails(parentPid: 209253, state: 'RI', commandLine: "sh -c phpunit -c phpunit_component_tests.xml '--group' 'does_not_require_external_services'"),
+            209278 => self::newAdditionalDetails(parentPid: 209277, state: 'SI+', commandLine: "php phpunit -c phpunit_component_tests.xml --group does_not_require_external_services"),
+            209280 => self::newAdditionalDetails(parentPid: 1, state: 'R+', commandLine: "php runResourcesCleaner.php 2>&1 | tee ResourcesCleaner.log"),
         ];
 
         $impl(TextUtilForTests::iterateLines($exampleOutputAsOneString), $exampleOutputResult);
@@ -135,7 +129,6 @@ class RunningProcessesInfoTest extends TestCaseBase
         self::assertSame($expectedMyCommandLine, $actualMyAdditionalDetails->commandLine);
 
         $expectedParentCommandLine = self::getProcessCommandLine($parentPid);
-        /** @var PidToAdditionalDetails $actualRunningProcesses */
         $actualParentAdditionalDetails = AssertEx::arrayHasKey($parentPid, $actualRunningProcesses);
         $dbgCtx->add(compact('actualParentAdditionalDetails'));
         self::assertSame($expectedParentCommandLine, $actualParentAdditionalDetails->commandLine);
@@ -143,10 +136,18 @@ class RunningProcessesInfoTest extends TestCaseBase
         self::assertTrue($actualRunningProcesses->isDescendantOf($myPid, $parentPid));
     }
 
+    /**
+     * @param array<Pid, Pid> $pidToParentPid
+     *
+     * @return RunningProcessesInfo
+     */
+    private static function buildFromPidToParentPid(array $pidToParentPid): RunningProcessesInfo
+    {
+        return new RunningProcessesInfo(array_map(fn($parentPid) => self::newAdditionalDetails($parentPid, 'dummy state', 'dummy cmd'), $pidToParentPid));
+    }
+
     public function testIterateAncestorsOf(): void
     {
-        DebugContext::getCurrentScope(/* out */ $dbgCtx);
-
         /**
          * @param array<Pid, Pid> $pidToParentPid
          * @phpstan-param Pid $pid
@@ -156,13 +157,13 @@ class RunningProcessesInfoTest extends TestCaseBase
             /** @var array<Pid, Pid> $pidToParentPid */
             /** @var Pid $pid */
             /** @var list<Pid> $expectedResult */
-            /** @var PidToAdditionalDetails $processesInfos */
-            $processesInfos = new RunningProcessesInfo(array_map(fn($parentPid) => self::newAdditionalDetails($parentPid, 'dummy cmd'), $pidToParentPid));
+
+            $processesInfos = self::buildFromPidToParentPid($pidToParentPid);
             $actualResult = IterableUtil::toList($processesInfos->iterateAncestorsOf($pid));
-            AssertEx::equalScalarLists($expectedResult, $actualResult);
+            AssertEx::equal($expectedResult, $actualResult);
         };
 
-        $impl([], 123, []);
+        $impl([], 1, []);
         $impl([111 => 11], 1, []);
         $impl([111 => 11], 11, []);
         $impl([111 => 11], 111, [11]);
@@ -176,5 +177,59 @@ class RunningProcessesInfoTest extends TestCaseBase
         $impl([122 => 12, 121 => 12, 111 => 11, 12 => 1, 11 => 1], 111, [11, 1]);
         $impl([122 => 12, 121 => 12, 111 => 11, 12 => 1, 11 => 1], 121, [12, 1]);
         $impl([122 => 12, 121 => 12, 111 => 11, 12 => 1, 11 => 1], 122, [12, 1]);
+    }
+
+    public function testGetSubTrees(): void
+    {
+        /**
+         * @param array<Pid, Pid> $basePidToParentPid
+         * @param list<Pid> $rootPids
+         * @param array<Pid, Pid> $expectedPidsInResult
+         */
+        $impl = function (array $basePidToParentPid, array $rootPids, array $expectedPidsInResult): void {
+            /** @var array<Pid, Pid> $basePidToParentPid */
+            /** @var list<Pid> $rootPids */
+            /** @var list<Pid> $expectedPidsInResult */
+
+            $baseProcessesInfos = self::buildFromPidToParentPid($basePidToParentPid);
+            $actualResult = $baseProcessesInfos->getSubTrees(new Set($rootPids));
+            AssertEx::equalAsSets(IterableUtil::toList(IterableUtil::keys($expectedPidsInResult)), IterableUtil::toList(IterableUtil::keys($actualResult)));
+            foreach ($actualResult as $pid => $actualAdditionalDetails) {
+                AssertEx::equal($baseProcessesInfos[$pid], $actualAdditionalDetails);
+            }
+        };
+
+        $impl([], [], []);
+        $impl([11 => 1], [1], [11 => 1]);
+        $impl([11 => 1], [11], [11 => 1]);
+        $impl([111 => 11, 11 => 1], [111], [111 => 11]);
+        $impl([111 => 11, 11 => 1], [11], [111 => 11, 11 => 1]);
+        $impl([111 => 11, 11 => 1], [111, 1], [111 => 11, 11 => 1]);
+        $impl([111 => 11, 11 => 1], [111, 11], [111 => 11, 11 => 1]);
+        $impl([111 => 11, 11 => 1], [111, 10], [111 => 11]);
+        $impl([111 => 11, 11 => 1], [10, 111], [111 => 11]);
+
+        $impl([122 => 12, 121 => 12, 111 => 11, 22 => 2, 21 => 2, 12 => 1, 11 => 1, 2 => 0, 1 => 0], [], [11, 1]);
+    }
+
+    public function testIterateInTopologicalOrder(): void
+    {
+        /**
+         * @param array<Pid, Pid> $pidToParentPid
+         * @phpstan-param Pid $pid
+         * @phpstan-param list<Pid> $expectedResult
+         */
+        $impl = function (array $pidToParentPid, array $expectedResult): void {
+            /** @var array<Pid, Pid> $pidToParentPid */
+            /** @var list<Pid> $expectedResult */
+
+            $processesInfos = self::buildFromPidToParentPid($pidToParentPid);
+            $actualResult = IterableUtil::toList(IterableUtil::keys($processesInfos->iterateInTopologicalOrder()));
+            AssertEx::equal($expectedResult, $actualResult);
+        };
+
+        $impl([], []);
+        $impl([11 => 1], [11]);
+        $impl([122 => 12, 121 => 12, 111 => 11, 12 => 1, 11 => 1], [122, 121, 111, 12, 11]);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use Ds\Set;
 use OTelDistroTests\Util\HttpMethods;
 use OTelDistroTests\Util\HttpStatusCodes;
 use OTelDistroTests\Util\Log\LoggableInterface;
@@ -13,6 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 
 /**
  * @phpstan-import-type Pid from ProcessUtil
+ * @phpstan-type SetOfPids Set<Pid>
  */
 class HttpServerHandle implements LoggableInterface
 {
@@ -24,12 +26,12 @@ class HttpServerHandle implements LoggableInterface
     public const PID_KEY = 'pid';
 
     /**
-     * @param list<Pid> $serverPids
+     * @phpstan-param SetOfPids $serverPids
      * @param list<int> $ports
      */
     public function __construct(
         public readonly string $dbgProcessName,
-        public readonly array $serverPids,
+        public readonly Set $serverPids,
         public readonly string $serverId,
         public readonly array $ports
     ) {
@@ -54,12 +56,14 @@ class HttpServerHandle implements LoggableInterface
         );
     }
 
-    public function signalAndWaitForItToExit(): void
+    protected function sendPostRequestAssertSuccessResponse(string $urlPath): void
     {
-        $response = $this->sendRequest(HttpMethods::POST, TestInfraHttpServerProcessBase::EXIT_URI_PATH);
+        $response = $this->sendRequest(HttpMethods::POST, $urlPath);
         Assert::assertSame(HttpStatusCodes::OK, $response->getStatusCode());
+    }
 
-        $hasExited = ProcessUtil::waitForProcessToExitUsingPid($this->dbgProcessName, $this->spawnedProcessOsId, /* maxWaitTimeInMicroseconds - 10 seconds */ 10 * 1000 * 1000);
-        Assert::assertTrue($hasExited);
+    public function cleanTestScoped(): void
+    {
+        $this->sendPostRequestAssertSuccessResponse(TestInfraHttpServerProcessBase::CLEAN_TEST_SCOPED_URI_PATH);
     }
 }

@@ -31,6 +31,6 @@ final class JsonUtilTest extends TestCaseBase
         self::assertSame(1, preg_match('/^\s*{\s*"0"\s*:\s*0\s*}\s*$/', $serialized));
         $decodedJson = self::decode($serialized);
         self::assertIsArray($decodedJson);
-        AssertEx::equalMaps($original, $decodedJson);
+        AssertEx::equal($original, $decodedJson);
     }
 }

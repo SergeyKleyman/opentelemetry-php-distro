@@ -30,7 +30,7 @@ final class DebugContextScopeRef
     /**
      * @phpstan-param ScopeContext $ctx
      */
-    public function resetTopSubScope(array $ctx): void
+    public function resetTopSubScope(array $ctx = []): void
     {
         $this->scope?->resetTopSubScope($ctx);
     }

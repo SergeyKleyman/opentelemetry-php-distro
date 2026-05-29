@@ -359,7 +359,7 @@ class LoggingVariousTypesTest extends TestCaseBase
             self::assertLessThanOrEqual($maxDepth, $depth);
 
             if ($depth === $maxDepth) {
-                AssertEx::equalMaps(LoggableToJsonEncodable::convertArrayForMaxDepth($buildParentArray([], $maxDepth), $maxDepth), $currentLoggedArray);
+                AssertEx::equal(LoggableToJsonEncodable::convertArrayForMaxDepth($buildParentArray([], $maxDepth), $maxDepth), $currentLoggedArray);
                 break;
             }
 
@@ -405,7 +405,7 @@ class LoggingVariousTypesTest extends TestCaseBase
             self::assertLessThanOrEqual($maxDepth, $depth);
 
             if ($depth === $maxDepth) {
-                AssertEx::equalMaps(LoggableToJsonEncodable::convertObjectForMaxDepth($buildParentObject(new ObjectForLoggableTraitTests(), $maxDepth), $maxDepth), $currentLoggedObject);
+                AssertEx::equal(LoggableToJsonEncodable::convertObjectForMaxDepth($buildParentObject(new ObjectForLoggableTraitTests(), $maxDepth), $maxDepth), $currentLoggedObject);
                 break;
             }
 

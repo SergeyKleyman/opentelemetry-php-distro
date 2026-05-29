@@ -11,7 +11,6 @@ use OTelDistroTests\Util\CombinatorialUtil;
 use OTelDistroTests\Util\DataProviderForTestBuilder;
 use OTelDistroTests\Util\DebugContext;
 use OTelDistroTests\Util\IterableUtil;
-use OTelDistroTests\Util\Log\LoggableToString;
 use OTelDistroTests\Util\TestCaseBase;
 
 class DataProviderForTestBuilderTest extends TestCaseBase
@@ -180,19 +179,14 @@ class DataProviderForTestBuilderTest extends TestCaseBase
                 CombinatorialUtil::cartesianProduct([$inputList1, $inputList2])
             );
         }
-        AssertEx::equalAsSets($expected, $actual, LoggableToString::convert(compact('onlyFirstValueCombinable1', 'onlyFirstValueCombinable2', 'expected', 'actual')));
+        AssertEx::equalAsSets($expected, $actual);
     }
 
     /**
      * @dataProvider dataProviderForTwoBoolArgs
-     *
-     * @param bool $disableInstrumentationsOnlyFirstValueCombinable
-     * @param bool $dbNameOnlyFirstValueCombinable
      */
-    public function testOneGeneratorAddsMultipleDimensions(
-        bool $disableInstrumentationsOnlyFirstValueCombinable,
-        bool $dbNameOnlyFirstValueCombinable
-    ): void {
+    public function testOneGeneratorAddsMultipleDimensions(bool $disableInstrumentationsOnlyFirstValueCombinable, bool $dbNameOnlyFirstValueCombinable): void
+    {
         $disableInstrumentationsVariants = [
             ''    => true,
             'pdo' => false,
@@ -251,7 +245,7 @@ class DataProviderForTestBuilderTest extends TestCaseBase
             $expected = $cartesianProduct;
         }
 
-        AssertEx::equalAsSets($expected, $actual, LoggableToString::convert(compact('disableInstrumentationsOnlyFirstValueCombinable', 'dbNameOnlyFirstValueCombinable', 'expected', 'actual')));
+        AssertEx::equalAsSets($expected, $actual);
     }
 
     /**
@@ -282,7 +276,7 @@ class DataProviderForTestBuilderTest extends TestCaseBase
                 CombinatorialUtil::cartesianProduct([$inputList1, $inputList2])
             );
         }
-        AssertEx::equalAsSets($expected, $actual, LoggableToString::convert(compact('onlyFirstValueCombinable1', 'onlyFirstValueCombinable2', 'expected', 'actual')));
+        AssertEx::equalAsSets($expected, $actual);
     }
 
     /**
@@ -322,7 +316,7 @@ class DataProviderForTestBuilderTest extends TestCaseBase
                 ['dimA' => 1.23, 'dimB' => 3, 'dimC' => 'b'],
                 ['dimA' => 4.56, 'dimB' => 3, 'dimC' => 'b'],
             ];
-        AssertEx::equalAsSets($expected, $actual, LoggableToString::convert(compact('expected', 'actual')));
+        AssertEx::equalAsSets($expected, $actual);
     }
 
     /**
@@ -362,7 +356,7 @@ class DataProviderForTestBuilderTest extends TestCaseBase
                 [1.23, 3, 'b'],
                 [4.56, 3, 'b'],
             ];
-        AssertEx::equalAsSets($expected, $actual, LoggableToString::convert(compact('expected', 'actual')));
+        AssertEx::equalAsSets($expected, $actual);
     }
 
     public function testConditional(): void

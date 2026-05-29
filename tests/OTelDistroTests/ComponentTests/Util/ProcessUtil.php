@@ -109,7 +109,7 @@ final class ProcessUtil
             $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
             if (!$processHandle->getStatus()->hasExited()) {
                 $logger->logWithLevel(__FUNCTION__, $logLevelTimedout ?? LogLevel::warning)?->with(__LINE__, 'Wait for the started process to exit timed out - terminating the process');
-                self::execCommandToTerminateProcess(AssertEx::isInt($processHandle->getStatus()->pid));
+                self::execCommandToTerminateProcess($processHandle->getStatus()->pid);
             }
         } finally {
             $processHandle->close();
@@ -160,6 +160,6 @@ final class ProcessUtil
      */
     public static function getCurrentPid(): int
     {
-        return self::assertValidPid(getmypid());
+        return self::assertValidPid(AssertEx::isInt(getmypid()));
     }
 }

@@ -244,7 +244,7 @@ class VariousOptionsParsingTest extends TestCaseBase
             $validValueData->rawValue = self::genOptionalWhitespace() . $validValueData->rawValue . self::genOptionalWhitespace();
             $actualParsedValue = Parser::parseOptionRawValue($validValueData->rawValue, $optParser);
             $dbgCtx->add(['actualParsedValue' => $valueWithDetails($actualParsedValue)]);
-            AssertEx::equalsEx($validValueData->parsedValue, $actualParsedValue);
+            AssertEx::equal($validValueData->parsedValue, $actualParsedValue);
         }
     }
 

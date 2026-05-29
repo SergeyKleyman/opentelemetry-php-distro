@@ -6,11 +6,14 @@ namespace OTelDistroTests\UnitTests\UtilTests;
 
 use Closure;
 use Ds\Map as DsMap;
-use Generator;
 use Iterator;
 use IteratorAggregate;
+use OpenTelemetry\Distro\Util\GetContextInterface;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\DebugContext;
+use OTelDistroTests\Util\Log\LoggableInterface;
+use OTelDistroTests\Util\Log\LoggableTrait;
+use OTelDistroTests\Util\Log\StdError;
 use OTelDistroTests\Util\ReflectionUtil;
 use OTelDistroTests\Util\TestCaseBase;
 use PHPUnit\Framework\Assert;
@@ -84,20 +87,12 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function arrayReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param array<mixed> $_
-         */
-        $closureWithTypeParam = fn(array $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, ReflectionUtil::ARRAY_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::arrayReflectionType());
     }
 
     private static function nullableArrayReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?array<mixed> $_
-         */
-        $closureWithTypeParam = fn(?array $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . ReflectionUtil::ARRAY_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::nullableArrayReflectionType());
     }
 
     private static function boolReflectionType(): DsHashableReflectionType
@@ -112,38 +107,22 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function callableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param callable(): void $_
-         */
-        $closureWithTypeParam = fn(callable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, ReflectionUtil::CALLABLE_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::callableReflectionType());
     }
 
     private static function nullableCallableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?callable(): void $_
-         */
-        $closureWithTypeParam = fn(?callable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . ReflectionUtil::CALLABLE_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::nullableCallableReflectionType());
     }
 
     private static function closureReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param Closure(): void $_
-         */
-        $closureWithTypeParam = fn(Closure $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Closure::class));
+        return new DsHashableReflectionType(ReflectionUtil::closureReflectionType());
     }
 
     private static function nullableClosureReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?Closure(): void $_
-         */
-        $closureWithTypeParam = fn(?Closure $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Closure::class));
+        return new DsHashableReflectionType(ReflectionUtil::nullableClosureReflectionType());
     }
 
     private static function dsMapReflectionType(): DsHashableReflectionType
@@ -216,20 +195,12 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function generatorReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param Generator<mixed> $_
-         */
-        $closureWithTypeParam = fn(Generator $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Generator::class));
+        return new DsHashableReflectionType(ReflectionUtil::generatorReflectionType());
     }
 
     private static function nullableGeneratorReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?Generator<mixed> $_
-         */
-        $closureWithTypeParam = fn(?Generator $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Generator::class));
+        return new DsHashableReflectionType(ReflectionUtil::nullableGeneratorReflectionType());
     }
 
     private static function intReflectionType(): DsHashableReflectionType
@@ -244,71 +215,47 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function iteratorReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param Iterator<mixed> $_
-         */
-        $closureWithTypeParam = fn(Iterator $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Iterator::class));
+        return new DsHashableReflectionType(ReflectionUtil::iteratorReflectionType());
     }
 
     private static function nullableIteratorReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?Iterator<mixed> $_
-         */
-        $closureWithTypeParam = fn(?Iterator $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Iterator::class));
+        return new DsHashableReflectionType(ReflectionUtil::nullableIteratorReflectionType());
     }
 
     private static function iteratorAggregateReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param IteratorAggregate<mixed> $_
-         */
-        $closureWithTypeParam = fn(IteratorAggregate $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, IteratorAggregate::class));
+        return new DsHashableReflectionType(ReflectionUtil::iteratorAggregateReflectionType());
     }
 
     private static function nullableIteratorAggregateReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?IteratorAggregate<mixed> $_
-         */
-        $closureWithTypeParam = fn(?IteratorAggregate $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . IteratorAggregate::class));
+        return new DsHashableReflectionType(ReflectionUtil::nullableIteratorAggregateReflectionType());
     }
 
     private static function iterableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param iterable<mixed> $_
-         */
-        $closureWithTypeParam = fn(iterable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, ReflectionUtil::ITERABLE_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::iterableReflectionType());
     }
 
     private static function nullableIterableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @phpstan-param ?iterable<mixed> $_
-         */
-        $closureWithTypeParam = fn(?iterable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . ReflectionUtil::ITERABLE_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::nullableIterableReflectionType());
     }
 
     private static function mixedReflectionType(): DsHashableReflectionType
     {
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(mixed $_) => null, ReflectionUtil::MIXED_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::mixedReflectionType());
     }
 
     private static function objectReflectionType(): DsHashableReflectionType
     {
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(object $_) => null, ReflectionUtil::OBJECT_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::objectReflectionType());
     }
 
     private static function nullableObjectReflectionType(): DsHashableReflectionType
     {
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName(fn(?object $_) => null, '?' . ReflectionUtil::OBJECT_TYPE_NAME));
+        return new DsHashableReflectionType(ReflectionUtil::nullableObjectReflectionType());
     }
 
     private static function parentReflectionType(): DsHashableReflectionType
@@ -357,20 +304,12 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function traversableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param Traversable<mixed> $_
-         */
-        $closureWithTypeParam = fn(Traversable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, Traversable::class));
+        return new DsHashableReflectionType(ReflectionUtil::traversableReflectionType());
     }
 
     private static function nullableTraversableReflectionType(): DsHashableReflectionType
     {
-        /**
-         * @param ?Traversable<mixed> $_
-         */
-        $closureWithTypeParam = fn(?Traversable $_) => null;
-        return new DsHashableReflectionType(ReflectionUtil::extractReflectionTypeFromClosureParamAssertName($closureWithTypeParam, '?' . Traversable::class));
+        return new DsHashableReflectionType(ReflectionUtil::nullableTraversableReflectionType());
     }
 
     /**
@@ -544,7 +483,7 @@ class ReflectionUtilTest extends TestCaseBase
 
     private static function assertCanBeAssignedTo(DsHashableReflectionType $source, DsHashableReflectionType $target, bool $expectedResult): void
     {
-        $actualResult = ReflectionUtil::canBeAssignedTo($source->wrapped, $target->wrapped);
+        $actualResult = ReflectionUtil::canReflectionTypeBeAssignedToReflectionType($source->wrapped, $target->wrapped);
         self::assertSame($expectedResult, $actualResult);
     }
 
@@ -737,5 +676,59 @@ class ReflectionUtilTest extends TestCaseBase
             self::assertTrue(ReflectionUtil::areEqualReflectionTypes($expectedNullableType, $nullableType->wrapped));
         }
         $dbgCtx->popSubScope();
+    }
+
+    public static function testGetReflectionTypeForValue(): void
+    {
+        DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+        // There's no ReflectionType for resource
+        self::assertNull(ReflectionUtil::getReflectionTypeForValue(StdError::singletonInstance()->getStream()));
+
+        $impl = function (mixed $value, string $expectedReflectionTypeName): void {
+            DebugContext::getCurrentScope(/* out */ $dbgCtx);
+
+            $actualReflectionType = AssertEx::notNull(ReflectionUtil::getReflectionTypeForValue($value));
+            $dbgCtx->add(compact('actualReflectionType'));
+            self::assertSame(ReflectionUtil::canonicalizeReflectionTypeName($expectedReflectionTypeName), ReflectionUtil::getReflectionTypeCanonicalName($actualReflectionType));
+        };
+
+        $impl(
+            new class {
+            },
+            ReflectionUtil::getReflectionTypeCanonicalName(ReflectionUtil::objectReflectionType()),
+        );
+
+        $impl(
+            new class extends stdClass {
+            },
+            stdClass::class,
+        );
+
+        $impl(
+            new class implements LoggableInterface {
+                use LoggableTrait;
+            },
+            LoggableInterface::class,
+        );
+
+        $impl(
+            new class extends stdClass implements LoggableInterface {
+                use LoggableTrait;
+            },
+            ReflectionUtil::unionTypeMembersToCanonicalName([stdClass::class, LoggableInterface::class]),
+        );
+
+        $impl(
+            new class extends stdClass implements GetContextInterface, LoggableInterface {
+                use LoggableTrait;
+
+                public function getContext(): array
+                {
+                    return [];
+                }
+            },
+            ReflectionUtil::unionTypeMembersToCanonicalName([stdClass::class, GetContextInterface::class, LoggableInterface::class]),
+        );
     }
 }
