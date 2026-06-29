@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace OTelDistroTests\ComponentTests\Util;
 
 /**
- * @phpstan-import-type Pid from RunningProcessesInfo
+ * @phpstan-import-type Pid from ProcessesInfo
  */
-final class RunningProcessAdditionalDetails
+final class ProcessesInfoPerProcessData
 {
     /**
      * @phpstan-param Pid $parentPid

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace OTelDistroTests\UnitTests\UtilTests;
 
 use Ds\Set;
-use OTelDistroTests\ComponentTests\Util\RunningProcessAdditionalDetails;
-use OTelDistroTests\ComponentTests\Util\RunningProcessesInfo;
+use OTelDistroTests\ComponentTests\Util\ProcessesInfoPerProcessData;
+use OTelDistroTests\ComponentTests\Util\ProcessesInfo;
 use OTelDistroTests\ComponentTests\Util\ProcessUtil;
 use OTelDistroTests\Util\AssertEx;
 use OTelDistroTests\Util\DebugContext;
@@ -18,17 +18,17 @@ use OTelDistroTests\Util\TextUtilForTests;
 use PHPUnit\Exception as PHPUnitExceptionInterface;
 
 /**
- * @phpstan-import-type Pid from RunningProcessesInfo
- * @phpstan-import-type PidToAdditionalDetails from RunningProcessesInfo
+ * @phpstan-import-type Pid from ProcessesInfo
+ * @phpstan-import-type PidToAdditionalDetails from ProcessesInfo
  */
 class RunningProcessesInfoTest extends TestCaseBase
 {
     /**
      * @phpstan-param Pid $parentPid
      */
-    private static function newAdditionalDetails(int $parentPid, string $state, string $commandLine): RunningProcessAdditionalDetails
+    private static function newAdditionalDetails(int $parentPid, string $state, string $commandLine): ProcessesInfoPerProcessData
     {
-        return new RunningProcessAdditionalDetails(parentPid: $parentPid, state: $state, commandLine: $commandLine);
+        return new ProcessesInfoPerProcessData(parentPid: $parentPid, state: $state, commandLine: $commandLine);
     }
 
     public function testParsePsCommandListingOutput(): void
@@ -43,8 +43,8 @@ class RunningProcessesInfoTest extends TestCaseBase
 
             DebugContext::getCurrentScope(/* out */ $dbgCtx);
 
-            $actualResult = RunningProcessesInfo::parsePsCommandOutput($outputLines);
-            AssertEx::equal(new RunningProcessesInfo($expectedResult), $actualResult);
+            $actualResult = ProcessesInfo::parsePsCommandOutput($outputLines);
+            AssertEx::equal(new ProcessesInfo($expectedResult), $actualResult);
         };
 
         // No output lines should cause an exception to be thrown
@@ -115,7 +115,7 @@ class RunningProcessesInfoTest extends TestCaseBase
         self::assertSame(posix_getpid(), $myPid);
         $parentPid = posix_getppid();
         $dbgCtx->add(compact('parentPid'));
-        $actualRunningProcesses = RunningProcessesInfo::getForAllInCurrentSession();
+        $actualRunningProcesses = ProcessesInfo::getForAllInCurrentSession();
         $dbgCtx->add(compact('actualRunningProcesses'));
         $actualMyAdditionalDetails = $actualRunningProcesses[$myPid];
         $dbgCtx->add(compact('actualMyAdditionalDetails'));
@@ -139,11 +139,11 @@ class RunningProcessesInfoTest extends TestCaseBase
     /**
      * @param array<Pid, Pid> $pidToParentPid
      *
-     * @return RunningProcessesInfo
+     * @return ProcessesInfo
      */
-    private static function buildFromPidToParentPid(array $pidToParentPid): RunningProcessesInfo
+    private static function buildFromPidToParentPid(array $pidToParentPid): ProcessesInfo
     {
-        return new RunningProcessesInfo(array_map(fn($parentPid) => self::newAdditionalDetails($parentPid, 'dummy state', 'dummy cmd'), $pidToParentPid));
+        return new ProcessesInfo(array_map(fn($parentPid) => self::newAdditionalDetails($parentPid, 'dummy state', 'dummy cmd'), $pidToParentPid));
     }
 
     public function testIterateAncestorsOf(): void

@@ -50,13 +50,15 @@ final class ResourcesCleanerClient
         $this->logger = $this->buildLogger();
     }
 
-    public function registerProcessToTerminate(string $dbgProcessName, int $pid, bool $isTestScoped): void
+    public function sendProcessToTerminateRegistration(string $dbgProcessName, int $pid, bool $isTestScoped, bool $registerOrUpdate): void
     {
-        $this->logger->logDebug(__FUNCTION__)?->with(__LINE__, 'Registering process to terminate with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('pid', 'isTestScoped'));
+        $logDebug = $this->logger->inherit(compact('pid', 'isTestScoped', 'registerOrUpdate'))->logDebug(__FUNCTION__);
+        $logDebug?->with(__LINE__, $registerOrUpdate ? 'Registering process to terminate' : 'Updating process to terminate registration');
 
+        $urlPath = $registerOrUpdate ? ResourcesCleaner::REGISTER_PROCESS_TO_TERMINATE_URI_PATH : ResourcesCleaner::UPDATE_PROCESS_TO_TERMINATE_REGISTRATION_URI_PATH;
         $response = HttpClientUtilForTests::sendRequest(
             HttpMethods::POST,
-            new UrlParts(port: $this->resourcesCleanerPort, path: ResourcesCleaner::REGISTER_PROCESS_TO_TERMINATE_URI_PATH),
+            new UrlParts(port: $this->resourcesCleanerPort, path: $urlPath),
             new TestInfraDataPerRequest(serverId: $this->resourcesCleanerServerId),
             headers: [
                 ResourcesCleaner::DBG_PROCESS_NAME_HEADER_NAME => $dbgProcessName,
@@ -68,8 +70,12 @@ final class ResourcesCleanerClient
             throw new ComponentTestsInfraException('Failed to register with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
         }
 
-        $this->logger->logDebug(__FUNCTION__)
-            ?->with(__LINE__, 'Successfully registered process to terminate with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class), compact('pid', 'isTestScoped'));
+        $logDebug?->with(__LINE__, 'Successfully ' . ($registerOrUpdate ? 'registered process to terminate' : 'updated process to terminate registration'));
+    }
+
+    public function registerProcessToTerminate(string $dbgProcessName, int $pid, bool $isTestScoped): void
+    {
+        $this->sendProcessToTerminateRegistration($dbgProcessName, $pid, $isTestScoped, registerOrUpdate: true);
     }
 
     /** @noinspection PhpSameParameterValueInspection */
@@ -98,5 +104,23 @@ final class ResourcesCleanerClient
             $this->registerFileToDelete($tempFileFullPath, isTestScoped: true);
         }
         return $tempFileFullPath;
+    }
+
+    public function terminateProcessTree(int $pid): void
+    {
+        $logDebug = $this->logger->inherit()->addAllContext(compact('fullPath', 'isTestScoped'))->logDebug(__FUNCTION__);
+        $logDebug?->with(__LINE__, 'Registering file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
+
+        $response = HttpClientUtilForTests::sendRequest(
+            HttpMethods::POST,
+            new UrlParts(port: $this->resourcesCleanerPort, path: ResourcesCleaner::REGISTER_FILE_TO_DELETE_URI_PATH),
+            new TestInfraDataPerRequest(serverId: $this->resourcesCleanerServerId),
+            [ResourcesCleaner::PATH_HEADER_NAME => $fullPath, ResourcesCleaner::IS_TEST_SCOPED_HEADER_NAME => BoolUtil::toString($isTestScoped)] /* <- headers */
+        );
+        if ($response->getStatusCode() !== HttpStatusCodes::OK) {
+            throw new ComponentTestsInfraException('Failed to register with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
+        }
+
+        $logDebug?->with(__LINE__, 'Successfully registered file to delete with ' . ClassNameUtil::fqToShort(ResourcesCleaner::class));
     }
 }

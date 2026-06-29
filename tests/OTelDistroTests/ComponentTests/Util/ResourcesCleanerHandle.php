@@ -30,7 +30,7 @@ final class ResourcesCleanerHandle extends HttpServerHandle
 
     public function signalAndWaitForItToExit(): void
     {
-        $relatedRunningProcesses = RunningProcessesInfo::getForAllInCurrentSession()->getSubTrees($this->serverPids);
+        $relatedRunningProcesses = ProcessesInfo::getForAllInCurrentSession()->getSubTrees($this->serverPids);
 
         $this->sendPostRequestAssertSuccessResponse(TestInfraHttpServerProcessBase::EXIT_URI_PATH);
 

@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace OTelDistroTests\ComponentTests\Util;
 
+use Ds\Set;
 use OpenTelemetry\Distro\Log\LogLevel;
 use OpenTelemetry\Distro\Util\StaticClassTrait;
 use OTelDistroTests\Util\AmbientContextForTests;
 use OTelDistroTests\Util\AssertEx;
+use OTelDistroTests\Util\ClassNameUtil;
 use OTelDistroTests\Util\EnvVarUtil;
 use OTelDistroTests\Util\ExceptionUtil;
+use OTelDistroTests\Util\IterableUtil;
 use OTelDistroTests\Util\Log\LogCategoryForTests;
+use OTelDistroTests\Util\TimeUtil;
+use PHPUnit\Framework\Assert;
 
 /**
  * @phpstan-import-type EnvVars from EnvVarUtil
  * @phpstan-type Pid non-negative-int
+ * @phpstan-import-type PidToDbgDesc from ProcessesInfo
  */
 final class ProcessUtil
 {
@@ -81,6 +87,39 @@ final class ProcessUtil
     }
 
     /**
+     * @phpstan-param PidToDbgDesc $pidToDbgDesc
+     */
+    public static function terminateProcesses(string $dbgProcessesSetDesc, array $pidToDbgDesc, int $maxWaitTimeInMicroseconds): bool
+    {
+        $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__)
+            ->addAllContext(compact('dbgProcessesSetDesc', 'pidToDbgDesc'));
+        $logDebug = $logger->logDebug(__FUNCTION__);
+        $logDebug?->with(__LINE__, 'Entered');
+
+        $runningProcesses = ProcessesInfo::getForAllInCurrentSession();
+        $runningProcesses->getSubTrees(new Set(IterableUtil::keys($pidToDbgDesc)));
+
+        foreach ([[false, 3 * $maxWaitTimeInMicroseconds / 4], [true, $maxWaitTimeInMicroseconds / 4]] as [$force, $maxWaitTimeInMicrosecondsForIteration]) {
+            $runningProcesses->terminate($pidToDbgDesc, $force);
+            $maxWaitTimeInMicroseconds = intval($maxWaitTimeInMicrosecondsForIteration);
+            if ($waitRetVal = $runningProcesses->waitToExit(ClassNameUtil::fqToShort(__CLASS__) . ' ' . $dbgProcessesSetDesc, maxWaitTimeInMicroseconds: $maxWaitTimeInMicroseconds)) {
+                break;
+            }
+        }
+
+        $retVal = true;
+        if (!$waitRetVal) {
+            foreach ($runningProcesses->iterateStillExisting() as $pid => $additionalDetails) {
+                $logger->logWarning(__FUNCTION__)?->with(__LINE__, 'Process still exists after atempt to terminate', compact('pid', 'additionalDetails'));
+                $retVal = false;
+            }
+        }
+
+        $logDebug?->with(__LINE__, 'Exiting', compact('retVal'));
+        return $retVal;
+    }
+
+    /**
      * @phpstan-param EnvVars $envVars
      */
     public static function startProcessAndWaitForItToExit(
@@ -105,15 +144,8 @@ final class ProcessUtil
         );
         $logger->addAllContext(compact('processHandle'));
 
-        try {
-            $processHandle->waitForProcessToExit($maxWaitTimeInMicroseconds, $logLevelTimedout);
-            if (!$processHandle->getStatus()->hasExited()) {
-                $logger->logWithLevel(__FUNCTION__, $logLevelTimedout ?? LogLevel::warning)?->with(__LINE__, 'Wait for the started process to exit timed out - terminating the process');
-                self::execCommandToTerminateProcess($processHandle->getStatus()->pid);
-            }
-        } finally {
-            $processHandle->close();
-        }
+        self::terminateProcesses($dbgProcessName . ' and its descendands', [$processHandle->getStatus()->pid => $dbgProcessName], $maxWaitTimeInMicroseconds);
+        Assert::assertTrue($processHandle->getStatus()->hasExited());
 
         return $processHandle->getStatus();
     }
@@ -121,8 +153,14 @@ final class ProcessUtil
     /**
      * @phpstan-param EnvVars $envVars
      */
-    private static function procOpenEx(string $dbgProcessName, string $command, array $envVars, bool $isBackground, ?ResourcesCleanerClient $resourcesCleanerClient, bool $isTestScoped): ProcessHandle
-    {
+    private static function procOpenEx(
+        string $dbgProcessName,
+        string $command,
+        array $envVars,
+        bool $isBackground,
+        ?ResourcesCleanerClient $resourcesCleanerClient,
+        bool $isTestScoped
+    ): StartedProcessStatus {
         $logger = AmbientContextForTests::loggerFactory()->loggerForClass(LogCategoryForTests::TEST_INFRA, __NAMESPACE__, __CLASS__, __FILE__);
         $logger->addAllContext(compact('dbgProcessName', 'command', 'envVars', 'isBackground'));
 
@@ -138,11 +176,15 @@ final class ProcessUtil
         }
 
         $processHandle = new ProcessHandle($dbgProcessName, $procOpenRetVal);
-        $resourcesCleanerClient?->registerProcessToTerminate($dbgProcessName, $processHandle->getStatus()->pid, $isTestScoped);
+        try {
+            $resourcesCleanerClient?->registerProcessToTerminate($dbgProcessName, $processHandle->getStatus()->pid, $isTestScoped);
 
-        $logInfo = $logger->logInfo(__FUNCTION__);
-        $logInfo?->with(__LINE__, "Started process $dbgProcessName ($command)", compact('processHandle'));
-        return $processHandle;
+            $logInfo = $logger->logInfo(__FUNCTION__);
+            $logInfo?->with(__LINE__, "Started process $dbgProcessName ($command)", compact('processHandle'));
+        } finally {
+            $processHandle->close();
+        }
+        return $processHandle->getStatus();
     }
 
     /**

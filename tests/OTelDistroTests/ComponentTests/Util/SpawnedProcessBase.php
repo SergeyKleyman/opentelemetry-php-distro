@@ -78,11 +78,16 @@ abstract class SpawnedProcessBase implements LoggableInterface
 
             $thisObj->processConfig();
 
-            if ($thisObj->shouldRegisterThisProcessWithResourcesCleaner()) {
-                $thisObj->registerWithResourcesCleaner();
+            if ($shouldRegisterThisProcessWithResourcesCleaner = $thisObj->shouldRegisterThisProcessWithResourcesCleaner()) {
+                $thisObj->sendProcessToTerminateRegistration(registerOrUpdate: true);
             }
-
-            $runImpl($thisObj);
+            try {
+                $runImpl($thisObj);
+            } finally {
+                if ($shouldRegisterThisProcessWithResourcesCleaner) {
+                    $thisObj->sendProcessToTerminateRegistration(registerOrUpdate: false);
+                }
+            }
         } catch (Throwable $throwable) {
             $level = LogLevel::critical;
             $isExpectedFromAppCode = false;
@@ -118,16 +123,21 @@ abstract class SpawnedProcessBase implements LoggableInterface
         return false;
     }
 
-    protected function registerWithResourcesCleaner(): void
+    private static function buildResourcesCleanerClient(): ResourcesCleanerClient
     {
-        $resourcesCleanerClient = new ResourcesCleanerClient(
+        return new ResourcesCleanerClient(
             AssertEx::notNull(AmbientContextForTests::testConfig()->dataPerProcess()->resourcesCleanerServerId),
             AssertEx::notNull(AmbientContextForTests::testConfig()->dataPerProcess()->resourcesCleanerPort),
         );
-        $resourcesCleanerClient->registerProcessToTerminate(
+    }
+
+    private function sendProcessToTerminateRegistration(bool $registerOrUpdate): void
+    {
+        self::buildResourcesCleanerClient()->sendProcessToTerminateRegistration(
             dbgProcessName: AmbientContextForTests::dbgProcessName(),
             pid: ProcessUtil::getCurrentPid(),
             isTestScoped: $this->isThisProcessTestScoped(),
+            registerOrUpdate: $registerOrUpdate,
         );
     }
 }

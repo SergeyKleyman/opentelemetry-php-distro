@@ -27,13 +27,13 @@ use Traversable;
 
 /**
  * @phpstan-import-type Pid from ProcessUtil
- * @phpstan-type PidToAdditionalDetails array<Pid, RunningProcessAdditionalDetails>
+ * @phpstan-type PidToAdditionalDetails array<Pid, ProcessesInfoPerProcessData>
  * @phpstan-type PidToDbgDesc array<Pid, string>
  *
- * @implements ArrayAccess<Pid, RunningProcessAdditionalDetails>
- * @implements IteratorAggregate<Pid, RunningProcessAdditionalDetails>
+ * @implements ArrayAccess<Pid, ProcessesInfoPerProcessData>
+ * @implements IteratorAggregate<Pid, ProcessesInfoPerProcessData>
  */
-final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, LoggableInterface
+final class ProcessesInfo implements ArrayAccess, IteratorAggregate, LoggableInterface
 {
     private const PID_PS_COLUMN_NAME = 'PID';
     private const PPID_PS_COLUMN_NAME = 'PPID';
@@ -87,7 +87,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
             $parentPid = AssertEx::isNonNegativeInt(NumericUtilForTests::parseStringAsInt($currentLineParts[1]));
             $state = $currentLineParts[2];
             $command = $currentLineParts[3];
-            ArrayUtilForTests::addAssertingKeyNew($pid, new RunningProcessAdditionalDetails($parentPid, $state, $command), /* ref */ $result);
+            ArrayUtilForTests::addAssertingKeyNew($pid, new ProcessesInfoPerProcessData($parentPid, $state, $command), /* ref */ $result);
         }
         return new self($result);
     }
@@ -108,7 +108,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     }
 
     /**
-     * @return iterable<Pid, RunningProcessAdditionalDetails>
+     * @return iterable<Pid, ProcessesInfoPerProcessData>
      */
     public function iterateStillExisting(): iterable
     {
@@ -151,7 +151,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     {
         $currentPid = $descendantPid;
         while (ArrayUtil::getValueIfKeyExists($currentPid, $this->pidToAdditionalDetails, /* out */ $currentAdditionalDetails)) {
-            /** @var RunningProcessAdditionalDetails $currentAdditionalDetails */
+            /** @var ProcessesInfoPerProcessData $currentAdditionalDetails */
             $currentPid = $currentAdditionalDetails->parentPid;
             yield $currentPid;
         }
@@ -227,7 +227,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     /**
      * @param PidToAdditionalDetails $pidToAdditionalDetails
      *
-     * @return iterable<Pid, RunningProcessAdditionalDetails>
+     * @return iterable<Pid, ProcessesInfoPerProcessData>
      */
     private static function iterateInTopologicalOrderImpl(array $pidToAdditionalDetails): iterable
     {
@@ -240,7 +240,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     }
 
     /**
-     * @return iterable<Pid, RunningProcessAdditionalDetails>
+     * @return iterable<Pid, ProcessesInfoPerProcessData>
      */
     public function iterateInTopologicalOrder(): iterable
     {
@@ -286,7 +286,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
     }
 
     /**
-     * @return Traversable<Pid, RunningProcessAdditionalDetails>
+     * @return Traversable<Pid, ProcessesInfoPerProcessData>
      */
     #[Override]
     public function getIterator(): Traversable
@@ -315,7 +315,7 @@ final class RunningProcessesInfo implements ArrayAccess, IteratorAggregate, Logg
      */
     #[Override]
     #[ReturnTypeWillChange]
-    public function offsetGet(mixed $offset): RunningProcessAdditionalDetails
+    public function offsetGet(mixed $offset): ProcessesInfoPerProcessData
     {
         ProcessUtil::assertValidPid($offset);
         return $this->pidToAdditionalDetails[$offset];

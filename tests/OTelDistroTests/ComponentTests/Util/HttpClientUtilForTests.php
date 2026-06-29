@@ -81,8 +81,7 @@ final class HttpClientUtilForTests
             $urlRelPart,
             [
                 RequestOptions::HEADERS =>
-                    $headers
-                    + [RequestHeadersRawSnapshotSource::optionNameToHeaderName(OptionForTestsName::data_per_request->name) => PhpSerializationUtil::serializeToString($dataPerRequest)],
+                    $headers + [RequestHeadersRawSnapshotSource::optionNameToHeaderName(OptionForTestsName::data_per_request->name) => PhpSerializationUtil::serializeToString($dataPerRequest)],
                 /*
                  * http://docs.guzzlephp.org/en/stable/request-options.html#http-errors
                  *
@@ -109,7 +108,7 @@ final class HttpClientUtilForTests
                  * Float describing the total timeout of the request in seconds.
                  * Use 0 to wait indefinitely (the default behavior).
                  */
-                RequestOptions::TIMEOUT => self::TIMEOUT_SECONDS,
+                RequestOptions::TIMEOUT => self::TIMEOUT_SECONDS * 2,
             ]
         );
 

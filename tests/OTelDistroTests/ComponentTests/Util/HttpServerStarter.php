@@ -98,7 +98,7 @@ abstract class HttpServerStarter
             /** @var ?Pid $receivedPid */
             $receivedPid = null;
             if ($this->isHttpServerRunning($dbgProcessName, $currentTryServerId, $currentTryPorts[0], $logger, /* ref */ $receivedPid)) {
-                $runningProcessesInfo = RunningProcessesInfo::getForAllInCurrentSession();
+                $runningProcessesInfo = ProcessesInfo::getForAllInCurrentSession();
                 $dbgCtx->add(compact('runningProcessesInfo'));
                 $logDebug?->with(__LINE__, 'Started HTTP server', compact('startedProcessStatus', 'receivedPid', 'runningProcessesInfo'));
                 Assert::assertTrue($runningProcessesInfo->isDescendantOf($receivedPid, $startedProcessStatus->pid));
